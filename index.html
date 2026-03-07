@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Sistema ERP | Trampoline Park</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root{--bg:#0f172a;--card:#1e293b;--acc:#38bdf8;--txt:#f8fafc;--dim:#94a3b8;--suc:#22c55e;--err:#ef4444;--war:#f59e0b;--cafe:#f43f5e;}
+        body{font-family:'Poppins',sans-serif;background:var(--bg);color:var(--txt);margin:0;display:flex;justify-content:center;min-height:100vh;padding:20px;box-sizing:border-box;}
+        .container{width:100%;max-width:600px;background:var(--card);padding:2rem;border-radius:20px;box-shadow:0 10px 25px rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);}
+        .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+        .header h1{font-size:1.5rem;color:var(--acc);margin:0;text-transform:uppercase;letter-spacing:1px;}
+        .section-title{font-size:0.85rem;color:var(--acc);margin-top:25px;border-bottom:1px solid #334155;padding-bottom:5px;text-transform:uppercase;letter-spacing:1px;margin-bottom:15px;}
+        label{font-size:0.8rem;color:var(--dim);margin-bottom:5px;display:block;}
+        input[type="number"],input[type="password"],input[type="date"],select{width:100%;padding:12px;background:#0f172a;border:1px solid #334155;border-radius:10px;color:white;font-family:inherit;box-sizing:border-box;}
+        input:focus,select:focus{outline:none;border-color:var(--acc);}
+        #loginView{display:block;text-align:center;} #posView,#adminView,#cafeView{display:none;}
+        
+        /* Modificadores de Cantidad + y - */
+        .qty-wrapper { display: flex; align-items: center; gap: 5px; }
+        .btn-qty { width: 32px; height: 32px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; color: white; display:flex; justify-content:center; align-items:center; font-size: 1.2rem; transition: 0.2s;}
+        .btn-qty.minus { background-color: var(--err); } .btn-qty.minus:active { background-color: #b91c1c; }
+        .btn-qty.plus { background-color: var(--suc); } .btn-qty.plus:active { background-color: #15803d; }
+
+        .ticket-row{display:flex;align-items:center;justify-content:space-between;background:#0f172a;padding:12px;margin-bottom:10px;border-radius:12px;border:1px solid #334155;}
+        .ticket-info{flex:1;} .ticket-name{font-size:0.95rem;font-weight:600;} .ticket-price{font-size:0.75rem;color:var(--acc);}
+        .ticket-inputs{display:flex; gap:10px;} .input-group{display:flex;flex-direction:column;align-items:center;}
+        .input-group label{font-size:0.65rem;text-align:center;} .ticket-inputs input[type="number"]{width:50px;text-align:center;padding:8px; font-weight: bold;}
+        
+        .adicionales-grid,.dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+        .adicional-item{background:#0f172a;padding:12px;border-radius:12px;border:1px solid #334155;display:flex;justify-content:space-between;align-items:center; flex-direction: column; gap: 10px;}
+        .adicional-item span{font-size:0.8rem; font-weight: 600;} .adicional-item input{width:50px;text-align:center;padding:8px; font-weight: bold;}
+        
+        /* Modal de Pago */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px; box-sizing: border-box;}
+        .modal-box { background: var(--card); padding: 30px; border-radius: 20px; width: 100%; max-width: 400px; text-align: center; border: 2px solid var(--acc); }
+        .payment-group{display:flex;gap:15px;margin-top:15px;} .payment-option{flex:1;position:relative;cursor:pointer;}
+        .payment-option input{position:absolute;opacity:0;cursor:pointer;}
+        .payment-box{background:#0f172a;border:2px solid #334155;padding:15px;border-radius:12px;text-align:center;color:var(--dim);transition:all .2s;font-weight:600;font-size:0.95rem;}
+        .payment-option input:checked+.payment-box{border-color:var(--acc);color:var(--txt);background:rgba(56,189,248,0.1);}
+        .change-box { background: #0f172a; padding: 15px; border-radius: 10px; margin-top: 20px; border: 1px solid #334155;}
+        .change-box input { font-size: 1.5rem; text-align: center; margin-bottom: 10px; color: var(--suc); font-weight: bold;}
+        
+        .total-box{background:#0f172a;padding:20px;border-radius:15px;margin-top:25px;text-align:center;border:2px solid var(--acc);}
+        .total-box.cafe-total{border-color:var(--cafe);}
+        .total-box span{display:block;font-size:0.9rem;color:var(--dim);} .total-box strong{font-size:2.5rem;color:var(--txt);}
+        
+        /* ADMIN DASHBOARD */
+        .dash-card{background:#0f172a;border:1px solid #334155;border-radius:12px;padding:15px;text-align:center;}
+        .dash-card span{font-size:0.75rem;color:var(--dim);display:block;margin-bottom:5px;text-transform:uppercase;}
+        .dash-card strong{font-size:1.6rem;display:block;} .money strong{color:var(--suc);} .calcetas strong{color:var(--war);}
+        .breakdown-list{background:#0f172a;border:1px solid #334155;border-radius:12px;padding:15px;margin-top:15px;}
+        .breakdown-item{display:flex;justify-content:space-between;border-bottom:1px solid #1e293b;padding:8px 0;font-size:0.9rem;align-items:center;}
+        .breakdown-item:last-child{border-bottom:none;}
+        .breakdown-detail{font-size:0.7rem;color:var(--war);display:block;}
+        
+        button.btn-main{width:100%;padding:15px;background:var(--acc);color:var(--bg);border:none;border-radius:10px;font-weight:600;cursor:pointer;margin-top:20px;transition:.3s;font-size:1rem;}
+        button.btn-main:hover{background:#7dd3fc;transform:translateY(-2px);}
+        button.btn-cafe{background:var(--cafe);color:white;} button.btn-cafe:hover{background:#fb7185;}
+        button.btn-cancel {background: transparent; border: 1px solid var(--err); color: var(--err); margin-top: 10px;}
+        .btn-logout{background:transparent;border:1px solid var(--err);color:var(--err);padding:5px 10px;font-size:0.75rem;width:auto;margin:0;border-radius:6px; cursor: pointer;}
+        .date-picker-box{background:#0f172a;padding:10px;border-radius:10px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--acc); margin-bottom: 10px;}
+        .loading{display:none;text-align:center;color:var(--suc);margin-top:15px;font-size:0.9rem;font-weight:600;}
+        .error-msg{color:var(--err);font-size:0.8rem;margin-top:10px;display:none;}
+        input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+
+        /* --- ESTILOS EXCLUSIVOS PARA LA IMPRESORA TÉRMICA --- */
+        @media print {
+            /* 1. Ocultar TODO el sistema y el modal quitando su espacio físico */
+            body > :not(#ticketImpresion) { 
+                display: none !important; 
+            }
+            
+            /* 2. Forzar que el ticket aparezca y quitar el position absolute */
+            #ticketImpresion { 
+                display: block !important;
+                width: 80mm; /* Ancho de tu Epson */
+                font-family: 'Courier New', Courier, monospace; 
+                font-size: 15px; color: black; background: white;
+                margin: 0; padding: 0;
+            }
+            
+            .ticket-center { text-align: center; }
+            .ticket-line { border-bottom: 1px dashed black; margin: 5px 0; }
+            .ticket-item { display: flex; justify-content: space-between; margin-bottom: 3px;}
+            
+            /* 3. Quitar los márgenes automáticos de la hoja del navegador */
+            @page { margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="ticketImpresion" style="display: none;">
+    <div class="ticket-center">
+        <h2 style="margin:0; font-size: 16px;">SKY ZONE</h2>
+        <p style="margin:0;">Sucursal Santa Fe</p>
+        <p style="margin:0;" id="ticketFecha"></p>
+    </div>
+    <div class="ticket-line"></div>
+    <p style="margin:0;">Cajero: <span id="ticketCajero"></span></p>
+    <div class="ticket-line"></div>
+    <div id="ticketProductos"></div> <div class="ticket-line"></div>
+    <div class="ticket-item"><strong>TOTAL:</strong><strong id="ticketTotal"></strong></div>
+    <div class="ticket-item">Pago (<span id="ticketMetodo"></span>):<span id="ticketRecibido"></span></div>
+    <div class="ticket-item">Cambio:<span id="ticketCambio"></span></div>
+    <div class="ticket-center" style="margin-top: 15px;">
+        <p style="margin:0;">¡Gracias por tu visita!</p>
+        <p style="margin:0;">Conserva este ticket</p>
+    </div>
+</div>
+
+<div class="modal-overlay" id="paymentModal">
+    <div class="modal-box">
+        <h2 style="margin-top: 0; color: var(--acc);">Finalizar Cobro</h2>
+        <div style="font-size: 2.5rem; font-weight: bold; margin-bottom: 20px;" id="modalTotalAmount">$0.00</div>
+        
+        <label>Tipo de Pago</label>
+        <div class="payment-group">
+            <label class="payment-option"><input type="radio" name="modalMetodoPago" value="Efectivo" id="radioEfectivo" checked onchange="toggleCambioBox()"><div class="payment-box">💵 Efectivo</div></label>
+            <label class="payment-option"><input type="radio" name="modalMetodoPago" value="Tarjeta" id="radioTarjeta" onchange="toggleCambioBox()"><div class="payment-box">💳 Tarjeta</div></label>
+        </div>
+
+        <div class="change-box" id="cambioContainer">
+            <label>Monto recibido del cliente:</label>
+            <input type="number" id="modalPagoRecibido" placeholder="$0.00" oninput="calcularCambio()">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                <span style="color: var(--dim);">Vuelto (Cambio):</span>
+                <strong style="font-size: 1.5rem; color: var(--err);" id="modalCambio">$0.00</strong>
+            </div>
+        </div>
+
+        <button type="button" class="btn-main" id="btnConfirmarVenta" onclick="confirmarVenta()">CONFIRMAR VENTA E IMPRIMIR</button>
+        <button type="button" class="btn-main btn-cancel" onclick="cerrarModal()">Cancelar</button>
+    </div>
+</div>
+
+<div class="container">
+    <div id="loginView">
+        <h1 style="color: var(--acc); margin-bottom: 20px; font-size: 1.8rem;">SISTEMA DE VENTAS SANTA FE</h1>
+        <div style="text-align: left; margin-bottom: 20px;">
+            <label>USUARIO</label>
+            <select id="cajeroSelect">
+                <option value="" disabled selected>Selecciona tu nombre</option>
+                <option value="David">David</option>
+                <option value="Valentina">Valentina</option>
+                <option value="Ketzalli">Ketzalli</option>
+                <option value="Yunn">Yunn</option>
+                <option value="Fernanda">Fernanda</option>
+                <option value="Monse">Monse</option>
+                <option value="Johan">Johan</option>
+                <option value="Sandy">Sandy (Admin)</option>
+                <option value="Mia">Mia (Admin)</option>
+            </select>
+        </div>
+        <div style="text-align: left; margin-bottom: 20px;">
+            <label>PIN DE ACCESO</label>
+            <input type="password" id="pinInput" placeholder="****" inputmode="text" maxlength="6">
+        </div>
+        <div id="loginError" class="error-msg">PIN incorrecto o área no autorizada.</div>
+        <button type="button" class="btn-main" onclick="iniciarSesion()">ENTRAR AL SISTEMA</button>
+    </div>
+
+    <div id="adminView">
+        <div class="header">
+            <h1>Corte en Vivo</h1><button class="btn-logout" onclick="cerrarSesion()">Salir</button>
+        </div>
+        <div class="date-picker-box">
+            <span style="font-size: 0.85rem; font-weight: 600;">Área:</span>
+            <select id="reportArea" style="width: auto; padding: 5px; margin: 0; border-color: var(--dim);" onchange="cargarResumen()">
+                <option value="Taquilla">Taquilla</option>
+                <option value="Cafeteria">Cafetería</option>
+            </select>
+        </div>
+        <div class="date-picker-box">
+            <span style="font-size: 0.85rem; font-weight: 600;">Fecha:</span>
+            <input type="date" id="reportDate" style="width: auto; padding: 5px 10px; margin: 0; border-color: var(--dim);" onchange="cargarResumen()">
+        </div>
+        
+        <div id="adminLoading" style="text-align: center; color: var(--acc); margin: 20px 0;">Sincronizando con la nube...</div>
+        
+        <div id="adminContent" style="display: none;">
+            <div class="dashboard-grid">
+                <div class="dash-card money" style="grid-column: span 2;"><span>Total de Ingresos (Efec + Tarj)</span><strong id="dashTotalGlobal" style="font-size: 2.2rem;">$0.00</strong></div>
+                <div class="dash-card money"><span>En Efectivo</span><strong id="dashEfectivo" style="color: var(--txt); font-size: 1.2rem;">$0.00</strong></div>
+                <div class="dash-card money"><span>En Tarjeta</span><strong id="dashTarjeta" style="color: var(--txt); font-size: 1.2rem;">$0.00</strong></div>
+                
+                <div class="dash-card taq-only"><span>Total Saltadores</span><strong id="dashSaltadores">0</strong></div>
+                <div class="dash-card calcetas taq-only"><span>Calcetas Vendidas</span><strong id="dashCalcetas">0</strong></div>
+                
+                <div class="dash-card cafe-only" style="grid-column: span 2; display:none;"><span>Artículos Vendidos</span><strong id="dashArticulosCafe" style="color:var(--cafe)">0</strong></div>
+            </div>
+
+            <div id="listasTaquilla">
+                <div class="section-title">Desglose de Entradas</div><div class="breakdown-list" id="dashBreakdown"></div>
+                <div class="section-title">Desglose de Adicionales</div><div class="breakdown-list" id="dashAdicionales"></div>
+            </div>
+
+            <div id="listasCafeteria" style="display:none;">
+                <div class="section-title" style="color:var(--cafe); border-color:var(--cafe);">Desglose de Productos</div>
+                <div class="breakdown-list" id="dashProductosCafe"></div>
+            </div>
+
+            <button type="button" class="btn-main" style="background: transparent; border: 1px solid var(--dim); color: var(--dim);" onclick="cargarResumen()">Refrescar Datos</button>
+        </div>
+    </div>
+
+    <div id="posView">
+        <div class="header">
+            <h1 style="color:var(--acc);">Taquilla</h1><button class="btn-logout" onclick="cerrarSesion()">Salir (<span id="nombreCajeroHeader"></span>)</button>
+        </div>
+        <form id="posForm">
+            <input type="hidden" name="tipoRegistro" value="Taquilla">
+            <div class="section-title">Entradas (Precio Sin Calcetas)</div>
+            <div id="lista-entradas">
+                <div class="ticket-row entrada-item" data-nombre="1 Hora" data-precio="200">
+                    <div class="ticket-info"><div class="ticket-name">1 Hora</div><div class="ticket-price">$200 base</div></div>
+                    <div class="ticket-inputs">
+                        <div class="input-group"><label>Total Ent.</label><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'T')">-</button><input type="number" class="t-qty" min="0" oninput="calcular()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div></div>
+                        <div class="input-group"><label>Compran Calc.</label><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'T')">-</button><input type="number" class="t-calc" min="0" oninput="calcular()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div></div>
+                    </div>
+                </div>
+                <div class="ticket-row entrada-item" data-nombre="2 Horas" data-precio="240">
+                    <div class="ticket-info"><div class="ticket-name">2 Horas</div><div class="ticket-price">$240 base</div></div>
+                    <div class="ticket-inputs">
+                        <div class="input-group"><label>Total Ent.</label><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'T')">-</button><input type="number" class="t-qty" min="0" oninput="calcular()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div></div>
+                        <div class="input-group"><label>Compran Calc.</label><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'T')">-</button><input type="number" class="t-calc" min="0" oninput="calcular()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div></div>
+                    </div>
+                </div>
+                <div class="ticket-row entrada-item" data-nombre="3 Horas" data-precio="300">
+                    <div class="ticket-info"><div class="ticket-name">3 Horas</div><div class="ticket-price">$300 base</div></div>
+                    <div class="ticket-inputs">
+                        <div class="input-group"><label>Total Ent.</label><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'T')">-</button><input type="number" class="t-qty" min="0" oninput="calcular()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div></div>
+                        <div class="input-group"><label>Compran Calc.</label><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'T')">-</button><input type="number" class="t-calc" min="0" oninput="calcular()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div></div>
+                    </div>
+                </div>
+                <div class="ticket-row entrada-item" data-nombre="Day Pass" data-precio="400">
+                    <div class="ticket-info"><div class="ticket-name">Day Pass</div><div class="ticket-price">$400 base</div></div>
+                    <div class="ticket-inputs">
+                        <div class="input-group"><label>Total Ent.</label><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'T')">-</button><input type="number" class="t-qty" min="0" oninput="calcular()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div></div>
+                        <div class="input-group"><label>Compran Calc.</label><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'T')">-</button><input type="number" class="t-calc" min="0" oninput="calcular()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div></div>
+                    </div>
+                </div>
+                <div class="ticket-row entrada-item" data-nombre="Combo Day Pass" data-precio="290">
+                    <div class="ticket-info"><div class="ticket-name">Combo DP</div><div class="ticket-price">$290 base</div></div>
+                    <div class="ticket-inputs">
+                        <div class="input-group"><label>Total Ent.</label><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'T')">-</button><input type="number" class="t-qty" min="0" oninput="calcular()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div></div>
+                        <div class="input-group"><label>Compran Calc.</label><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'T')">-</button><input type="number" class="t-calc" min="0" oninput="calcular()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div></div>
+                    </div>
+                </div>
+                <div class="ticket-row entrada-item" data-nombre="Apoyo" data-precio="100">
+                    <div class="ticket-info"><div class="ticket-name">Apoyo</div><div class="ticket-price">$100 base</div></div>
+                    <div class="ticket-inputs">
+                        <div class="input-group"><label>Total Ent.</label><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'T')">-</button><input type="number" class="t-qty" min="0" oninput="calcular()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div></div>
+                        <div class="input-group"><label>Compran Calc.</label><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'T')">-</button><input type="number" class="t-calc" min="0" oninput="calcular()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-title">Adicionales</div>
+            <div class="adicionales-grid">
+                <div class="adicional-item adicional-row" data-nombre="Maquillaje" data-precio="15">
+                    <span>Maquillaje ($15)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'T')">-</button><input type="number" class="a-qty" min="0" oninput="calcular()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div>
+                </div>
+                <div class="adicional-item adicional-row" data-nombre="Locker" data-precio="30">
+                    <span>Locker ($30)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'T')">-</button><input type="number" class="a-qty" min="0" oninput="calcular()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div>
+                </div>
+                <div class="adicional-item adicional-row" data-nombre="Locker DP" data-precio="50">
+                    <span>Locker DP ($50)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'T')">-</button><input type="number" class="a-qty" min="0" oninput="calcular()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div>
+                </div>
+                <div class="adicional-item adicional-row" data-nombre="SkySocks" data-precio="59">
+                    <span>SkySocks ($59)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'T')">-</button><input type="number" class="a-qty" min="0" oninput="calcular()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div>
+                </div>
+            </div>
+
+            <input type="hidden" id="cajeroFinal_taq" name="cajeroFinal">
+            <input type="hidden" id="resumenEntradas" name="resumenEntradas">
+            <input type="hidden" id="resumenAdicionales" name="resumenAdicionales">
+            <input type="hidden" id="totalFinal_taq" name="totalFinal">
+            <input type="hidden" id="metodoPagoFinal_taq" name="metodoPagoFinal">
+
+            <div class="total-box"><span>TOTAL A COBRAR</span><strong id="displayTotal">$0.00</strong></div>
+            <button type="button" class="btn-main" onclick="abrirModalPago('Taquilla')">COMPLETAR ORDEN</button>
+            <button type="button" class="btn-main btn-cancel" onclick="limpiarTaquilla()">Borrar pedido</button>
+        </form>
+        <div id="mensajeTaq" class="loading">✓ Venta registrada e impresa</div>
+    </div>
+
+    <div id="cafeView">
+        <div class="header">
+            <h1 style="color:var(--cafe);">Cafetería</h1><button class="btn-logout" onclick="cerrarSesion()">Salir (<span id="nombreCajeroHeaderCafe"></span>)</button>
+        </div>
+        <form id="cafeForm">
+            <input type="hidden" name="tipoRegistro" value="Cafeteria">
+            
+            <div class="section-title" style="color:var(--cafe); border-color:var(--cafe);">Bebidas</div>
+            <div class="adicionales-grid">
+                <div class="adicional-item cafe-row" data-nombre="Coca cola" data-precio="39"><span>Coca cola ($39)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Coca Light" data-precio="39"><span>Coca Light ($39)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Coca Zero" data-precio="39"><span>Coca Zero ($39)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Sprite" data-precio="39"><span>Sprite ($39)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Fanta" data-precio="39"><span>Fanta ($39)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Mundet" data-precio="39"><span>Mundet ($39)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Delaware Punch" data-precio="39"><span>Delaware ($39)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Jugo Valle" data-precio="39"><span>Jugo Valle ($39)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Fuze Tea" data-precio="35"><span>Fuze Tea ($35)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Topochico" data-precio="39"><span>Topochico ($39)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Powerade" data-precio="49"><span>Powerade ($49)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Agua" data-precio="35"><span>Botella Agua ($35)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Garrafon Agua Simple" data-precio="110"><span>Garrafon Natural ($110)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Garrafon Agua Sabor" data-precio="130"><span>Garrafon Sabor ($130)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+            </div>
+
+            <div class="section-title" style="color:var(--cafe); border-color:var(--cafe); margin-top:20px;">Snacks y Comida</div>
+            <div class="adicionales-grid">
+                <div class="adicional-item cafe-row" data-nombre="Palomitas" data-precio="80"><span>Palomitas ($80)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Pizza" data-precio="250"><span>Pizza ($250)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Nuggets" data-precio="120"><span>Nuggets ($120)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Burguer Sencilla" data-precio="140"><span>Hamburguesa Sencilla ($140)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Burguer Especial" data-precio="160"><span>Hamburguesa Especial ($160)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Hotdog (2)" data-precio="120"><span>Hotdog x2 ($120)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Chicken Tenders" data-precio="120"><span>Chicken Tenders ($120)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Papas Francesa" data-precio="120"><span>Papas Francesa ($120)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Dedos Queso" data-precio="120"><span>Dedos Queso ($120)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Boneless" data-precio="120"><span>Boneless ($120)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Crazy Papas" data-precio="105"><span>Crazy Papas ($105)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Vaso Loco" data-precio="60"><span>Vaso Loco ($60)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Helado Frozen" data-precio="80"><span>Frozen Lab ($80)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+            </div>
+
+            <div class="section-title" style="color:var(--cafe); border-color:var(--cafe); margin-top:20px;">Combos Especiales</div>
+            <div class="adicionales-grid">
+                <div class="adicional-item cafe-row" data-nombre="Combo Hamburguesa" data-precio="220"><span>Combo Hamburguesa ($220)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+                <div class="adicional-item cafe-row" data-nombre="Combo SkyFriends" data-precio="379"><span>Combo SkyFriends ($379)</span><div class="qty-wrapper"><button type="button" class="btn-qty minus" onclick="modQty(this, -1, 'C')">-</button><input type="number" class="c-qty" min="0" oninput="calcularCafe()"><button type="button" class="btn-qty plus" onclick="modQty(this, 1, 'C')">+</button></div></div>
+            </div>
+
+            <input type="hidden" id="cajeroFinal_cafe" name="cajeroFinal">
+            <input type="hidden" id="resumenProductos_cafe" name="resumenProductos">
+            <input type="hidden" id="totalFinal_cafe" name="totalFinal">
+            <input type="hidden" id="metodoPagoFinal_cafe" name="metodoPagoFinal">
+
+            <div class="total-box cafe-total"><span>TOTAL A COBRAR</span><strong id="displayTotalCafe">$0.00</strong></div>
+            <button type="button" class="btn-main btn-cafe" onclick="abrirModalPago('Cafeteria')">COMPLETAR ORDEN</button>
+            <button type="button" class="btn-main btn-cancel" onclick="limpiarCafe()">Borrar pedido</button>
+        </form>
+        <div id="mensajeCafe" class="loading">✓ Venta registrada e impresa</div>
+    </div>
+</div>
+
+<script>
+    // ⚠️ PEGA TU URL DE APPS SCRIPT AQUÍ
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbw8q6RdD1E7n-l9tCG9FnGgxsRLxuzuzs1WNAGRnu0nGkMDDXLLQq6v9-feKlo_a4d8/exec'; 
+
+    const usuariosPermitidos = { 
+        "Yunn": {pin: "2701", rol: "Taquilla"}, 
+        "Fernanda": {pin: "3312", rol: "Taquilla"}, 
+        "Sandy": {pin: "0312", rol: "Admin"},
+        "Mia":{pin: "2301", rol: "Admin"},
+        "Monse": {pin: "", rol: "Cafeteria"}, 
+        "Johan": {pin: "140407", rol: "Cafeteria"},
+        "Valentina": {pin: "monse", rol: "Cafeteria"},
+        "Ketzalli": {pin: "1710", rol: "Taquilla"}
+    };
+
+    const hoy = new Date();
+    const hoyStr = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+    
+    window.onload = () => {
+        document.getElementById('reportDate').value = hoyStr;
+        const cajeroGuardado = localStorage.getItem('cajeroActivo');
+        const rolGuardado = localStorage.getItem('rolActivo');
+        if (cajeroGuardado && rolGuardado) enrutarUsuario(cajeroGuardado, rolGuardado);
+        calcular(); calcularCafe();
+    };
+
+    // --- FUNCIÓN BOTONES + y - ---
+    function modQty(btn, delta, area) {
+        const input = btn.parentElement.querySelector('input[type="number"]');
+        let val = parseInt(input.value) || 0;
+        val += delta;
+        if(val < 0) val = 0;
+        input.value = val === 0 ? '' : val;
+        
+        if (area === 'C') calcularCafe();
+        else calcular();
+    }
+
+    function iniciarSesion() {
+        const cajero = document.getElementById('cajeroSelect').value;
+        const pin = document.getElementById('pinInput').value;
+        let rol = null;
+
+        if(cajero === "David") {
+            if(pin === "2010") rol = "Taquilla";
+            else if(pin === "david") rol = "Cafeteria";
+        } else if (usuariosPermitidos[cajero] && usuariosPermitidos[cajero].pin === pin) {
+            rol = usuariosPermitidos[cajero].rol;
+        }
+
+        if (rol) {
+            localStorage.setItem('cajeroActivo', cajero);
+            localStorage.setItem('rolActivo', rol);
+            document.getElementById('loginError').style.display = 'none';
+            enrutarUsuario(cajero, rol);
+        } else {
+            document.getElementById('loginError').style.display = 'block';
+        }
+    }
+
+    function enrutarUsuario(cajero, rol) {
+        document.getElementById('loginView').style.display = 'none';
+        document.getElementById('posView').style.display = 'none';
+        document.getElementById('cafeView').style.display = 'none';
+        document.getElementById('adminView').style.display = 'none';
+
+        if(rol === "Admin") {
+            document.getElementById('adminView').style.display = 'block';
+            cargarResumen(); 
+        } else if (rol === "Cafeteria") {
+            document.getElementById('cafeView').style.display = 'block';
+            document.getElementById('nombreCajeroHeaderCafe').innerText = cajero;
+            document.getElementById('cajeroFinal_cafe').value = cajero;
+        } else if (rol === "Taquilla") {
+            document.getElementById('posView').style.display = 'block';
+            document.getElementById('nombreCajeroHeader').innerText = cajero;
+            document.getElementById('cajeroFinal_taq').value = cajero;
+        }
+    }
+
+    function cerrarSesion() {
+        localStorage.removeItem('cajeroActivo'); localStorage.removeItem('rolActivo');
+        document.getElementById('posView').style.display = 'none'; document.getElementById('cafeView').style.display = 'none';
+        document.getElementById('adminView').style.display = 'none'; document.getElementById('loginView').style.display = 'block';
+        document.getElementById('pinInput').value = ''; 
+    }
+
+    // --- LÓGICA DEL MODAL DE PAGO ---
+    let modalAreaActiva = '';
+    let totalModal = 0;
+
+    function abrirModalPago(area) {
+        modalAreaActiva = area;
+        let total = 0;
+        if(area === 'Taquilla') total = parseFloat(document.getElementById('totalFinal_taq').value);
+        if(area === 'Cafeteria') total = parseFloat(document.getElementById('totalFinal_cafe').value);
+        
+        if(total === 0 || isNaN(total)) return alert("El carrito está vacío. Agrega productos primero.");
+        
+        totalModal = total;
+        document.getElementById('modalTotalAmount').innerText = '$' + total.toLocaleString('es-MX', {minimumFractionDigits: 2});
+        document.getElementById('modalPagoRecibido').value = '';
+        document.getElementById('modalCambio').innerText = '$0.00';
+        
+        document.getElementById('radioEfectivo').checked = true;
+        toggleCambioBox();
+        document.getElementById('paymentModal').style.display = 'flex';
+    }
+
+    function cerrarModal() { document.getElementById('paymentModal').style.display = 'none'; }
+
+    function toggleCambioBox() {
+        const isEfectivo = document.getElementById('radioEfectivo').checked;
+        document.getElementById('cambioContainer').style.display = isEfectivo ? 'block' : 'none';
+    }
+
+    function calcularCambio() {
+        const recibido = parseFloat(document.getElementById('modalPagoRecibido').value) || 0;
+        const cambio = recibido - totalModal;
+        document.getElementById('modalCambio').innerText = '$' + (cambio > 0 ? cambio : 0).toLocaleString('es-MX', {minimumFractionDigits: 2});
+    }
+
+    // --- IMPRESIÓN DEL TICKET FÍSICO ---
+    function prepararTicketFisico() {
+        document.getElementById('ticketFecha').innerText = new Date().toLocaleString('es-MX');
+        document.getElementById('ticketCajero').innerText = localStorage.getItem('cajeroActivo');
+        document.getElementById('ticketTotal').innerText = document.getElementById('modalTotalAmount').innerText;
+        document.getElementById('ticketMetodo').innerText = document.getElementById('radioEfectivo').checked ? "Efectivo" : "Tarjeta";
+        
+        let recibido = document.getElementById('modalPagoRecibido').value;
+        let total = document.getElementById('modalTotalAmount').innerText;
+        document.getElementById('ticketRecibido').innerText = recibido ? '$' + parseFloat(recibido).toFixed(2) : total;
+        document.getElementById('ticketCambio').innerText = document.getElementById('modalCambio').innerText;
+
+        let productosArray = [];
+        if (modalAreaActiva === 'Taquilla') {
+            let ent = document.getElementById('resumenEntradas').value;
+            let adi = document.getElementById('resumenAdicionales').value;
+            if (ent && ent !== "Ninguna") productosArray = productosArray.concat(ent.split(" | "));
+            if (adi && adi !== "Ninguno") productosArray = productosArray.concat(adi.split(" | "));
+        } else {
+            let prod = document.getElementById('resumenProductos_cafe').value;
+            if (prod && prod !== "Ninguno") productosArray = productosArray.concat(prod.split(" | "));
+        }
+
+        let listaHTML = '';
+        productosArray.forEach(item => {
+            listaHTML += `<div style="font-size: 12px; margin-bottom: 2px;">- ${item}</div>`;
+        });
+        document.getElementById('ticketProductos').innerHTML = listaHTML;
+    }
+
+    function confirmarVenta() {
+        const isEfectivo = document.getElementById('radioEfectivo').checked;
+        const metodoPago = isEfectivo ? 'Efectivo' : 'Tarjeta';
+        
+        if (isEfectivo) {
+            const recibido = parseFloat(document.getElementById('modalPagoRecibido').value) || 0;
+            if (recibido < totalModal) return alert("El monto recibido no alcanza para cubrir el total.");
+        }
+
+        const btn = document.getElementById('btnConfirmarVenta');
+        btn.disabled = true; btn.innerText = "PROCESANDO...";
+
+        // 1. Preparamos el HTML del ticket con los datos ANTES de limpiar el formulario
+        prepararTicketFisico();
+
+        if(modalAreaActiva === 'Taquilla') {
+            document.getElementById('metodoPagoFinal_taq').value = metodoPago;
+            procesarFetch(document.getElementById('posForm'), 'mensajeTaq', limpiarTaquilla, btn);
+        } else {
+            document.getElementById('metodoPagoFinal_cafe').value = metodoPago;
+            procesarFetch(document.getElementById('cafeForm'), 'mensajeCafe', limpiarCafe, btn);
+        }
+    }
+
+    function procesarFetch(formObj, msgId, limpiarFunc, btnObj) {
+        fetch(scriptURL, { method: 'POST', body: new FormData(formObj)})
+            .then(() => {
+                document.getElementById(msgId).style.display = 'block';
+                
+                // 2. Ejecutamos la impresión física
+                window.print();
+
+                limpiarFunc(); cerrarModal();
+                btnObj.disabled = false; btnObj.innerText = "CONFIRMAR VENTA E IMPRIMIR";
+                setTimeout(() => { document.getElementById(msgId).style.display = 'none'; }, 3000);
+            }).catch(err => { alert("Error de conexión"); btnObj.disabled = false; btnObj.innerText = "CONFIRMAR VENTA E IMPRIMIR"; });
+    }
+
+
+    // --- ADMIN DASHBOARD ---
+    function cargarResumen() {
+        document.getElementById('adminLoading').style.display = 'block';
+        document.getElementById('adminContent').style.display = 'none';
+        
+        const fechaSeleccionada = document.getElementById('reportDate').value;
+        const areaSeleccionada = document.getElementById('reportArea').value;
+
+        if(areaSeleccionada === "Taquilla") {
+            document.querySelectorAll('.taq-only').forEach(el => el.style.display = 'block');
+            document.querySelectorAll('.cafe-only').forEach(el => el.style.display = 'none');
+            document.getElementById('listasTaquilla').style.display = 'block';
+            document.getElementById('listasCafeteria').style.display = 'none';
+        } else {
+            document.querySelectorAll('.taq-only').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.cafe-only').forEach(el => el.style.display = 'block');
+            document.getElementById('listasTaquilla').style.display = 'none';
+            document.getElementById('listasCafeteria').style.display = 'block';
+        }
+
+        fetch(`${scriptURL}?date=${fechaSeleccionada}&sheetType=${areaSeleccionada}`)
+            .then(res => res.json()).then(json => {
+                procesarDatosAdmin(json.data, areaSeleccionada);
+                document.getElementById('adminLoading').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+            }).catch(err => { document.getElementById('adminLoading').innerText = "Error de conexión con la base de datos."; });
+    }
+
+    function procesarDatosAdmin(datos, area) {
+        let totalEfectivo = 0, totalTarjeta = 0; 
+        
+        if (area === "Taquilla") {
+            let totalSaltadores = 0, totalCalcetasAdquiridas = 0;
+            let categorias = { "1 Hora": {qty:0, calc:0}, "2 Horas": {qty:0, calc:0}, "3 Horas": {qty:0, calc:0}, "Day Pass": {qty:0, calc:0}, "Combo Day Pass": {qty:0, calc:0}, "Apoyo": {qty:0, calc:0} };
+            let catAdicionales = {}; 
+
+            datos.forEach(venta => {
+                if (venta.metodoPago === "Efectivo") totalEfectivo += parseFloat(venta.total);
+                if (venta.metodoPago === "Tarjeta") totalTarjeta += parseFloat(venta.total);
+
+                if (venta.entradas && venta.entradas !== "Ninguna") {
+                    const items = venta.entradas.split(" | ");
+                    items.forEach(item => {
+                        const matchQty = item.match(/^(\d+)x/); const qty = matchQty ? parseInt(matchQty[1]) : 0;
+                        const matchCalc = item.match(/\(\+(\d+)\s+calcetas\)/); const calcCompradas = matchCalc ? parseInt(matchCalc[1]) : 0;
+                        let nombre = item.replace(/^\d+x\s+/, '').replace(/\s*\(\+\d+ calcetas\)/, '').trim();
+                        
+                        if (qty > 0) {
+                            totalSaltadores += qty;
+                            totalCalcetasAdquiridas += calcCompradas;
+                            if (categorias[nombre] !== undefined) { 
+                                categorias[nombre].qty += qty; 
+                                categorias[nombre].calc += calcCompradas; 
+                            }
+                        }
+                    });
+                }
+                if (venta.adicionales && venta.adicionales !== "Ninguno") {
+                    const itemsAdic = venta.adicionales.split(" | ");
+                    itemsAdic.forEach(item => {
+                        const matchQty = item.match(/^(\d+)x/); const qty = matchQty ? parseInt(matchQty[1]) : 0;
+                        let nombreAdic = item.replace(/^\d+x\s+/, '').trim();
+                        if (qty > 0) {
+                            if(nombreAdic === "SkySocks") totalCalcetasAdquiridas += qty;
+                            if (catAdicionales[nombreAdic] !== undefined) catAdicionales[nombreAdic] += qty;
+                            else catAdicionales[nombreAdic] = qty;
+                        }
+                    });
+                }
+            });
+
+            document.getElementById('dashTotalGlobal').innerText = '$' + (totalEfectivo + totalTarjeta).toLocaleString('es-MX', {minimumFractionDigits: 2});
+            document.getElementById('dashEfectivo').innerText = '$' + totalEfectivo.toLocaleString('es-MX', {minimumFractionDigits: 2});
+            document.getElementById('dashTarjeta').innerText = '$' + totalTarjeta.toLocaleString('es-MX', {minimumFractionDigits: 2});
+            document.getElementById('dashSaltadores').innerText = totalSaltadores;
+            document.getElementById('dashCalcetas').innerText = totalCalcetasAdquiridas;
+
+            const listEntradas = document.getElementById('dashBreakdown'); listEntradas.innerHTML = '';
+            for (const [nombre, datosCat] of Object.entries(categorias)) {
+                let detalleCalcetas = `<span class="breakdown-detail">Compraron ${datosCat.calc} calcetas</span>`;
+                listEntradas.innerHTML += `<div class="breakdown-item"><div><span>${nombre}</span>${detalleCalcetas}</div><strong>${datosCat.qty}</strong></div>`;
+            }
+
+            const listAdicionales = document.getElementById('dashAdicionales'); listAdicionales.innerHTML = '';
+            if(Object.keys(catAdicionales).length === 0) listAdicionales.innerHTML = `<div class="breakdown-item"><span style="color:var(--dim)">Sin ventas adicionales</span></div>`;
+            for (const [nombre, cantidad] of Object.entries(catAdicionales)) { listAdicionales.innerHTML += `<div class="breakdown-item"><span>${nombre}</span><strong>${cantidad}</strong></div>`; }
+        
+        } else if (area === "Cafeteria") {
+            let totalArticulos = 0; let desgloseCafe = {};
+
+            datos.forEach(venta => {
+                if (venta.metodoPago === "Efectivo") totalEfectivo += parseFloat(venta.total);
+                if (venta.metodoPago === "Tarjeta") totalTarjeta += parseFloat(venta.total);
+
+                if (venta.productos && venta.productos !== "Ninguno") {
+                    const items = venta.productos.split(" | ");
+                    items.forEach(item => {
+                        const matchQty = item.match(/^(\d+)x/); const qty = matchQty ? parseInt(matchQty[1]) : 0;
+                        let nombre = item.replace(/^\d+x\s+/, '').trim();
+                        if (qty > 0) {
+                            totalArticulos += qty;
+                            if (desgloseCafe[nombre]) desgloseCafe[nombre] += qty;
+                            else desgloseCafe[nombre] = qty;
+                        }
+                    });
+                }
+            });
+
+            document.getElementById('dashTotalGlobal').innerText = '$' + (totalEfectivo + totalTarjeta).toLocaleString('es-MX', {minimumFractionDigits: 2});
+            document.getElementById('dashEfectivo').innerText = '$' + totalEfectivo.toLocaleString('es-MX', {minimumFractionDigits: 2});
+            document.getElementById('dashTarjeta').innerText = '$' + totalTarjeta.toLocaleString('es-MX', {minimumFractionDigits: 2});
+            document.getElementById('dashArticulosCafe').innerText = totalArticulos;
+
+            const listProdCafe = document.getElementById('dashProductosCafe'); listProdCafe.innerHTML = '';
+            if(Object.keys(desgloseCafe).length === 0) listProdCafe.innerHTML = `<div class="breakdown-item"><span style="color:var(--dim)">Sin ventas aún</span></div>`;
+            for (const [nombre, cantidad] of Object.entries(desgloseCafe)) {
+                listProdCafe.innerHTML += `<div class="breakdown-item"><span>${nombre}</span><strong>${cantidad}</strong></div>`;
+            }
+        }
+    }
+
+    // --- PUNTO DE VENTA: TAQUILLA ---
+    function calcular() {
+        let granTotal = 0; let resumenEnt = []; let resumenAdi = [];
+        document.querySelectorAll('.entrada-item').forEach(item => {
+            const nombre = item.getAttribute('data-nombre'); const precio = parseFloat(item.getAttribute('data-precio'));
+            const inputQty = item.querySelector('.t-qty'); const inputCalc = item.querySelector('.t-calc');
+            
+            let qty = inputQty && inputQty.value ? parseInt(inputQty.value) : 0;
+            let qtyCalc = inputCalc && inputCalc.value ? parseInt(inputCalc.value) : 0;
+            
+            if (qty > 0) {
+                if (qtyCalc > qty) { qtyCalc = qty; inputCalc.value = qty; }
+                
+                granTotal += (qty * precio);
+                granTotal += (qtyCalc * 59);
+                
+                let texto = `${qty}x ${nombre}`; if (qtyCalc > 0) texto += ` (+${qtyCalc} calcetas)`; resumenEnt.push(texto);
+            }
+        });
+
+        document.querySelectorAll('.adicional-row').forEach(item => {
+            const nombre = item.getAttribute('data-nombre'); const precio = parseFloat(item.getAttribute('data-precio'));
+            const inputQty = item.querySelector('.a-qty'); let qty = inputQty && inputQty.value ? parseInt(inputQty.value) : 0;
+            if (qty > 0) { granTotal += (qty * precio); resumenAdi.push(`${qty}x ${nombre}`); }
+        });
+
+        document.getElementById('displayTotal').innerText = '$' + granTotal.toLocaleString('es-MX', {minimumFractionDigits: 2});
+        document.getElementById('resumenEntradas').value = resumenEnt.length > 0 ? resumenEnt.join(" | ") : "Ninguna";
+        document.getElementById('resumenAdicionales').value = resumenAdi.length > 0 ? resumenAdi.join(" | ") : "Ninguno";
+        document.getElementById('totalFinal_taq').value = granTotal;
+    }
+    
+    function limpiarTaquilla() {
+        document.querySelectorAll('#posForm .t-qty, #posForm .t-calc, #posForm .a-qty').forEach(i => i.value = '');
+        calcular();
+    }
+
+    // --- PUNTO DE VENTA: CAFETERÍA ---
+    function calcularCafe() {
+        let granTotal = 0; let resumenCafe = [];
+        document.querySelectorAll('.cafe-row').forEach(item => {
+            const nombre = item.getAttribute('data-nombre'); const precio = parseFloat(item.getAttribute('data-precio'));
+            const inputQty = item.querySelector('.c-qty'); let qty = inputQty && inputQty.value ? parseInt(inputQty.value) : 0;
+            if (qty > 0) { granTotal += (qty * precio); resumenCafe.push(`${qty}x ${nombre}`); }
+        });
+
+        document.getElementById('displayTotalCafe').innerText = '$' + granTotal.toLocaleString('es-MX', {minimumFractionDigits: 2});
+        document.getElementById('resumenProductos_cafe').value = resumenCafe.length > 0 ? resumenCafe.join(" | ") : "Ninguno";
+        document.getElementById('totalFinal_cafe').value = granTotal;
+    }
+    
+    function limpiarCafe() {
+        document.querySelectorAll('#cafeForm .c-qty').forEach(i => i.value = '');
+        calcularCafe();
+    }
+</script>
+</body>
+</html>
