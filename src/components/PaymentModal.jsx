@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import TicketImpresion from './TicketImpresion';
-
-const scriptURL = 'https://script.google.com/macros/s/AKfycbw8q6RdD1E7n-l9tCG9FnGgxsRLxuzuzs1WNAGRnu0nGkMDDXLLQq6v9-feKlo_a4d8/exec';
+import { db } from '../config/firebase';
+import { collection, addDoc } from 'firebase/firestore';
+import { taquillaProducts } from '../data/products';
 
 const PaymentModal = ({ area, onClose }) => {
   const { cart, total, clearCart } = useCart();
@@ -11,6 +12,7 @@ const PaymentModal = ({ area, onClose }) => {
   
   const [metodo, setMetodo] = useState('Efectivo');
   const [recibido, setRecibido] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -24,28 +26,57 @@ const PaymentModal = ({ area, onClose }) => {
 
     setLoading(true);
 
-    // Preparar FormData para Google Apps Script
-    const formData = new FormData();
-    formData.append('tipoRegistro', area);
-    formData.append('cajeroFinal', user?.nombre || 'Desconocido');
-    formData.append('totalFinal', total);
-    formData.append('metodoPagoFinal', metodo);
-
-    // Formatear resumen
-    let resumen = cart.map(item => `${item.qty}x ${item.nombre} ($${item.precio})`);
+    // Preparar objeto para Firebase
+    let resumen = cart.map(item => {
+      const prod = taquillaProducts.entradas.find(p => p.nombre === item.nombre);
+      const suffix = (prod && prod.incCalcetas > 0) ? ` (+${prod.incCalcetas} calcetas)` : '';
+      return `${item.qty}x ${item.nombre}${suffix} ($${item.precio})`;
+    }).join(" | ") || "Ninguno";
     
+    const ventaData = {
+      area: area,
+      cajero: user?.nombre || 'Desconocido',
+      total: total,
+      metodoPago: metodo,
+      fecha: new Date().toISOString(),
+      timestamp: Date.now()
+    };
+    // Calcular hora de salida automática basada en la duración del ticket (CDMX)
     if (area === 'Taquilla') {
-      formData.append('resumenEntradas', resumen.join(" | ") || "Ninguna");
-      formData.append('resumenAdicionales', "Ninguno"); // Simplify for now
+      // Obtener la mayor duración (en minutos) de los productos en el carrito
+      let maxDuration = 0;
+      cart.forEach(item => {
+        const prod = taquillaProducts.entradas.find(p => p.nombre === item.nombre);
+        if (prod && prod.duration) {
+          // Si hay varias entradas, consideramos la mayor duración
+          maxDuration = Math.max(maxDuration, prod.duration);
+        }
+      });
+
+      if (maxDuration > 0) {
+        const exitDate = new Date(Date.now() + maxDuration * 60 * 1000);
+        ventaData.exitHour = exitDate.getHours();
+        ventaData.exitMinute = exitDate.getMinutes();
+        ventaData.exitTimestamp = exitDate.getTime();
+      } else {
+        // SKY PASS o APOYO sin límite de tiempo
+        ventaData.exitHour = null;
+        ventaData.exitMinute = null;
+        ventaData.exitTimestamp = null;
+      }
+    }
+
+    if (area === 'Taquilla') {
+      ventaData.entradas = resumen;
+      ventaData.adicionales = "Ninguno";
     } else {
-      formData.append('resumenProductos', resumen.join(" | ") || "Ninguno");
+      ventaData.productos = resumen;
     }
 
     try {
-      // Intentar enviar datos al script de Google
-      await fetch(scriptURL, { method: 'POST', body: formData, mode: 'no-cors' });
+      await addDoc(collection(db, 'ventas'), ventaData);
       
-      // Imprimir el ticket de manera sincrona después de enviar a GAS (modo no-cors no da response detallada)
+      // Imprimir el ticket de manera sincrona después de enviar a Firebase
       window.print();
       
       setSuccess(true);
@@ -90,23 +121,26 @@ const PaymentModal = ({ area, onClose }) => {
             </div>
 
             {metodo === 'Efectivo' && (
-              <div className="neu-box" style={{ padding: '15px', marginBottom: '20px', textAlign: 'left' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Monto recibido del cliente:</label>
-                <input 
-                  type="number" 
-                  className="neu-input" 
-                  style={{ marginTop: '10px', fontSize: '1.2rem', textAlign: 'center' }} 
-                  placeholder="$0.00"
-                  value={recibido}
-                  onChange={(e) => setRecibido(e.target.value)}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px' }}>
-                  <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Vuelto (Cambio):</span>
-                  <strong style={{ fontSize: '1.2rem', color: cambio >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)' }}>
-                    ${cambio > 0 ? cambio.toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '0.00'}
-                  </strong>
+              <>
+                <div className="neu-box" style={{ padding: '15px', marginBottom: '20px', textAlign: 'left' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Monto recibido del cliente:</label>
+                  <input
+                    type="number"
+                    className="neu-input"
+                    style={{ marginTop: '10px', fontSize: '1.2rem', textAlign: 'center' }}
+                    placeholder="$0.00"
+                    value={recibido}
+                    onChange={(e) => setRecibido(e.target.value)}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px' }}>
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Vuelto (Cambio):</span>
+                    <strong style={{ fontSize: '1.2rem', color: cambio >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)' }}>
+                      ${cambio > 0 ? cambio.toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '0.00'}
+                    </strong>
+                  </div>
                 </div>
-              </div>
+
+              </>
             )}
 
             <button 

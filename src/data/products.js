@@ -1,17 +1,17 @@
 export const taquillaProducts = {
   entradas: [
-    { nombre: "1 Hora", precio: 200, incCalcetas: 0 },
-    { nombre: "2 Horas", precio: 240, incCalcetas: 0 },
-    { nombre: "3 Horas", precio: 300, incCalcetas: 0 },
-    { nombre: "Apoyo", precio: 100, incCalcetas: 0 },
-    { nombre: "Paquete Peque Aventura", precio: 299, incCalcetas: 1 },
-    { nombre: "Paquete Peque Diversion", precio: 349, incCalcetas: 1 },
-    { nombre: "Paquete Super Aventura", precio: 299, incCalcetas: 1 },
-    { nombre: "Paquete familiar", precio: 999, incCalcetas: 0 }
+    { nombre: "MEDIUM", subtitle: "60 minutos", precio: 259, incCalcetas: 0, duration: 60 },
+    { nombre: "STANDARD", subtitle: "120 minutos", precio: 299, incCalcetas: 0, duration: 120 },
+    { nombre: "PREMIUM", subtitle: "180 minutos", precio: 359, incCalcetas: 0, duration: 180 },
+    { nombre: "SKY PASS", subtitle: "tiempo ilimitado", precio: 459, incCalcetas: 0, duration: 0 },
+    { nombre: "APOYO", subtitle: "acompañamiento", precio: 159, incCalcetas: 0, duration: 0 },
+    { nombre: "Paquete Peque Aventura", precio: 299, incCalcetas: 1, duration: 120 },
+    { nombre: "Paquete Peque Diversion", precio: 349, incCalcetas: 1, duration: 120 },
+    { nombre: "Paquete Super Aventura", precio: 299, incCalcetas: 1, duration: 120 },
+    { nombre: "Paquete familiar", precio: 999, incCalcetas: 0, duration: 0 }
   ],
   adicionales: [
-    { nombre: "Locker", precio: 30 },
-    { nombre: "Locker DP", precio: 50 },
+    { nombre: "Locker", precio: 0, precioAbierto: true },
     { nombre: "SkySocks", precio: 59 }
   ]
 };

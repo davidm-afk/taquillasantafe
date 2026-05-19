@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, RefreshCw } from 'lucide-react';
-
-const scriptURL = 'https://script.google.com/macros/s/AKfycbw8q6RdD1E7n-l9tCG9FnGgxsRLxuzuzs1WNAGRnu0nGkMDDXLLQq6v9-feKlo_a4d8/exec';
+import { LogOut } from 'lucide-react';
+import { db } from '../config/firebase';
+import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import GuestList from '../components/GuestList';
 
 const AdminDashboard = () => {
   const { logout } = useAuth();
@@ -16,28 +17,37 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
-
-  const fetchDatos = async () => {
-    setLoading(true);
-    setError('');
-    setData(null);
-    try {
-      // El script original pasaba la fecha directamente en formato YYYY-MM-DD
-      const res = await fetch(`${scriptURL}?date=${date}&sheetType=${area}`);
-      if (!res.ok) throw new Error('Network response was not ok');
-      const json = await res.json();
-
-      setData(json.data || []);
-    } catch (err) {
-      setError('Error al obtener los datos. Verifica tu conexión.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [editingVenta, setEditingVenta] = useState(null);
 
   useEffect(() => {
-    fetchDatos();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setLoading(true);
+
+    // Create local timezone bounds in milliseconds
+    const [yyyy, mm, dd] = date.split('-');
+    const localStart = new Date(yyyy, parseInt(mm) - 1, dd, 0, 0, 0, 0).getTime();
+    const localEnd = new Date(yyyy, parseInt(mm) - 1, dd, 23, 59, 59, 999).getTime();
+
+    // Query using the numeric timestamp to completely avoid string timezone mismatches
+    const q = query(
+      collection(db, 'ventas'),
+      where('timestamp', '>=', localStart),
+      where('timestamp', '<=', localEnd)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const docs = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(data => data.area === area); // Local filter by area
+
+      setData(docs);
+      setLoading(false);
+    }, (err) => {
+      console.error("Firestore Error:", err);
+      setError('Error al conectar con Firebase. Revisa la consola.');
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [date, area]);
 
   // Procesamiento de métricas
@@ -78,7 +88,7 @@ const AdminDashboard = () => {
 
               const matchCalc = item.match(/\(\+(\d+)\s+calcetas/);
               if (matchCalc) {
-                totalCalcetas += parseInt(matchCalc[1]);
+                totalCalcetas += parseInt(matchCalc[1]) * qty;
               }
             }
           });
@@ -112,6 +122,18 @@ const AdminDashboard = () => {
       }
     });
   }
+
+  const handleDelete = async (id) => {
+    if (window.confirm("¿Estás seguro de que deseas eliminar permanentemente esta venta de los registros de Firebase?")) {
+      try {
+        await deleteDoc(doc(db, 'ventas', id));
+        alert("Venta eliminada exitosamente.");
+      } catch (err) {
+        console.error("Error al eliminar venta:", err);
+        alert("Error al intentar eliminar la venta de Firebase.");
+      }
+    }
+  };
 
   return (
     <div style={{ padding: '20px 40px', display: 'flex', flexDirection: 'column', height: '100vh', overflowY: 'auto' }}>
@@ -153,9 +175,6 @@ const AdminDashboard = () => {
             <option value="Cafeteria">Cafetería</option>
           </select>
         </div>
-        <button className="neu-button" onClick={fetchDatos} style={{ marginTop: '22px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <RefreshCw size={18} /> Actualizar
-        </button>
       </div>
 
       {loading ? (
@@ -208,7 +227,7 @@ const AdminDashboard = () => {
                 </div>
                 <div className="neu-box" style={{ padding: '20px' }}>
                   <h3 style={{ margin: '0 0 15px 0', borderBottom: '2px solid var(--bg-color)', paddingBottom: '10px' }}>
-                    Adicionales & Calcetas (Total Calc: {totalCalcetas})
+                    Adicionales y Calcetas (Total Calcetas Vendidas: {totalCalcetas})
                   </h3>
                   {Object.keys(desgloseAdicionales).length === 0 ? <p>No hay adicionales</p> : null}
                   {Object.keys(desgloseAdicionales).map(k => (
@@ -236,8 +255,233 @@ const AdminDashboard = () => {
               </div>
             )}
           </div>
+          {area === 'Taquilla' && <GuestList />}
+
+          {/* Tabla de Registro de Ventas del Día */}
+          <div className="neu-box" style={{ padding: '25px', marginTop: '30px', textAlign: 'left' }}>
+            <h2 className="text-gradient-blue" style={{ marginTop: 0, fontSize: '1.6rem', marginBottom: '20px', borderBottom: '2px solid var(--bg-color)', paddingBottom: '12px' }}>
+              📊 Registro de Ventas del Día
+            </h2>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', color: 'var(--text-main)', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--bg-color)' }}>
+                    <th style={{ padding: '12px 8px', color: 'var(--text-muted)' }}>Cajero</th>
+                    <th style={{ padding: '12px 8px', color: 'var(--text-muted)' }}>Detalle</th>
+                    <th style={{ padding: '12px 8px', color: 'var(--text-muted)' }}>Método</th>
+                    <th style={{ padding: '12px 8px', color: 'var(--text-muted)' }}>Total</th>
+                    <th style={{ padding: '12px 8px', color: 'var(--text-muted)', textAlign: 'center' }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                        No hay registros de ventas para este día.
+                      </td>
+                    </tr>
+                  ) : (
+                    data.map((venta) => (
+                      <tr key={venta.id} style={{ borderBottom: '1px solid var(--bg-color)' }}>
+                        <td style={{ padding: '12px 8px' }}>{venta.cajero}</td>
+                        <td style={{ padding: '12px 8px', maxWidth: '300px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {venta.entradas || venta.productos || 'Ninguno'}
+                        </td>
+                        <td style={{ padding: '12px 8px' }}>{venta.metodoPago}</td>
+                        <td style={{ padding: '12px 8px', fontWeight: 'bold' }}>
+                          ${parseFloat(venta.total).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                          <button
+                            onClick={() => setEditingVenta(venta)}
+                            className="neu-button"
+                            style={{ padding: '6px 12px', marginRight: '10px', fontSize: '0.85rem', color: 'var(--accent-blue)', cursor: 'pointer' }}
+                          >
+                            ✏️ Editar
+                          </button>
+                          <button
+                            onClick={() => handleDelete(venta.id)}
+                            className="neu-button"
+                            style={{ padding: '6px 12px', fontSize: '0.85rem', color: 'var(--accent-danger)', cursor: 'pointer' }}
+                          >
+                            🗑️ Borrar
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </>
       ) : null}
+
+      {editingVenta && (
+        <EditVentaModal
+          venta={editingVenta}
+          onClose={() => setEditingVenta(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+// Componente Modal de Edición de Ventas
+const EditVentaModal = ({ venta, onClose }) => {
+  const [cajero, setCajero] = useState(venta.cajero || '');
+  const [totalVal, setTotalVal] = useState(venta.total || '');
+  const [metodoPago, setMetodoPago] = useState(venta.metodoPago || 'Efectivo');
+  const [detalle, setDetalle] = useState(venta.entradas || venta.productos || '');
+  const [exitHour, setExitHour] = useState(venta.exitHour !== null && venta.exitHour !== undefined ? venta.exitHour : '');
+  const [exitMinute, setExitMinute] = useState(venta.exitMinute !== null && venta.exitMinute !== undefined ? venta.exitMinute : '');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const updateData = {
+        cajero,
+        total: parseFloat(totalVal) || 0,
+        metodoPago,
+      };
+
+      if (venta.area === 'Taquilla') {
+        updateData.entradas = detalle;
+        if (exitHour !== '' && exitMinute !== '') {
+          const exitDate = new Date();
+          exitDate.setHours(parseInt(exitHour, 10), parseInt(exitMinute, 10), 0, 0);
+          updateData.exitHour = parseInt(exitHour, 10);
+          updateData.exitMinute = parseInt(exitMinute, 10);
+          updateData.exitTimestamp = exitDate.getTime();
+        } else {
+          updateData.exitHour = null;
+          updateData.exitMinute = null;
+          updateData.exitTimestamp = null;
+        }
+      } else {
+        updateData.productos = detalle;
+      }
+
+      await updateDoc(doc(db, 'ventas', venta.id), updateData);
+      alert("Venta actualizada con éxito.");
+      onClose();
+    } catch (err) {
+      console.error("Error al actualizar venta:", err);
+      alert("Hubo un error al guardar los cambios en Firebase.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" style={{ display: 'flex', position: 'fixed', zIndex: 1000, left: 0, top: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' }}>
+      <div className="neu-box" style={{ padding: '30px', width: '90%', maxWidth: '500px', background: 'var(--bg-color)', borderRadius: '16px' }}>
+        <h2 className="text-gradient-blue" style={{ marginTop: 0, marginBottom: '20px' }}>✏️ Editar Registro de Venta</h2>
+        <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '15px', textAlign: 'left' }}>
+          <div>
+            <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>CAJERO</label>
+            <input
+              type="text"
+              className="neu-input"
+              value={cajero}
+              onChange={(e) => setCajero(e.target.value)}
+              required
+              style={{ marginTop: '5px' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>DETALLE (BOLETOS / PRODUCTOS)</label>
+            <input
+              type="text"
+              className="neu-input"
+              value={detalle}
+              onChange={(e) => setDetalle(e.target.value)}
+              required
+              style={{ marginTop: '5px' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>TOTAL ($)</label>
+              <input
+                type="number"
+                step="0.01"
+                className="neu-input"
+                value={totalVal}
+                onChange={(e) => setTotalVal(e.target.value)}
+                required
+                style={{ marginTop: '5px' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>MÉTODO DE PAGO</label>
+              <select
+                className="neu-input"
+                value={metodoPago}
+                onChange={(e) => setMetodoPago(e.target.value)}
+                style={{ marginTop: '5px' }}
+              >
+                <option value="Efectivo">Efectivo</option>
+                <option value="Tarjeta">Tarjeta</option>
+              </select>
+            </div>
+          </div>
+
+          {venta.area === 'Taquilla' && (
+            <div>
+              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>HORA DE SALIDA MANUAL (HH:MM)</label>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '5px', alignItems: 'center' }}>
+                <input
+                  type="number"
+                  placeholder="HH"
+                  min="0"
+                  max="23"
+                  className="neu-input"
+                  value={exitHour}
+                  onChange={(e) => setExitHour(e.target.value)}
+                  style={{ width: '70px', textAlign: 'center' }}
+                />
+                <span>:</span>
+                <input
+                  type="number"
+                  placeholder="MM"
+                  min="0"
+                  max="59"
+                  className="neu-input"
+                  value={exitMinute}
+                  onChange={(e) => setExitMinute(e.target.value)}
+                  style={{ width: '70px', textAlign: 'center' }}
+                />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>(dejar vacío si es SKY PASS o APOYO)</span>
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '15px', marginTop: '20px' }}>
+            <button
+              type="submit"
+              className="neu-button"
+              disabled={submitting}
+              style={{ flex: 1, color: 'var(--accent-success)' }}
+            >
+              {submitting ? 'GUARDANDO...' : 'GUARDAR CAMBIOS'}
+            </button>
+            <button
+              type="button"
+              className="neu-button"
+              onClick={onClose}
+              disabled={submitting}
+              style={{ flex: 1, color: 'var(--accent-danger)' }}
+            >
+              CANCELAR
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
