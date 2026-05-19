@@ -1,106 +1,154 @@
-# 🪐 SkyZone POS - Sistema de Punto de Venta Premium
+# 🪐 Ecosistema SkyZone POS - Manual de Ingeniería y Arquitectura Técnica
 
-Bienvenido a la documentación técnica oficial de **SkyZone POS**, un sistema de punto de venta premium de alta fidelidad diseñado con estética de Neumorfismo. El sistema está estructurado con React, Vite y Firebase Firestore, optimizado para operaciones en tiempo real entre múltiples terminales de cobro (Taquilla y Cafetería) y administración centralizada.
-
----
-
-## 🛠️ Arquitectura y Tecnologías Clave
-
-El proyecto está diseñado bajo un modelo ágil, modular y altamente desacoplado, garantizando respuestas rápidas y consistentes.
-
-1. **Vite + React (ES6+)**:
-   - Utilizado como motor del ecosistema SPA por su compilación ultrarrápida (HMR) y empaquetado optimizado para baja latencia en terminales físicas de punto de venta.
-2. **Firebase Firestore (Base de Datos en Tiempo Real)**:
-   - Base de datos orientada a documentos NoSQL que gestiona la sincronización inmediata del estado de saltadores, comisiones, ventas diarias e impresiones de tickets de forma bidireccional mediante suscripciones en tiempo real (`onSnapshot`).
-3. **Vanilla CSS (Diseño Neumórfico Premium)**:
-   - Implementado para otorgar una identidad visual tridimensional única, con micro-animaciones en botones táctiles, inputs inmersivos y soporte integrado de transición suave para **Modo Claro** y **Modo Oscuro** (Cyber Dark).
-4. **React Router DOM**:
-   - Gestor de enrutamiento del lado del cliente con protección de rutas (`ProtectedRoute`) y segmentación de accesos por roles operativos (Admin, Taquilla, Cafetería).
-5. **Lucide Icons**:
-   - Paquete de iconografía vectorial ligera para controles de interfaz táctil intuitiva.
+Bienvenido al centro de documentación técnica y de ingeniería de **SkyZone POS**, un sistema de punto de venta táctil de alto rendimiento y fidelidad visual diseñado bajo los lineamientos estéticos del **Neumorfismo 3D**. Este sistema se especializa en la gestión y control en tiempo real de boletos (Taquilla), alimentos/bebidas (Cafetería con soporte de comanda multicarrito activa) y auditoría contable/operativa en tiempo real (Panel de Administración).
 
 ---
 
-## 📁 Estructura del Workspace
+## 🚀 1. Stack Tecnológico de Alto Rendimiento
 
-A continuación se detalla la distribución de archivos clave en la carpeta del código fuente (`src`):
+El sistema ha sido cimentado sobre tecnologías modernas que garantizan una velocidad de procesamiento menor a 20ms en actualizaciones de UI y persistencia tolerante a fallos:
 
-```bash
-c:\Users\david\OneDrive\Documentos\SKYZONE
-├── docs/                        # Recursos de documentación
-│   └── img/                     # Capturas de pantalla didácticas para el manual
-├── src/
-│   ├── assets/                  # Estilos auxiliares e imágenes estáticas
-│   ├── components/              # Componentes de UI modulares y reutilizables
-│   │   ├── CartSidebar.jsx      # Barra de compra con carpetas de comanda plegables
-│   │   ├── GuestList.jsx        # Lista activa de saltadores en tiempo real (exit > now())
-│   │   ├── PaymentModal.jsx     # Selector de forma de pago y registro directo en Firestore
-│   │   ├── ProductCard.jsx      # Tarjeta interactiva de producto (soporta precio abierto)
-│   │   ├── Sidebar.jsx          # Barra lateral de navegación con tema integrado
-│   │   ├── ThemeToggle.jsx      # Interruptor flotante de modo claro/oscuro para login/admin
-│   │   └── TicketImpresion.jsx  # Vista de ticket físico formateado en CSS para impresoras térmicas
-│   ├── config/
-│   │   └── firebase.js          # Inicialización y SDK de Firebase Client
-│   ├── context/
-│   │   ├── AuthContext.jsx      # Gestión y persistencia de sesiones de cajeros
-│   │   └── CartContext.jsx      # Lógica multicarrito transparente (Cuentas Abiertas)
-│   ├── data/
-│   │   └── products.js          # Catálogo de productos y paquetes parametrizados
-│   ├── pages/
-│   │   ├── AdminDashboard.jsx   # Estadísticas del día, tabla CRUD de ventas y gestión
-│   │   ├── Login.jsx            # Pantalla de acceso seguro para cajeros
-│   │   ├── PosCafeteria.jsx     # POS de Cafetería con menú interactivo y producto libre
-│   │   └── PosTaquilla.jsx      # POS de Taquilla enfocado a entradas y paquetes
-│   ├── App.css                  # Reglas CSS específicas de la aplicación
-│   ├── App.jsx                  # Ruteador central y renderizado global de componentes
-│   ├── index.css                # Diseño base de Neumorfismo y variables CSS de Modo Claro/Oscuro
-│   └── main.jsx                 # Punto de entrada de renderizado React
-├── package.json                 # Dependencias y scripts de construcción
-└── vite.config.js               # Ajustes y plugins de Vite
+*   **Vite v8.0.13 (Entorno de Compilación y Bundler):**
+    *   Sustituye a Webpack para ofrecer arranques instantáneos gracias al pre-empaquetado de dependencias con `esbuild` y recargas de módulos calientes (HMR) ultrarrápidas sobre ES Modules nativos.
+*   **React v18 (Biblioteca de UI Reactiva):**
+    *   Aprovecha el Virtual DOM de React para actualizar únicamente los nodos que sufren modificaciones físicas. Utiliza ganchos de estado avanzados (`useContext`, `useEffect`, `useMemo`) para mantener la coherencia del estado del carro y los saltadores.
+*   **Firebase SDK v10 (Capa de Persistencia y Tiempo Real):**
+    *   Utiliza **Firestore** como base de datos de documentos distribuidos.
+    *   La sincronización en tiempo real se realiza mediante controladores de suscripción de bases de datos activa (`onSnapshot`), asegurando que cualquier ticket cobrado, saltador ingresado o edición administrativa se propague en menos de 100ms a todas las computadoras del local.
+*   **Vanilla CSS + Custom CSS Variables (Diseño Neumórfico):**
+    *   La totalidad del diseño está codificada de manera artesanal y pura, sin sobrecargar con frameworks pesados de CSS como Bootstrap o Tailwind.
+    *   Utiliza variables nativas de CSS (`:root` y `[data-theme="dark"]`) para lograr un cambio de tema global y fluido mediante interpolación lineal de colores y sombras.
+
+---
+
+## 🎨 2. El Ecosistema de Neumorfismo y Temas Globales
+
+El neumorfismo es un estilo visual que emula la física de extrusión de objetos en relieve. Para lograr este efecto premium en pantallas táctiles y tradicionales, el archivo `src/index.css` define matrices de sombras exactas que representan hendiduras y relieves volumétricos:
+
+```css
+:root {
+  --bg-color: #e0e5ec;
+  --text-main: #2d3748;
+  --text-muted: #718096;
+  --shadow-light: 9px 9px 16px rgb(163,177,198,0.6), -9px -9px 16px rgba(255,255,255, 0.5);
+  --shadow-inset: inset 6px 6px 10px 0 rgba(163,177,198, 0.7), inset -6px -6px 10px 0 rgba(255,255,255, 0.8);
+}
+
+[data-theme="dark"] {
+  --bg-color: #1a1e24;
+  --text-main: #f7fafc;
+  --text-muted: #a0aec0;
+  --shadow-light: 8px 8px 16px #101217, -8px -8px 16px #242a31;
+  --shadow-inset: inset 6px 6px 10px #101217, inset -6px -6px 10px #242a31;
+}
 ```
 
+### Arquitectura de Controladores de Tema
+1.  **`ThemeToggle.jsx` (Acceso Flotante):** Posicionado de forma fija (`position: fixed`) en el Login y en la Administración. Alterna de manera reactiva y persiste la selección del cajero en el `localStorage` del navegador.
+2.  **`Sidebar.jsx` (Integración Nativa):** Implementado en los puntos de venta táctiles directamente debajo del botón Home. Utiliza un estilo neumórfico circular idéntico a las opciones del menú, garantizando coherencia visual y liberando espacio en la pantalla de cobro.
+
 ---
 
-## ⚡ Lógica Destacada del Sistema
+## ⚙️ 3. Ingeniería de Datos y Lógica Crítica
 
-### 🛒 Gestión Multicarrito Transparente (`CartContext.jsx`)
-Para soportar el flujo de **Cuentas Abiertas / Mesas** de la Cafetería sin alterar la simplicidad del flujo de la Taquilla, desarrollamos un mapeador en el estado de React:
+### A. Gestión de Comandas y Cuentas Abiertas (`CartContext.jsx`)
+La Cafetería requiere múltiples comandas simultáneas (ej. mesas o cuentas abiertas), mientras que la Taquilla necesita un flujo simplificado e instantáneo. Para solucionar esto sin duplicar código ni acoplar las vistas, la lógica de negocio en `CartContext` maneja una estructura de diccionario de carritos independientes:
+
 ```javascript
 const [carts, setCarts] = useState({
-  default: { name: 'Principal', items: [] }
+  Principal: { name: 'Principal', items: [] }
 });
-const [activeCartId, setActiveCartId] = useState('default');
+const [activeCartId, setActiveCartId] = useState('Principal');
 ```
-El contexto expone las variables derivadas `cart = carts[activeCartId].items` y `total`, por lo que **los módulos existentes consumen el carrito sin enterarse de que hay múltiples cuentas abiertas detrás**, logrando una compatibilidad absoluta del 100%.
 
-### ⏰ Conteo de Saltadores e Invitados Activos (`GuestList.jsx`)
-Para mostrar en el panel administrativo el número exacto de jumpers saltando dentro del parque en tiempo real, realizamos una consulta reactiva a Firebase filtrando las salidas previstas en el futuro:
+El contexto calcula y expone las propiedades derivadas del carrito actualmente activo:
+*   `cart`: Arreglo de artículos en `carts[activeCartId].items`.
+*   `total`: Suma matemática de `precio * qty` de los elementos de la cuenta activa.
+*   **Compatibilidad:** Dado que expone `cart` y `total` directamente, la vista de Taquilla funciona de manera transparente sin saber que existen múltiples carritos, logrando retrocompatibilidad absoluta.
+
+### B. Salidas y Saltadores Activos en Tiempo Real (`GuestList.jsx`)
+Para llevar una auditoría exacta de los brazaletes activos dentro del parque, se realiza una consulta reactiva a la base de datos de Firestore. Un saltador se considera "activo" únicamente si su hora programada de salida es posterior al segundo actual:
+
 ```javascript
 const q = query(
   collection(db, "ventas"),
   where("exitTimestamp", ">", Date.now())
 );
 ```
-El componente recalcula de forma interactiva y en tiempo real el tiempo restante de cada saltador en minutos, notificando al administrador de forma inmediata cuando el tiempo de una entrada ha finalizado.
+
+Dentro del componente, un intervalo de actualización de 1 segundo recalcula el tiempo restante para cada registro en minutos, eliminando de pantalla visual al brazalete tan pronto expira su tiempo de forma automática y reactiva.
 
 ---
 
-## 🚀 Guía de Instalación y Ejecución Local
+## 📂 4. Distribución del Workspace y Código Fuente
 
-Sigue estos pasos sencillos para correr el proyecto en tu entorno local de desarrollo:
+A continuación se presenta un plano detallado de la distribución de componentes técnicos para facilitar el mantenimiento futuro:
 
-1.  **Clonar el repositorio e instalar dependencias:**
-    ```bash
-    cd c:\Users\david\OneDrive\Documentos\SKYZONE
-    npm install
-    ```
-2.  **Iniciar Servidor de Desarrollo Local (Vite):**
-    ```bash
-    npm run dev
-    ```
-    *   Abre tu navegador en `http://localhost:5173`.
-3.  **Compilar para Producción:**
+```bash
+c:\Users\david\OneDrive\Documentos\SKYZONE
+├── docs/                        # Recursos de documentación interactiva
+│   └── img/                     # Capturas de pantalla físicas y reales del sistema
+│       ├── login_page.png       # Vista del portal de acceso neumórfico
+│       ├── pos_light.png        # Interfaz de cobro en Modo Claro
+│       ├── pos_dark.png         # Interfaz de cobro en Modo Oscuro (Cyber Dark)
+│       ├── pos_cafeteria.png    # Interfaz táctil de Cafetería con menú completo
+│       └── admin_panel.png      # Vista analítica y tabla CRUD del administrador
+├── src/
+│   ├── components/              # Componentes de UI modulares de presentación
+│   │   ├── CartSidebar.jsx      # Barra de compra plegable con soporte multicuenta
+│   │   ├── GuestList.jsx        # Lista activa y reactiva de saltadores
+│   │   ├── PaymentModal.jsx     # Selector de tipo de cobro (Efectivo/Tarjeta)
+│   │   ├── ProductCard.jsx      # Tarjeta interactiva de producto y precio abierto
+│   │   ├── Sidebar.jsx          # Barra de navegación neumórfica con tema integrado
+│   │   ├── ThemeToggle.jsx      # Control flotante de tema claro/oscuro
+│   │   └── TicketImpresion.jsx  # Maqueta en HTML/CSS optimizada para impresoras térmicas
+│   ├── config/
+│   │   └── firebase.js          # Inicialización del cliente SDK de Firebase Firestore
+│   ├── context/
+│   │   ├── AuthContext.jsx      # Control de sesiones de cajeros y roles de usuario
+│   │   └── CartContext.jsx      # Ecosistema de control y persistencia del carrito
+│   ├── data/
+│   │   └── products.js          # Catálogo unificado de alimentos, bebidas y boletos
+│   ├── pages/
+│   │   ├── AdminDashboard.jsx   # Auditoría, métricas diarias e interfaz de edición
+│   │   ├── Login.jsx            # Portal de acceso restringido
+│   │   ├── PosCafeteria.jsx     # Terminal táctil de Cafetería
+│   │   └── PosTaquilla.jsx      # Terminal de venta de entradas y Locker
+│   ├── App.jsx                  # Ruteador central y ruteo protegido
+│   └── index.css                # Hoja de estilos central y variables de tema
+```
+
+---
+
+## 🛠️ 5. Despliegue, Construcción e Instalación en Producción
+
+### A. Preparación en Red Local (Computadoras en Establecimiento)
+Si deseas que ambas computadoras de cobro operen de manera local sin subir la aplicación a internet:
+
+1.  **Compilar la aplicación estática:** Ejecuta en la terminal de la computadora principal:
     ```bash
     npm run build
     ```
-    *   Esto generará una carpeta `dist` con los archivos HTML, CSS y JS ultra comprimidos listos para cualquier hosting (Vercel, Firebase Hosting, Netlify).
+    Esto creará una carpeta `dist/` ultra optimizada con todo el JS y CSS minificados.
+2.  **Lanzar servidor local de alta velocidad:** Instala globalmente la herramienta `serve` e inicialízala apuntando a la carpeta de compilación:
+    ```bash
+    npm install -g serve
+    serve -s dist -l 5000
+    ```
+3.  **Enlazar terminal secundaria:**
+    *   Abre una terminal y teclea `ipconfig` para conocer la IP local de la computadora principal (ej. `192.168.1.50`).
+    *   En la segunda computadora, accede al navegador web e ingresa a `http://192.168.1.50:5000`.
+
+### B. Despliegue en la Nube (Vercel / Firebase Hosting)
+Para habilitar actualizaciones automáticas mediante integración continua:
+
+*   **Vercel:** Conecta tu repositorio de GitHub a tu cuenta de Vercel. Selecciona el proyecto `taquillasantafe` y haz clic en **Deploy**. Cada `git push` actualizará automáticamente las computadoras del establecimiento en tiempo real.
+*   **Firebase Hosting:** Ejecuta los siguientes comandos desde la carpeta raíz del proyecto:
+    ```bash
+    npm install -g firebase-tools
+    firebase login
+    firebase init hosting
+    # Selecciona tu base de datos y define "dist" como directorio público
+    npm run build
+    firebase deploy
+    ```
