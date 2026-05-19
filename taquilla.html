@@ -1,0 +1,491 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema ERP | Trampoline Park</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <link rel='stylesheet' href='styles.css'>
+</head>
+
+<body>
+
+    <div id="ticketImpresion" style="display: none;">
+        <div class="ticket-center">
+            <h2 style="margin:0; font-size: 16px;">SKY ZONE</h2>
+            <p style="margin:0; font-weight:bold;">Sucursal Santa Fe</p>
+            <p style="margin:3px 0; font-size: 9px; line-height: 1.2;">Prol. P.Âº de la Reforma 400, Santa
+                Fe, Zedec Sta
+                FÃ©, Ãlvaro ObregÃ³n, 01210 Ciudad de MÃ©xico, CDMX</p>
+            <p style="margin:0;" id="ticketFecha"></p>
+        </div>
+        <div class="ticket-line"></div>
+        <p style="margin:0;">Cajero: <span id="ticketCajero"></span></p>
+        <div class="ticket-line"></div>
+        <div id="ticketProductos"></div>
+        <div class="ticket-line"></div>
+        <div class="ticket-item"><strong>TOTAL:</strong><strong id="ticketTotal"></strong></div>
+        <div class="ticket-item">Pago (<span id="ticketMetodo"></span>):<span id="ticketRecibido"></span>
+        </div>
+        <div class="ticket-item">Cambio:<span id="ticketCambio"></span></div>
+        <div class="ticket-center" style="margin-top: 15px;">
+            <p style="margin:0;">Â¡Gracias por tu visita!</p>
+            <p style="margin:0;">Conserva este ticket</p>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="paymentModal">
+        <div class="modal-box">
+            <h2 style="margin-top: 0; color: var(--acc);">Finalizar Cobro</h2>
+            <div style="font-size: 2.5rem; font-weight: bold; margin-bottom: 20px;" id="modalTotalAmount">
+                $0.00</div>
+            <label>Tipo de Pago</label>
+            <div class="payment-group">
+                <label class="payment-option"><input type="radio" name="modalMetodoPago" value="Efectivo"
+                        id="radioEfectivo" checked onchange="toggleCambioBox()">
+                    <div class="payment-box">ðŸ’µ Efectivo</div>
+                </label>
+                <label class="payment-option"><input type="radio" name="modalMetodoPago" value="Tarjeta"
+                        id="radioTarjeta" onchange="toggleCambioBox()">
+                    <div class="payment-box">ðŸ’³ Tarjeta</div>
+                </label>
+            </div>
+            <div class="change-box" id="cambioContainer">
+                <label>Monto recibido del cliente:</label>
+                <input type="number" id="modalPagoRecibido" placeholder="$0.00" oninput="calcularCambio()">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                    <span style="color: var(--dim);">Vuelto (Cambio):</span>
+                    <strong style="font-size: 1.5rem; color: var(--err);" id="modalCambio">$0.00</strong>
+                </div>
+            </div>
+            <button type="button" class="btn-main" id="btnConfirmarVenta"
+                onclick="confirmarVenta()">CONFIRMAR VENTA E
+                IMPRIMIR</button>
+            <button type="button" class="btn-main btn-cancel" onclick="cerrarModal()">Cancelar</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="customProductModal">
+        <div class="modal-box">
+            <h2 style="margin-top: 0; color: var(--acc);">AÃ±adir Otro Producto</h2>
+            <p style="color:var(--dim); font-size:0.8rem; margin-top:-10px;">Agrega un artÃ­culo temporal al
+                carrito.</p>
+
+            <div style="text-align: left; margin-bottom: 15px;">
+                <label>Nombre del Producto / Paquete</label>
+                <input type="text" id="cpName" placeholder="Ej. Evento Especial, ReposiciÃ³n...">
+            </div>
+            <div style="text-align: left; margin-bottom: 15px;">
+                <label>Precio Cobrado ($)</label>
+                <input type="number" id="cpPrice" placeholder="0" min="0">
+            </div>
+            <div style="text-align: left; margin-bottom: 20px;">
+                <label>Â¿CuÃ¡ntas calcetas incluye?</label>
+                <input type="number" id="cpSocks" placeholder="0" min="0">
+            </div>
+            <button type="button" class="btn-main" onclick="guardarCustomProduct()">AGREGAR AL
+                CARRITO</button>
+            <button type="button" class="btn-main btn-cancel"
+                onclick="cerrarCustomProductModal()">Cancelar</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="saveTabModal">
+        <div class="modal-box">
+            <h2 style="margin-top: 0; color: var(--cafe);">Guardar en Cuenta</h2>
+            <p style="color:var(--dim); font-size:0.8rem;">Crea una cuenta nueva o suma a una existente.</p>
+
+            <div style="margin-bottom: 20px; text-align:left;">
+                <label>Crear Cuenta Nueva</label>
+                <input type="text" id="newTabName" placeholder="Ej. Mesa 3 o Cumple Ketzalli">
+                <button type="button" class="btn-main btn-cafe" style="padding:10px; margin-top:10px;"
+                    onclick="guardarEnCuentaNueva()">âž• CREAR Y GUARDAR</button>
+            </div>
+
+            <hr style="border-color:#334155; margin: 20px 0;">
+
+            <div style="text-align:left;">
+                <label>O Abonar a Cuenta Abierta:</label>
+                <div id="existingTabsList" style="margin-top:10px; max-height:150px; overflow-y:auto;">
+                </div>
+            </div>
+
+            <button type="button" class="btn-main btn-cancel" onclick="cerrarModalTabs()">Cancelar</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="cajeroSummaryModal">
+        <div class="modal-box">
+            <h2 style="margin-top: 0; color: var(--suc);">Resumen de Productos</h2>
+            <p style="color:var(--dim); font-size:0.85rem; margin-top:-10px;">Ventas de hoy en <span
+                    id="summaryAreaName" style="font-weight:bold; color:white;"></span></p>
+            <div id="cajeroSummaryLoading" style="color:var(--suc); margin:20px 0;">Sincronizando con la
+                nube...</div>
+            <div id="cajeroSummaryContent" style="display:none; text-align:left;"></div>
+            <button type="button" class="btn-main btn-cancel"
+                onclick="document.getElementById('cajeroSummaryModal').style.display='none'">Cerrar
+                Resumen</button>
+        </div>
+    </div>
+
+    <div class="app-container">
+<div id="posView" class="view-panel split-view" style="display:grid !important;">
+            <div class="main-pane">
+                <div class="header">
+                    <h1 class="gradient-text">Taquilla</h1>
+                    <button class="btn-logout" onclick="cerrarSesion()">Salir (<span
+                            id="nombreCajeroHeader"></span>)</button>
+                </div>
+                <form id="posForm">
+                    <input type="hidden" name="tipoRegistro" value="Taquilla">
+                    <div class="scrollable-content">
+                        <div class="section-title">Entradas</div>
+                        <div id="lista-entradas">
+                            <div class="ticket-row entrada-item" data-nombre="1 Hora" data-precio="200"
+                                data-inc-calcetas="0">
+                                <div class="ticket-info">
+                                    <div class="ticket-name">1 Hora</div>
+                                    <div class="ticket-price">$200 base</div>
+                                </div>
+                                <div class="ticket-inputs">
+                                    <div class="input-group"><label>Total Ent.</label>
+                                        <div class="qty-wrapper"><button type="button" class="btn-qty minus"
+                                                onclick="modQty(this, -1, 'T')">-</button><input
+                                                type="number" class="t-qty" min="0"
+                                                oninput="calcular()"><button type="button"
+                                                class="btn-qty plus"
+                                                onclick="modQty(this, 1, 'T')">+</button></div>
+                                    </div>
+                                    <div class="input-group"><label>Compran Calc.</label>
+                                        <div class="qty-wrapper"><button type="button" class="btn-qty minus"
+                                                onclick="modQty(this, -1, 'T')">-</button><input
+                                                type="number" class="t-calc" min="0"
+                                                oninput="calcular()"><button type="button"
+                                                class="btn-qty plus"
+                                                onclick="modQty(this, 1, 'T')">+</button></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ticket-row entrada-item" data-nombre="2 Horas" data-precio="240"
+                                data-inc-calcetas="0">
+                                <div class="ticket-info">
+                                    <div class="ticket-name">2 Horas</div>
+                                    <div class="ticket-price">$240 base</div>
+                                </div>
+                                <div class="ticket-inputs">
+                                    <div class="input-group"><label>Total Ent.</label>
+                                        <div class="qty-wrapper"><button type="button" class="btn-qty minus"
+                                                onclick="modQty(this, -1, 'T')">-</button><input
+                                                type="number" class="t-qty" min="0"
+                                                oninput="calcular()"><button type="button"
+                                                class="btn-qty plus"
+                                                onclick="modQty(this, 1, 'T')">+</button></div>
+                                    </div>
+                                    <div class="input-group"><label>Compran Calc.</label>
+                                        <div class="qty-wrapper"><button type="button" class="btn-qty minus"
+                                                onclick="modQty(this, -1, 'T')">-</button><input
+                                                type="number" class="t-calc" min="0"
+                                                oninput="calcular()"><button type="button"
+                                                class="btn-qty plus"
+                                                onclick="modQty(this, 1, 'T')">+</button></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ticket-row entrada-item" data-nombre="3 Horas" data-precio="300"
+                                data-inc-calcetas="0">
+                                <div class="ticket-info">
+                                    <div class="ticket-name">3 Horas</div>
+                                    <div class="ticket-price">$300 base</div>
+                                </div>
+                                <div class="ticket-inputs">
+                                    <div class="input-group"><label>Total Ent.</label>
+                                        <div class="qty-wrapper"><button type="button" class="btn-qty minus"
+                                                onclick="modQty(this, -1, 'T')">-</button><input
+                                                type="number" class="t-qty" min="0"
+                                                oninput="calcular()"><button type="button"
+                                                class="btn-qty plus"
+                                                onclick="modQty(this, 1, 'T')">+</button></div>
+                                    </div>
+                                    <div class="input-group"><label>Compran Calc.</label>
+                                        <div class="qty-wrapper"><button type="button" class="btn-qty minus"
+                                                onclick="modQty(this, -1, 'T')">-</button><input
+                                                type="number" class="t-calc" min="0"
+                                                oninput="calcular()"><button type="button"
+                                                class="btn-qty plus"
+                                                onclick="modQty(this, 1, 'T')">+</button></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ticket-row entrada-item" data-nombre="Apoyo" data-precio="100"
+                                data-inc-calcetas="0">
+                                <div class="ticket-info">
+                                    <div class="ticket-name">Apoyo</div>
+                                    <div class="ticket-price">$100 base</div>
+                                </div>
+                                <div class="ticket-inputs">
+                                    <div class="input-group"><label>Total Ent.</label>
+                                        <div class="qty-wrapper"><button type="button" class="btn-qty minus"
+                                                onclick="modQty(this, -1, 'T')">-</button><input
+                                                type="number" class="t-qty" min="0"
+                                                oninput="calcular()"><button type="button"
+                                                class="btn-qty plus"
+                                                onclick="modQty(this, 1, 'T')">+</button></div>
+                                    </div>
+                                    <div class="input-group"><label>Compran Calc.</label>
+                                        <div class="qty-wrapper"><button type="button" class="btn-qty minus"
+                                                onclick="modQty(this, -1, 'T')">-</button><input
+                                                type="number" class="t-calc" min="0"
+                                                oninput="calcular()"><button type="button"
+                                                class="btn-qty plus"
+                                                onclick="modQty(this, 1, 'T')">+</button></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ticket-row entrada-item" data-nombre="Paquete Peque Aventura"
+                                data-precio="299" data-inc-calcetas="1">
+                                <div class="ticket-info">
+                                    <div class="ticket-name">Paq. Peque Aventura</div>
+                                    <div class="ticket-price">$299 c/calceta</div>
+                                </div>
+                                <div class="ticket-inputs">
+                                    <div class="input-group"><label>Total Paq.</label>
+                                        <div class="qty-wrapper"><button type="button" class="btn-qty minus"
+                                                onclick="modQty(this, -1, 'T')">-</button><input
+                                                type="number" class="t-qty" min="0"
+                                                oninput="calcular()"><button type="button"
+                                                class="btn-qty plus"
+                                                onclick="modQty(this, 1, 'T')">+</button></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ticket-row entrada-item" data-nombre="Paquete Peque Diversion"
+                                data-precio="349" data-inc-calcetas="1">
+                                <div class="ticket-info">
+                                    <div class="ticket-name">Paq. Peque Diversion</div>
+                                    <div class="ticket-price">$349 c/calceta</div>
+                                </div>
+                                <div class="ticket-inputs">
+                                    <div class="input-group"><label>Total Paq.</label>
+                                        <div class="qty-wrapper"><button type="button" class="btn-qty minus"
+                                                onclick="modQty(this, -1, 'T')">-</button><input
+                                                type="number" class="t-qty" min="0"
+                                                oninput="calcular()"><button type="button"
+                                                class="btn-qty plus"
+                                                onclick="modQty(this, 1, 'T')">+</button></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ticket-row entrada-item" data-nombre="Paquete Super Aventura"
+                                data-precio="299" data-inc-calcetas="1">
+                                <div class="ticket-info">
+                                    <div class="ticket-name">Paq. Super Aventura</div>
+                                    <div class="ticket-price">$299 c/calceta</div>
+                                </div>
+                                <div class="ticket-inputs">
+                                    <div class="input-group"><label>Total Paq.</label>
+                                        <div class="qty-wrapper"><button type="button" class="btn-qty minus"
+                                                onclick="modQty(this, -1, 'T')">-</button><input
+                                                type="number" class="t-qty" min="0"
+                                                oninput="calcular()"><button type="button"
+                                                class="btn-qty plus"
+                                                onclick="modQty(this, 1, 'T')">+</button></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ticket-row entrada-item" data-nombre="Paquete familiar"
+                                data-precio="999" data-inc-calcetas="0">
+                                <div class="ticket-info">
+                                    <div class="ticket-name">Paquete familiar</div>
+                                    <div class="ticket-price">$999 fijo</div>
+                                </div>
+                                <div class="ticket-inputs">
+                                    <div class="input-group"><label>Total Paq.</label>
+                                        <div class="qty-wrapper"><button type="button" class="btn-qty minus"
+                                                onclick="modQty(this, -1, 'T')">-</button><input
+                                                type="number" class="t-qty" min="0"
+                                                oninput="calcular()"><button type="button"
+                                                class="btn-qty plus"
+                                                onclick="modQty(this, 1, 'T')">+</button></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section-title">Adicionales</div>
+                        <div class="adicionales-grid">
+                            <div class="adicional-item">
+                                <span>Maquillaje (Libre)</span>
+                                <div class="qty-wrapper">
+                                    <button type="button" class="btn-qty minus"
+                                        onclick="quitarMaquillaje()">-</button>
+                                    <input type="number" id="qtyMaquillaje" placeholder="0" readonly
+                                        style="background:#0f172a; border:none; color:white; width:40px;">
+                                    <button type="button" class="btn-qty plus"
+                                        onclick="agregarMaquillaje()">+</button>
+                                </div>
+                            </div>
+                            <div class="adicional-item">
+                                <span style="color:#fbbf24;">Vaso SkyZone (Libre)</span>
+                                <div class="qty-wrapper">
+                                    <button type="button" class="btn-qty minus"
+                                        onclick="quitarVasoTaq()">-</button>
+                                    <input type="number" id="qtyVasoTaq" placeholder="0" readonly
+                                        style="background:#0f172a; border:none; color:white; width:40px;">
+                                    <button type="button" class="btn-qty plus"
+                                        onclick="agregarVasoTaq()">+</button>
+                                </div>
+                            </div>
+
+                            <div class="adicional-item adicional-row" data-nombre="Locker" data-precio="30">
+                                <span>Locker ($30)</span>
+                                <div class="qty-wrapper"><button type="button" class="btn-qty minus"
+                                        onclick="modQty(this, -1, 'T')">-</button><input type="number"
+                                        class="a-qty" min="0" oninput="calcular()"><button type="button"
+                                        class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div>
+                            </div>
+                            <div class="adicional-item adicional-row" data-nombre="Locker DP"
+                                data-precio="50">
+                                <span>Locker DP ($50)</span>
+                                <div class="qty-wrapper"><button type="button" class="btn-qty minus"
+                                        onclick="modQty(this, -1, 'T')">-</button><input type="number"
+                                        class="a-qty" min="0" oninput="calcular()"><button type="button"
+                                        class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div>
+                            </div>
+                            <div class="adicional-item adicional-row" data-nombre="SkySocks"
+                                data-precio="59">
+                                <span>SkySocks ($59)</span>
+                                <div class="qty-wrapper"><button type="button" class="btn-qty minus"
+                                        onclick="modQty(this, -1, 'T')">-</button><input type="number"
+                                        class="a-qty" min="0" oninput="calcular()"><button type="button"
+                                        class="btn-qty plus" onclick="modQty(this, 1, 'T')">+</button></div>
+                            </div>
+
+                            <div class="adicional-item" style="grid-column: span 2;">
+                                <span style="color:var(--acc);">Otro Producto / Evento Especial</span>
+                                <button type="button" class="btn-main"
+                                    style="margin-top:5px; padding:10px; background:#eab308; color:#0f172a;"
+                                    onclick="abrirCustomProductModal()">+ CREAR PRODUCTO</button>
+                                <div id="customProductsContainer" style="width:100%; margin-top:10px;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="cajeroFinal_taq" name="cajeroFinal">
+                    <input type="hidden" id="resumenEntradas" name="resumenEntradas">
+                    <input type="hidden" id="resumenAdicionales" name="resumenAdicionales">
+                    <input type="hidden" id="totalFinal_taq" name="totalFinal">
+                    <input type="hidden" id="metodoPagoFinal_taq" name="metodoPagoFinal">
+
+                    <div class="total-container">
+                        <div class="total-box"><span>TOTAL A COBRAR</span><strong
+                                id="displayTotal">$0.00</strong></div>
+                        <div class="action-buttons">
+                            <button type="button" class="btn-main btn-glow"
+                                onclick="abrirModalPago('Taquilla')">COMPLETAR ORDEN</button>
+                            <button type="button" class="btn-secondary" onclick="limpiarTaquilla()">Borrar
+                                pedido</button>
+                            <button type="button" class="btn-summary"
+                                onclick="abrirResumenCajero('Taquilla')">ðŸ“Š Ver Resumen de Ventas</button>
+                        </div>
+                    </div>
+                </form>
+                <div id="mensajeTaq" class="loading">âœ“ Venta registrada e impresa</div>
+            </div>
+        </div>
+
+        <div id="cafeView" class="view-panel split-view">
+            <div class="main-pane">
+                <div class="header">
+                    <h1 class="gradient-text cafe-gradient">CafeterÃ­a</h1>
+                    <button class="btn-logout" onclick="cerrarSesion()">Salir (<span
+                            id="nombreCajeroHeaderCafe"></span>)</button>
+                </div>
+                <div class="scrollable-content">
+                    <div class="section-title"
+                        style="color:var(--cafe); border-color:var(--cafe); margin-top:0;">Bebidas
+                    </div>
+                    <div class="products-grid">
+                        <div class="adicionales-grid">
+                            <div class="product-card cafe-card">
+                                <span style="color:#fbbf24;">Refill de Agua (Libre)</span>
+                                <div class="qty-wrapper">
+                                    <button type="button" class="btn-qty minus"
+                                        onclick="quitarRefillAgua()">-</button>
+                                    <input type="number" id="qtyRefillAgua" placeholder="0" readonly
+                                        style="background:#0f172a; border:none; color:white; width:40px;">
+                                    <button type="button" class="btn-qty plus"
+                                        onclick="agregarRefillAgua()">+</button>
+                                </div>
+                            </div>
+                            <div class="product-card cafe-card">
+                                <span style="color:#fbbf24;">Jarra de Agua (Libre)</span>
+                                <div class="qty-wrapper">
+                                    <button type="button" class="btn-qty minus"
+                                        onclick="quitarJarraAgua()">-</button>
+                                    <input type="number" id="qtyJarraAgua" placeholder="0" readonly
+                                        style="background:#0f172a; border:none; color:white; width:40px;">
+                                    <button type="button" class="btn-qty plus"
+                                        onclick="agregarJarraAgua()">+</button>
+                                </div>
+                            </div>
+                            <!-- (Products list truncated for brevity as per instructions) -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-pane">
+                <div class="sidebar-content">
+                    <form id="cafeForm">
+                        <input type="hidden" name="tipoRegistro" value="Cafeteria">
+                        <input type="hidden" id="cajeroFinal_cafe" name="cajeroFinal">
+                        <input type="hidden" id="resumenProductos_cafe" name="resumenProductos">
+                        <input type="hidden" id="totalFinal_cafe" name="totalFinal">
+                        <input type="hidden" id="metodoPagoFinal_cafe" name="metodoPagoFinal">
+                        <div class="total-container">
+                            <div class="total-box cafe-total"><span>TOTAL ACTUAL</span><strong
+                                    id="displayTotalCafe">$0.00</strong></div>
+                            <div class="action-buttons">
+                                <div style="display:flex; gap:10px;">
+                                    <button type="button" class="btn-secondary"
+                                        onclick="limpiarCafe()">Borrar pedido</button>
+                                    <button type="button" class="btn-accent"
+                                        onclick="prepararGuardarCuenta()">ðŸ’¾ GUARDAR CUENTA</button>
+                                </div>
+                                <button type="button" class="btn-main btn-cafe-glow"
+                                    onclick="abrirModalPago('Cafeteria')">COMPLETAR ORDEN</button>
+                                <button type="button" class="btn-summary"
+                                    onclick="abrirResumenCajero('Cafeteria')">ðŸ“Š Ver Resumen</button>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mensajeCafe" class="loading">âœ“ Venta registrada e impresa</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tabsCafeView" class="view-panel active-view" style="display:flex;">
+            <div class="header">
+                <h1 class="gradient-text warning-gradient">Cuentas Abiertas</h1>
+                <button class="btn-logout btn-outline" onclick="volverACafeteria()">
+                    < Volver </button>
+            </div>
+            <p style="color:var(--dim); font-size:1rem; margin-bottom: 20px;">Carritos guardados pendientes
+                por cobrar.</p>
+            <div id="tabsListContainer" class="tabs-grid"></div>
+        </div>
+    </div>
+
+    <script src='app.js'></script>
+</body>
+
+</html>
+
+    </div>
+    <script src='app.js'></script>
+</body>
+</html>
