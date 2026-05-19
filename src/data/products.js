@@ -12,7 +12,8 @@ export const taquillaProducts = {
   ],
   adicionales: [
     { nombre: "Locker", precio: 0, precioAbierto: true },
-    { nombre: "SkySocks", precio: 59 }
+    { nombre: "SkySocks", precio: 59 },
+    { nombre: "Maquillaje Neon", precio: 0, precioAbierto: true }
   ]
 };
 

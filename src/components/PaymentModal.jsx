@@ -27,11 +27,26 @@ const PaymentModal = ({ area, onClose }) => {
     setLoading(true);
 
     // Preparar objeto para Firebase
-    let resumen = cart.map(item => {
-      const prod = taquillaProducts.entradas.find(p => p.nombre === item.nombre);
-      const suffix = (prod && prod.incCalcetas > 0) ? ` (+${prod.incCalcetas} calcetas)` : '';
-      return `${item.qty}x ${item.nombre}${suffix} ($${item.precio})`;
-    }).join(" | ") || "Ninguno";
+    let resumenEntradasList = [];
+    let resumenAdicionalesList = [];
+    let resumenCafeteriaList = [];
+
+    cart.forEach(item => {
+      if (area === 'Taquilla') {
+        const prodEntrada = taquillaProducts.entradas.find(p => p.nombre === item.nombre);
+        const isEntrada = prodEntrada || item.isEntrada || (item.incCalcetas && item.incCalcetas > 0);
+        const incCalcetas = prodEntrada ? prodEntrada.incCalcetas : (item.incCalcetas || 0);
+
+        if (isEntrada) {
+          const suffix = incCalcetas > 0 ? ` (+${incCalcetas} calcetas)` : '';
+          resumenEntradasList.push(`${item.qty}x ${item.nombre}${suffix} ($${item.precio})`);
+        } else {
+          resumenAdicionalesList.push(`${item.qty}x ${item.nombre} ($${item.precio})`);
+        }
+      } else {
+        resumenCafeteriaList.push(`${item.qty}x ${item.nombre} ($${item.precio})`);
+      }
+    });
     
     const ventaData = {
       area: area,
@@ -67,10 +82,10 @@ const PaymentModal = ({ area, onClose }) => {
     }
 
     if (area === 'Taquilla') {
-      ventaData.entradas = resumen;
-      ventaData.adicionales = "Ninguno";
+      ventaData.entradas = resumenEntradasList.join(" | ") || "Ninguna";
+      ventaData.adicionales = resumenAdicionalesList.join(" | ") || "Ninguno";
     } else {
-      ventaData.productos = resumen;
+      ventaData.productos = resumenCafeteriaList.join(" | ") || "Ninguno";
     }
 
     try {

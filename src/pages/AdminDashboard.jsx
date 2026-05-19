@@ -80,11 +80,17 @@ const AdminDashboard = () => {
           entradasStr.split(' | ').forEach(item => {
             const matchQty = item.match(/^(\d+)x/);
             const qty = matchQty ? parseInt(matchQty[1]) : 0;
-            let nombre = item.replace(/^\d+x\s+/, '').replace(/\(\$.*\)/, '').trim();
+            let nombre = item.replace(/^\d+x\s+/, '').replace(/\(\$.*\)/, '').replace(/\(\+\d+\s+calcetas\)/gi, '').trim();
 
             if (qty > 0) {
-              totalSaltadores += qty;
-              desgloseEntradas[nombre] = (desgloseEntradas[nombre] || 0) + qty;
+              const lowerNombre = nombre.toLowerCase();
+              if (lowerNombre.includes('skysocks') || lowerNombre.includes('calceta')) {
+                totalCalcetas += qty;
+                desgloseAdicionales[nombre] = (desgloseAdicionales[nombre] || 0) + qty;
+              } else {
+                totalSaltadores += qty;
+                desgloseEntradas[nombre] = (desgloseEntradas[nombre] || 0) + qty;
+              }
 
               const matchCalc = item.match(/\(\+(\d+)\s+calcetas/);
               if (matchCalc) {
@@ -101,7 +107,10 @@ const AdminDashboard = () => {
             const qty = matchQty ? parseInt(matchQty[1]) : 0;
             let nombre = item.replace(/^\d+x\s+/, '').replace(/\(\$.*\)/, '').trim();
             if (qty > 0) {
-              if (nombre.includes('SkySocks') || nombre.includes('calcetas')) totalCalcetas += qty;
+              const lowerNombre = nombre.toLowerCase();
+              if (lowerNombre.includes('skysocks') || lowerNombre.includes('calceta')) {
+                totalCalcetas += qty;
+              }
               desgloseAdicionales[nombre] = (desgloseAdicionales[nombre] || 0) + qty;
             }
           });
@@ -207,6 +216,14 @@ const AdminDashboard = () => {
                 ${totalTarjeta.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </h2>
             </div>
+            {area === 'Taquilla' && (
+              <div className="neu-box" style={{ padding: '20px', textAlign: 'center' }}>
+                <p style={{ margin: '0 0 10px 0', color: 'var(--text-muted)', fontWeight: 'bold' }}>CALCETAS VENDIDAS</p>
+                <h2 style={{ margin: 0, fontSize: '2rem', color: 'var(--accent-blue)' }}>
+                  {totalCalcetas}
+                </h2>
+              </div>
+            )}
           </div>
 
           {/* Desglose Específico */}
