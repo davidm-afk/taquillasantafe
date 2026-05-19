@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
 
 const ThemeToggle = () => {
+  const pathname = window.location.pathname;
+
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('theme') || 'light';
   });
@@ -14,6 +16,10 @@ const ThemeToggle = () => {
   const toggleTheme = () => {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
+
+  if (pathname === '/taquilla' || pathname === '/cafeteria') {
+    return null;
+  }
 
   return (
     <button 

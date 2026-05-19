@@ -1,9 +1,22 @@
 import React from 'react';
-import { LogOut, Home, Settings } from 'lucide-react';
+import { LogOut, Home, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = ({ area }) => {
   const { user, logout } = useAuth();
+
+  const [theme, setTheme] = React.useState(() => {
+    return localStorage.getItem('theme') || 'light';
+  });
+
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
 
   return (
     <div className="neu-box" style={{ 
@@ -22,6 +35,23 @@ const Sidebar = ({ area }) => {
         
         <button className="neu-button" style={{ padding: '15px', borderRadius: '50%', color: 'var(--accent-blue)' }} title="Inicio">
           <Home size={24} />
+        </button>
+
+        <button 
+          className="neu-button" 
+          onClick={toggleTheme}
+          style={{ 
+            padding: '15px', 
+            borderRadius: '50%', 
+            color: theme === 'light' ? 'var(--text-main)' : 'var(--accent-warning)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer'
+          }} 
+          title={theme === 'light' ? 'Activar Modo Oscuro' : 'Activar Modo Claro'}
+        >
+          {theme === 'light' ? <Moon size={24} /> : <Sun size={24} />}
         </button>
       </div>
 
