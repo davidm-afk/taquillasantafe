@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import PosTaquilla from './pages/PosTaquilla';
 import PosCafeteria from './pages/PosCafeteria';
 import AdminDashboard from './pages/AdminDashboard';
+import ThemeToggle from './components/ThemeToggle';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user } = useAuth();
@@ -31,6 +32,7 @@ const App = () => {
       <CartProvider>
         <Router>
           <AppRoutes />
+          <ThemeToggle />
         </Router>
       </CartProvider>
     </AuthProvider>

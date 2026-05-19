@@ -18,6 +18,30 @@
   --shadow-active: inset 4px 4px 8px rgb(163,177,198,0.7), inset -4px -4px 8px rgba(255,255,255, 0.8);
 }
 
+[data-theme="dark"] {
+  /* Cyber Dark Colors */
+  --bg-color: #1a1e24;
+  --text-main: #f7fafc;
+  --text-muted: #a0aec0;
+  
+  /* Brighter accents for Dark Mode contrast */
+  --accent-orange: #ff7d4d;
+  --accent-blue: #33c2e1;
+  --accent-success: #5ccdfb;
+  --accent-warning: #fbbf24;
+  --accent-danger: #f87171;
+
+  /* Shadows for Neumorphism in Dark Mode */
+  --shadow-light: 8px 8px 16px #101217, -8px -8px 16px #242a31;
+  --shadow-inset: inset 6px 6px 10px #101217, inset -6px -6px 10px #242a31;
+  --shadow-hover: 12px 12px 20px #0e1014, -12px -12px 20px #2a313a;
+  --shadow-active: inset 4px 4px 8px #101217, inset -4px -4px 8px #242a31;
+}
+
+[data-theme="dark"] .modal-overlay {
+  background: rgba(26, 30, 36, 0.85);
+}
+
 body {
   margin: 0;
   font-family: 'Poppins', sans-serif;
@@ -26,6 +50,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 }
 
 * {
