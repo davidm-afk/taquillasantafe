@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 // Este componente está siempre oculto en pantalla normal (display: none),
 // pero mediante CSS (en index.css) se hará visible únicamente al imprimir.
@@ -16,7 +17,7 @@ const TicketImpresion = ({ user, cart, total, method, received, change }) => {
   const iva = total - (total / 1.16);
   const subtotal = total - iva;
 
-  return (
+  return createPortal(
     <div id="ticketImpresion" style={{ display: 'none' }}>
       {/* Cabecera Principal */}
       <div className="ticket-center">
@@ -131,7 +132,8 @@ const TicketImpresion = ({ user, cart, total, method, received, change }) => {
         <p style={{ margin: '0 0 2px 0', textTransform: 'uppercase' }}>¡Gracias por volar con nosotros!</p>
         <p style={{ margin: '8px 0 0 0', fontSize: '12px', letterSpacing: '1px', textTransform: 'uppercase', fontStyle: 'italic' }}>H A V E   F U N ,   F L Y   S A F E !</p>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
