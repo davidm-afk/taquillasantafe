@@ -1,0 +1,149 @@
+:root {
+  /* Neumorphism Colors */
+  --bg-color: #e0e5ec;
+  --text-main: #2d3748;
+  --text-muted: #718096;
+  
+  /* Brand Colors */
+  --accent-orange: #ff6b35;
+  --accent-blue: #00b4d8;
+  --accent-success: #38bdf8;
+  --accent-warning: #f59e0b;
+  --accent-danger: #ef4444;
+
+  /* Shadows for Neumorphism */
+  --shadow-light: 9px 9px 16px rgb(163,177,198,0.6), -9px -9px 16px rgba(255,255,255, 0.5);
+  --shadow-inset: inset 6px 6px 10px 0 rgba(163,177,198, 0.7), inset -6px -6px 10px 0 rgba(255,255,255, 0.8);
+  --shadow-hover: 12px 12px 20px rgb(163,177,198,0.7), -12px -12px 20px rgba(255,255,255, 0.6);
+  --shadow-active: inset 4px 4px 8px rgb(163,177,198,0.7), inset -4px -4px 8px rgba(255,255,255, 0.8);
+}
+
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Utilities */
+.neu-box {
+  background-color: var(--bg-color);
+  box-shadow: var(--shadow-light);
+  border-radius: 20px;
+}
+
+.neu-button {
+  background-color: var(--bg-color);
+  box-shadow: var(--shadow-light);
+  border: none;
+  border-radius: 12px;
+  color: var(--text-main);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  padding: 12px 20px;
+}
+
+.neu-button:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+}
+
+.neu-button:active {
+  box-shadow: var(--shadow-active);
+  transform: translateY(2px);
+}
+
+.neu-input {
+  background-color: var(--bg-color);
+  box-shadow: var(--shadow-inset);
+  border: none;
+  border-radius: 12px;
+  padding: 15px;
+  width: 100%;
+  color: var(--text-main);
+  font-family: inherit;
+  outline: none;
+}
+
+.neu-input:focus {
+  box-shadow: inset 8px 8px 12px rgba(163,177,198, 0.8), inset -8px -8px 12px rgba(255,255,255, 0.9);
+}
+
+.text-gradient-orange {
+  background: linear-gradient(135deg, var(--accent-orange), #ff9f1c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-blue {
+  background: linear-gradient(135deg, var(--accent-blue), #90e0ef);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(224, 229, 236, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* --- ESTILOS PARA IMPRESORA TÉRMICA --- */
+@media print {
+  body > :not(#ticketImpresion) {
+    display: none !important;
+  }
+  
+  #ticketImpresion {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 57mm; 
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    color: black;
+    background: white;
+    margin: 0;
+    padding: 0;
+  }
+
+  .ticket-center {
+    text-align: center;
+  }
+
+  .ticket-line {
+    border-bottom: 1px dashed black;
+    margin: 5px 0;
+  }
+
+  .ticket-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3px;
+  }
+
+  @page {
+    margin: 0;
+  }
+}
+

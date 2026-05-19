@@ -2,43 +2,15 @@
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema ERP | Trampoline Park</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sky Zone | POS System</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-    <div class="app-container">
-        <div id="loginView" class="view-panel active-view" style="display:flex;">
-            <div class="login-card">
-                <div class="brand-header">
-                    <h1>SKY ZONE</h1>
-                    <span class="subtitle">SANTA FE - POS SYSTEM</span>
-                </div>
-                <div class="input-container">
-                    <label>USUARIO</label>
-                    <select id="cajeroSelect" class="modern-input">
-                        <option value="" disabled selected>Selecciona tu nombre</option>
-                        <option value="Yunn">Yunn</option>
-                        <option value="Tania">Tania</option>
-                        <option value="Monse">Monse</option>
-                        <option value="Sandy">Sandy (Admin)</option>
-                    </select>
-                </div>
-                <div class="input-container">
-                    <label>PIN DE ACCESO</label>
-                    <input type="password" id="pinInput" class="modern-input" placeholder="****" inputmode="text"
-                        maxlength="6">
-                </div>
-                <div id="loginError" class="error-msg">PIN incorrecto o área no autorizada.</div>
-                <button type="button" class="btn-main btn-glow" onclick="iniciarSesion()">ENTRAR AL SISTEMA</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="app.js"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
 </body>
 
 </html>
