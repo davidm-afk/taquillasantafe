@@ -11,7 +11,8 @@ const CartSidebar = ({ onCheckout, titleColorClass = "text-gradient-blue", enabl
     activeCartId, 
     createCart, 
     switchCart, 
-    deleteCart 
+    deleteCart,
+    removeItem
   } = useCart();
 
   const [expandedId, setExpandedId] = React.useState(null);
@@ -185,7 +186,24 @@ const CartSidebar = ({ onCheckout, titleColorClass = "text-gradient-blue", enabl
                   <p style={{ margin: '0 0 5px 0', fontWeight: 600, fontSize: '0.9rem' }}>{item.nombre}</p>
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>${item.precio} x {item.qty}</span>
                 </div>
-                <strong style={{ fontSize: '1.1rem' }}>${item.precio * item.qty}</strong>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <strong style={{ fontSize: '1.05rem', color: 'var(--text-main)' }}>${item.precio * item.qty}</strong>
+                  <button 
+                    onClick={() => removeItem(item.nombre)} 
+                    style={{ 
+                      background: 'none', 
+                      border: 'none', 
+                      color: 'var(--accent-danger)', 
+                      cursor: 'pointer', 
+                      padding: '4px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    title="Eliminar producto"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
             ))
           )}
