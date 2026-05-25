@@ -16,11 +16,16 @@ const PaymentModal = ({ area, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const cambio = (parseFloat(recibido) || 0) - total;
+  const numRecibido = parseFloat(recibido) || 0;
+  const isMixto = metodo === 'Efectivo' && numRecibido > 0 && numRecibido < total;
+
+  const cashPaid = isMixto ? numRecibido : (metodo === 'Efectivo' && numRecibido >= total ? total : 0);
+  const cardPaid = isMixto ? total - numRecibido : (metodo === 'Tarjeta' ? total : 0);
+  const cambio = isMixto ? 0 : (metodo === 'Efectivo' && numRecibido >= total ? numRecibido - total : 0);
 
   const handleConfirm = async () => {
-    if (metodo === 'Efectivo' && (parseFloat(recibido) || 0) < total) {
-      alert("El pago recibido es insuficiente.");
+    if (metodo === 'Efectivo' && numRecibido <= 0) {
+      alert("Por favor, ingresa un monto recibido en efectivo válido.");
       return;
     }
 
@@ -52,7 +57,9 @@ const PaymentModal = ({ area, onClose }) => {
       area: area,
       cajero: user?.nombre || 'Desconocido',
       total: total,
-      metodoPago: metodo,
+      metodoPago: isMixto ? 'Mixto' : metodo,
+      pagoEfectivo: cashPaid,
+      pagoTarjeta: cardPaid,
       fecha: new Date().toISOString(),
       timestamp: Date.now()
     };
@@ -92,7 +99,9 @@ const PaymentModal = ({ area, onClose }) => {
       await addDoc(collection(db, 'ventas'), ventaData);
       
       // Imprimir el ticket de manera sincrona después de enviar a Firebase
+      document.body.classList.add('print-ticket');
       window.print();
+      document.body.classList.remove('print-ticket');
       
       setSuccess(true);
       setTimeout(() => {
@@ -138,7 +147,7 @@ const PaymentModal = ({ area, onClose }) => {
             {metodo === 'Efectivo' && (
               <>
                 <div className="neu-box" style={{ padding: '15px', marginBottom: '20px', textAlign: 'left' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Monto recibido del cliente:</label>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Monto recibido en efectivo:</label>
                   <input
                     type="number"
                     className="neu-input"
@@ -146,15 +155,38 @@ const PaymentModal = ({ area, onClose }) => {
                     placeholder="$0.00"
                     value={recibido}
                     onChange={(e) => setRecibido(e.target.value)}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleConfirm();
+                      }
+                    }}
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px' }}>
-                    <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Vuelto (Cambio):</span>
-                    <strong style={{ fontSize: '1.2rem', color: cambio >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)' }}>
-                      ${cambio > 0 ? cambio.toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '0.00'}
-                    </strong>
-                  </div>
-                </div>
 
+                  {isMixto ? (
+                    <div className="neu-box animate-fade-in" style={{ marginTop: '15px', padding: '12px', borderLeft: '4px solid var(--accent-warning)', background: 'rgba(245, 158, 11, 0.05)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '6px' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>💵 Pago en Efectivo:</span>
+                        <strong style={{ color: 'var(--text-main)' }}>${cashPaid.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '6px' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>💳 Restante con Tarjeta:</span>
+                        <strong style={{ color: 'var(--accent-warning)' }}>${cardPaid.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
+                      </div>
+                      <div className="text-gradient-blue" style={{ fontSize: '0.8rem', fontWeight: 'bold', marginTop: '8px', textAlign: 'center', textTransform: 'uppercase' }}>
+                        ⚡ Se cobrará con método Mixto ⚡
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px' }}>
+                      <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Vuelto (Cambio):</span>
+                      <strong style={{ fontSize: '1.2rem', color: cambio >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)' }}>
+                        ${cambio > 0 ? cambio.toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '0.00'}
+                      </strong>
+                    </div>
+                  )}
+                </div>
               </>
             )}
 
@@ -189,9 +221,11 @@ const PaymentModal = ({ area, onClose }) => {
         user={user} 
         cart={cart} 
         total={total} 
-        method={metodo} 
+        method={isMixto ? 'Mixto' : metodo} 
         received={recibido} 
         change={cambio > 0 ? cambio : 0} 
+        pagoEfectivo={cashPaid}
+        pagoTarjeta={cardPaid}
       />
     </div>
   );

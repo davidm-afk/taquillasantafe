@@ -132,13 +132,14 @@ body {
   z-index: 1000;
 }
 
-/* --- ESTILOS PARA IMPRESORA TÉRMICA --- */
+/* --- ESTILOS PARA IMPRESIÓN --- */
 @media print {
-  body > :not(#ticketImpresion) {
+  /* Impresión de Ticket Térmico */
+  body.print-ticket > :not(#ticketImpresion) {
     display: none !important;
   }
   
-  #ticketImpresion {
+  body.print-ticket #ticketImpresion {
     display: block !important;
     position: absolute;
     left: 0;
@@ -165,6 +166,25 @@ body {
     display: flex;
     justify-content: space-between;
     margin-bottom: 3px;
+  }
+
+  /* Impresión de Ficha de Reservación A4 */
+  body.print-reservation > :not(#reservationSheetPrint) {
+    display: none !important;
+  }
+
+  body.print-reservation #reservationSheetPrint {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 210mm;
+    height: 297mm;
+    background: white !important;
+    color: black !important;
+    font-family: Arial, Helvetica, sans-serif;
+    padding: 15mm;
+    box-sizing: border-box;
   }
 
   @page {

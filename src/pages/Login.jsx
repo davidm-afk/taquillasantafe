@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usuariosPermitidos } from '../data/users';
+import { Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
   const [nombre, setNombre] = useState('');
   const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -21,6 +23,7 @@ const Login = () => {
       if (user.rol === 'Taquilla') navigate('/taquilla');
       else if (user.rol === 'Cafeteria') navigate('/cafeteria');
       else if (user.rol === 'Admin') navigate('/admin');
+      else if (user.rol === 'Eventos') navigate('/eventos');
     } else {
       setError('PIN incorrecto o usuario no válido.');
     }
@@ -54,14 +57,41 @@ const Login = () => {
 
           <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.85rem' }}>PIN DE ACCESO</label>
-            <input 
-              type="password"
-              className="neu-input"
-              placeholder="****"
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              maxLength={6}
-            />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input 
+                type={showPin ? 'text' : 'password'}
+                className="neu-input"
+                placeholder="****"
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                maxLength={6}
+                style={{ paddingRight: '50px' }}
+              />
+              <button
+                type="button"
+                onMouseDown={() => setShowPin(true)}
+                onMouseUp={() => setShowPin(false)}
+                onMouseLeave={() => setShowPin(false)}
+                onTouchStart={(e) => { e.preventDefault(); setShowPin(true); }}
+                onTouchEnd={() => setShowPin(false)}
+                style={{
+                  position: 'absolute',
+                  right: '15px',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 0,
+                  userSelect: 'none',
+                  outline: 'none'
+                }}
+              >
+                {showPin ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
           {error && <p style={{ color: 'var(--accent-danger)', fontSize: '0.85rem', marginBottom: '1rem' }}>{error}</p>}

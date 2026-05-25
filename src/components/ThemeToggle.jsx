@@ -17,7 +17,9 @@ const ThemeToggle = () => {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
 
-  if (pathname === '/taquilla' || pathname === '/cafeteria') {
+  // El Sidebar ya incluye el toggle en todas las páginas autenticadas.
+  // Solo mostramos el botón flotante en la pantalla de login.
+  if (pathname !== '/') {
     return null;
   }
 

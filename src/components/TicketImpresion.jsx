@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 
 // Este componente está siempre oculto en pantalla normal (display: none),
 // pero mediante CSS (en index.css) se hará visible únicamente al imprimir.
-const TicketImpresion = ({ user, cart, total, method, received, change }) => {
+const TicketImpresion = ({ user, cart, total, method, received, change, pagoEfectivo = 0, pagoTarjeta = 0 }) => {
   const hoy = new Date();
 
   // Generar un folio de venta único de alta fidelidad corporativa
@@ -90,18 +90,41 @@ const TicketImpresion = ({ user, cart, total, method, received, change }) => {
 
         <div className="ticket-line" style={{ borderBottom: '1px solid #000', margin: '4px 0' }}></div>
 
-        <div className="ticket-item">
-          <span>Forma de Pago:</span>
-          <strong style={{ textTransform: 'uppercase' }}>{method}</strong>
-        </div>
-        <div className="ticket-item">
-          <span>Pago Recibido:</span>
-          <span>${parseFloat(received || total).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
-        </div>
-        <div className="ticket-item">
-          <span>Cambio:</span>
-          <strong style={{ fontSize: '11px' }}>${change.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
-        </div>
+        {method === 'Mixto' ? (
+          <>
+            <div className="ticket-item">
+              <span>Forma de Pago:</span>
+              <strong style={{ textTransform: 'uppercase' }}>MIXTO (EFEC + TARJETA)</strong>
+            </div>
+            <div className="ticket-item">
+              <span>Pago en Efectivo:</span>
+              <span>${pagoEfectivo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="ticket-item">
+              <span>Pago en Tarjeta:</span>
+              <span>${pagoTarjeta.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="ticket-item">
+              <span>Cambio:</span>
+              <strong style={{ fontSize: '11px' }}>$0.00</strong>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="ticket-item">
+              <span>Forma de Pago:</span>
+              <strong style={{ textTransform: 'uppercase' }}>{method}</strong>
+            </div>
+            <div className="ticket-item">
+              <span>Pago Recibido:</span>
+              <span>${parseFloat(received || total).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="ticket-item">
+              <span>Cambio:</span>
+              <strong style={{ fontSize: '11px' }}>${change.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="ticket-line" style={{ borderBottom: '2px double #000', margin: '10px 0' }}></div>

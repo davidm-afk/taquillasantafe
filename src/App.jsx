@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import PosTaquilla from './pages/PosTaquilla';
 import PosCafeteria from './pages/PosCafeteria';
 import AdminDashboard from './pages/AdminDashboard';
+import Eventos from './pages/Eventos';
 import ThemeToggle from './components/ThemeToggle';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -22,6 +23,7 @@ const AppRoutes = () => {
       <Route path="/taquilla" element={<ProtectedRoute allowedRoles={['Taquilla']}><PosTaquilla /></ProtectedRoute>} />
       <Route path="/cafeteria" element={<ProtectedRoute allowedRoles={['Cafeteria']}><PosCafeteria /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute allowedRoles={['Admin']}><AdminDashboard /></ProtectedRoute>} />
+      <Route path="/eventos" element={<ProtectedRoute allowedRoles={['Eventos']}><Eventos /></ProtectedRoute>} />
     </Routes>
   );
 };

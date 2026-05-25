@@ -71,8 +71,14 @@ const AdminDashboard = () => {
       const ventaTotal = parseFloat(venta.total || venta.Total || 0);
       const metodo = venta.metodoPago || venta['Método de Pago'] || '';
 
-      if (metodo.toLowerCase() === 'efectivo') totalEfectivo += ventaTotal;
-      else totalTarjeta += ventaTotal;
+      if (venta.pagoEfectivo !== undefined && venta.pagoTarjeta !== undefined) {
+        totalEfectivo += parseFloat(venta.pagoEfectivo || 0);
+        totalTarjeta += parseFloat(venta.pagoTarjeta || 0);
+      } else if (metodo.toLowerCase() === 'efectivo') {
+        totalEfectivo += ventaTotal;
+      } else {
+        totalTarjeta += ventaTotal;
+      }
 
       if (area === 'Taquilla') {
         const entradasStr = venta.entradas || venta.resumenEntradas || '';
@@ -349,6 +355,8 @@ const EditVentaModal = ({ venta, onClose }) => {
   const [cajero, setCajero] = useState(venta.cajero || '');
   const [totalVal, setTotalVal] = useState(venta.total || '');
   const [metodoPago, setMetodoPago] = useState(venta.metodoPago || 'Efectivo');
+  const [pagoEfectivo, setPagoEfectivo] = useState(venta.pagoEfectivo !== undefined ? venta.pagoEfectivo : (venta.metodoPago === 'Efectivo' ? venta.total : 0));
+  const [pagoTarjeta, setPagoTarjeta] = useState(venta.pagoTarjeta !== undefined ? venta.pagoTarjeta : (venta.metodoPago === 'Tarjeta' ? venta.total : 0));
   const [detalle, setDetalle] = useState(venta.entradas || venta.productos || '');
   const [exitHour, setExitHour] = useState(venta.exitHour !== null && venta.exitHour !== undefined ? venta.exitHour : '');
   const [exitMinute, setExitMinute] = useState(venta.exitMinute !== null && venta.exitMinute !== undefined ? venta.exitMinute : '');
@@ -363,6 +371,18 @@ const EditVentaModal = ({ venta, onClose }) => {
         total: parseFloat(totalVal) || 0,
         metodoPago,
       };
+
+      if (metodoPago === 'Mixto') {
+        updateData.pagoEfectivo = parseFloat(pagoEfectivo) || 0;
+        updateData.pagoTarjeta = parseFloat(pagoTarjeta) || 0;
+        updateData.total = updateData.pagoEfectivo + updateData.pagoTarjeta;
+      } else if (metodoPago === 'Efectivo') {
+        updateData.pagoEfectivo = updateData.total;
+        updateData.pagoTarjeta = 0;
+      } else {
+        updateData.pagoEfectivo = 0;
+        updateData.pagoTarjeta = updateData.total;
+      }
 
       if (venta.area === 'Taquilla') {
         updateData.entradas = detalle;
@@ -444,9 +464,49 @@ const EditVentaModal = ({ venta, onClose }) => {
               >
                 <option value="Efectivo">Efectivo</option>
                 <option value="Tarjeta">Tarjeta</option>
+                <option value="Mixto">Mixto</option>
               </select>
             </div>
           </div>
+
+          {metodoPago === 'Mixto' && (
+            <div style={{ display: 'flex', gap: '15px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>PAGO EFECTIVO ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="neu-input"
+                  value={pagoEfectivo}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    setPagoEfectivo(e.target.value);
+                    const currentCard = parseFloat(pagoTarjeta) || 0;
+                    setTotalVal((val + currentCard).toString());
+                  }}
+                  required
+                  style={{ marginTop: '5px' }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>PAGO TARJETA ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="neu-input"
+                  value={pagoTarjeta}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    setPagoTarjeta(e.target.value);
+                    const currentCash = parseFloat(pagoEfectivo) || 0;
+                    setTotalVal((currentCash + val).toString());
+                  }}
+                  required
+                  style={{ marginTop: '5px' }}
+                />
+              </div>
+            </div>
+          )}
 
           {venta.area === 'Taquilla' && (
             <div>
