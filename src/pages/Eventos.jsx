@@ -55,6 +55,14 @@ const formatDatePickerInput = (value) => {
   return formatted;
 };
 
+// Normalizar campo de catering: soporta string legacy o array nuevo
+const normalizeToArray = (val) => {
+  if (!val) return [];
+  if (Array.isArray(val)) return val.filter(v => v && v !== 'Sin definir');
+  if (val === 'Sin definir') return [];
+  return [val];
+};
+
 // Lista de paquetes estándar del parque
 const paquetesEstandar = ['Sin definir', 'Platinum', 'VIP', 'NTP $6299', 'Grupos', 'Evento Privado'];
 
@@ -128,8 +136,8 @@ const Eventos = () => {
   const [customPaquete, setCustomPaquete] = useState(''); // Estado para paquete manual
   const [espacio, setEspacio] = useState('Sin definir'); // Espacio designado
   
-  const [pizza, setPizza] = useState('Sin definir');
-  const [agua, setAgua] = useState('Sin definir');
+  const [pizza, setPizza] = useState([]);
+  const [agua, setAgua] = useState([]);
   const [pastel, setPastel] = useState('Sin definir');
   
   const [horaLlegada, setHoraLlegada] = useState('');
@@ -149,6 +157,9 @@ const Eventos = () => {
   const [decoracionConcepto, setDecoracionConcepto] = useState('');
   const [decoracionMonto, setDecoracionMonto] = useState('');
   const [horaPinata, setHoraPinata] = useState('');
+  const [tamañoPastel, setTamañoPastel] = useState('');
+  const [notasExtra, setNotasExtra] = useState([]);
+  const [nuevaNota, setNuevaNota] = useState('');
   
   // Estados para precio base manual
   const [isManualPrecioBase, setIsManualPrecioBase] = useState(false);
@@ -268,6 +279,8 @@ const Eventos = () => {
       decoracionConcepto: decoracionTipo === 'Personalizada' ? decoracionConcepto.trim() : '',
       decoracionMonto: decoracionTipo === 'Personalizada' ? (parseFloat(decoracionMonto) || 0) : 0,
       horaPinata: horaPinata,
+      tamañoPastel: tamañoPastel,
+      notasExtra: notasExtra,
       precioBaseManual: isManualPrecioBase && manualPrecioBase !== '' ? (parseFloat(manualPrecioBase) || 0) : null,
       timestamp: Date.now()
     };
@@ -287,8 +300,8 @@ const Eventos = () => {
       setPaquete('Sin definir');
       setCustomPaquete('');
       setEspacio('Sin definir');
-      setPizza('Sin definir');
-      setAgua('Sin definir');
+      setPizza([]);
+      setAgua([]);
       setPastel('Sin definir');
       setHoraLlegada('');
       setHoraSalida('');
@@ -300,6 +313,9 @@ const Eventos = () => {
       setDecoracionConcepto('');
       setDecoracionMonto('');
       setHoraPinata('');
+      setTamañoPastel('');
+      setNotasExtra([]);
+      setNuevaNota('');
       setIsManualPrecioBase(false);
       setManualPrecioBase('');
       setExtrasForm([]); // Limpiar extras
@@ -824,36 +840,58 @@ const Eventos = () => {
               )}
 
               {formTab === 'catering' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                   <div>
                     <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🍕 ALIMENTOS PIZZA</label>
-                    <select 
-                      className="neu-input"
-                      value={pizza}
-                      onChange={(e) => setPizza(e.target.value)}
-                      style={{ marginTop: '5px' }}
-                    >
-                      <option value="Sin definir">Sin definir</option>
-                      <option value="Pepperoni">Pepperoni</option>
-                      <option value="Queso">Queso</option>
-                      <option value="Hawaiana">Hawaiana</option>
-                      <option value="Mitad y Mitad">Mitad y mitad</option>
-                    </select>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                      {['Pepperoni', 'Queso', 'Hawaiana', 'Mitad y Mitad'].map(opt => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => setPizza(prev => prev.includes(opt) ? prev.filter(x => x !== opt) : [...prev, opt])}
+                          className={pizza.includes(opt) ? 'neu-button' : 'neu-box'}
+                          style={{
+                            padding: '7px 14px', fontSize: '0.78rem', cursor: 'pointer', borderRadius: '8px',
+                            border: pizza.includes(opt) ? '1.5px solid var(--accent-success)' : 'none',
+                            color: pizza.includes(opt) ? 'var(--accent-success)' : 'var(--text-muted)',
+                            fontWeight: pizza.includes(opt) ? 'bold' : 'normal',
+                          }}
+                        >
+                          {pizza.includes(opt) ? '✓ ' : ''}{opt}
+                        </button>
+                      ))}
+                    </div>
+                    {pizza.length > 0 && (
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '5px 0 0 0', fontStyle: 'italic' }}>
+                        Seleccionado: {pizza.join(', ')}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🥤 SABOR DE AGUA</label>
-                    <select 
-                      className="neu-input"
-                      value={agua}
-                      onChange={(e) => setAgua(e.target.value)}
-                      style={{ marginTop: '5px' }}
-                    >
-                      <option value="Sin definir">Sin definir</option>
-                      <option value="Limón">Limón</option>
-                      <option value="Jamaica">Jamaica</option>
-                      <option value="Horchata">Horchata</option>
-                      <option value="Natural">Natural</option>
-                    </select>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                      {['Limón', 'Jamaica', 'Horchata', 'Natural'].map(opt => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => setAgua(prev => prev.includes(opt) ? prev.filter(x => x !== opt) : [...prev, opt])}
+                          className={agua.includes(opt) ? 'neu-button' : 'neu-box'}
+                          style={{
+                            padding: '7px 14px', fontSize: '0.78rem', cursor: 'pointer', borderRadius: '8px',
+                            border: agua.includes(opt) ? '1.5px solid var(--accent-blue)' : 'none',
+                            color: agua.includes(opt) ? 'var(--accent-blue)' : 'var(--text-muted)',
+                            fontWeight: agua.includes(opt) ? 'bold' : 'normal',
+                          }}
+                        >
+                          {agua.includes(opt) ? '✓ ' : ''}{opt}
+                        </button>
+                      ))}
+                    </div>
+                    {agua.length > 0 && (
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '5px 0 0 0', fontStyle: 'italic' }}>
+                        Seleccionado: {agua.join(', ')}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🎂 SABOR DE PASTEL</label>
@@ -869,6 +907,22 @@ const Eventos = () => {
                       <option value="Fresa Pay">Fresa Pay</option>
                       <option value="Choco Fresa">Choco Fresa</option>
                     </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🎂 TAMAÑO DEL PASTEL</label>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                      {['Chico', 'Grande', 'Rectangular'].map(size => (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() => setTamañoPastel(prev => prev === size ? '' : size)}
+                          className={tamañoPastel === size ? 'neu-button' : 'neu-box'}
+                          style={{ padding: '7px 14px', fontSize: '0.78rem', cursor: 'pointer', borderRadius: '8px', border: tamañoPastel === size ? '1.5px solid var(--accent-warning)' : 'none', color: tamañoPastel === size ? 'var(--accent-warning)' : 'var(--text-muted)', fontWeight: tamañoPastel === size ? 'bold' : 'normal' }}
+                        >
+                          {tamañoPastel === size ? '✓ ' : ''}{size}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1043,6 +1097,40 @@ const Eventos = () => {
                           ➕ Agregar
                         </button>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Notas Extra */}
+                  <div style={{ borderTop: '1px dashed rgba(59, 130, 246, 0.2)', paddingTop: '12px', marginTop: '4px' }}>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>📝 NOTAS EXTRA (aparecen en el PDF)</label>
+                    {notasExtra.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', margin: '8px 0' }}>
+                        {notasExtra.map((nota, idx) => (
+                          <div key={idx} className="neu-box animate-fade-in" style={{ padding: '6px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-color)', boxShadow: 'var(--shadow-inset)', borderRadius: '8px' }}>
+                            <span style={{ fontSize: '0.8rem' }}>📝 {nota}</span>
+                            <button type="button" onClick={() => setNotasExtra(notasExtra.filter((_, i) => i !== idx))} style={{ border: 'none', background: 'none', color: 'var(--accent-danger)', cursor: 'pointer', fontSize: '0.85rem', padding: '2px' }}>🗑️</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                      <input
+                        type="text"
+                        className="neu-input"
+                        placeholder="Ej. Helado de limón de cortesía"
+                        value={nuevaNota}
+                        onChange={(e) => setNuevaNota(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (!nuevaNota.trim()) return; setNotasExtra([...notasExtra, nuevaNota.trim()]); setNuevaNota(''); }}}
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        type="button"
+                        className="neu-button"
+                        onClick={() => { if (!nuevaNota.trim()) return; setNotasExtra([...notasExtra, nuevaNota.trim()]); setNuevaNota(''); }}
+                        style={{ padding: '8px 14px', color: 'var(--accent-blue)', fontWeight: 'bold', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                      >
+                        ➕ Agregar nota
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1224,29 +1312,27 @@ const Eventos = () => {
                             🎂 {ev.festejado ? `Festejad@: ${ev.festejado}` : 'Festejad@ Faltante'}
                           </span>
 
-                          {/* Pizza */}
-                          <span style={{ 
-                            fontSize: '0.75rem', 
-                            padding: '4px 10px', 
-                            borderRadius: '8px', 
-                            background: ev.pizza && ev.pizza !== 'Sin definir' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.05)', 
-                            color: ev.pizza && ev.pizza !== 'Sin definir' ? 'var(--accent-success)' : 'var(--accent-warning)', 
-                            border: ev.pizza && ev.pizza !== 'Sin definir' ? 'none' : '1px dashed rgba(245, 158, 11, 0.3)' 
-                          }}>
-                            🍕 Pizza: {ev.pizza && ev.pizza !== 'Sin definir' ? ev.pizza : 'Pendiente'}
-                          </span>
+                          {/* Pizza - array-aware */}
+                          {(() => {
+                            const pizzaArr = Array.isArray(ev.pizza) ? ev.pizza : (ev.pizza && ev.pizza !== 'Sin definir' ? [ev.pizza] : []);
+                            const hasPizza = pizzaArr.length > 0;
+                            return (
+                              <span style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: '8px', background: hasPizza ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.05)', color: hasPizza ? 'var(--accent-success)' : 'var(--accent-warning)', border: hasPizza ? 'none' : '1px dashed rgba(245, 158, 11, 0.3)' }}>
+                                🍕 Pizza: {hasPizza ? pizzaArr.join(', ') : 'Pendiente'}
+                              </span>
+                            );
+                          })()}
 
-                          {/* Agua */}
-                          <span style={{ 
-                            fontSize: '0.75rem', 
-                            padding: '4px 10px', 
-                            borderRadius: '8px', 
-                            background: ev.agua && ev.agua !== 'Sin definir' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.05)', 
-                            color: ev.agua && ev.agua !== 'Sin definir' ? 'var(--accent-success)' : 'var(--accent-warning)', 
-                            border: ev.agua && ev.agua !== 'Sin definir' ? 'none' : '1px dashed rgba(245, 158, 11, 0.3)' 
-                          }}>
-                            🥤 Agua: {ev.agua && ev.agua !== 'Sin definir' ? ev.agua : 'Pendiente'}
-                          </span>
+                          {/* Agua - array-aware */}
+                          {(() => {
+                            const aguaArr = Array.isArray(ev.agua) ? ev.agua : (ev.agua && ev.agua !== 'Sin definir' ? [ev.agua] : []);
+                            const hasAgua = aguaArr.length > 0;
+                            return (
+                              <span style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: '8px', background: hasAgua ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.05)', color: hasAgua ? 'var(--accent-success)' : 'var(--accent-warning)', border: hasAgua ? 'none' : '1px dashed rgba(245, 158, 11, 0.3)' }}>
+                                🥤 Agua: {hasAgua ? aguaArr.join(', ') : 'Pendiente'}
+                              </span>
+                            );
+                          })()}
 
                           {/* Pastel */}
                           <span style={{ 
@@ -1352,8 +1438,8 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
   const [customPaquete, setCustomPaquete] = useState(isEstandar ? '' : (reservacion.paquete || ''));
   const [espacio, setEspacio] = useState(reservacion.espacio || 'Sin definir'); // Nuevo campo en edición
   
-  const [pizza, setPizza] = useState(reservacion.pizza || 'Sin definir');
-  const [agua, setAgua] = useState(reservacion.agua || 'Sin definir');
+  const [pizza, setPizza] = useState(normalizeToArray(reservacion.pizza));
+  const [agua, setAgua] = useState(normalizeToArray(reservacion.agua));
   const [pastel, setPastel] = useState(reservacion.pastel || 'Sin definir');
   
   const [horaLlegada, setHoraLlegada] = useState(reservacion.horaLlegada || '');
@@ -1368,6 +1454,9 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
   const [decoracionConcepto, setDecoracionConcepto] = useState(reservacion.decoracionConcepto || '');
   const [decoracionMonto, setDecoracionMonto] = useState(reservacion.decoracionMonto || '');
   const [horaPinata, setHoraPinata] = useState(reservacion.horaPinata || '');
+  const [tamañoPastel, setTamañoPastel] = useState(reservacion.tamañoPastel || '');
+  const [notasExtra, setNotasExtra] = useState(reservacion.notasExtra || []);
+  const [nuevaNota, setNuevaNota] = useState('');
   
   // Estados para precio base manual
   const [isManualPrecioBase, setIsManualPrecioBase] = useState(reservacion.precioBaseManual !== undefined && reservacion.precioBaseManual !== null && reservacion.precioBaseManual !== '');
@@ -1440,6 +1529,8 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
         decoracionConcepto: decoracionTipo === 'Personalizada' ? decoracionConcepto.trim() : '',
         decoracionMonto: decoracionTipo === 'Personalizada' ? (parseFloat(decoracionMonto) || 0) : 0,
         horaPinata: horaPinata,
+        tamañoPastel: tamañoPastel,
+        notasExtra: notasExtra,
         precioBaseManual: isManualPrecioBase && manualPrecioBase !== '' ? (parseFloat(manualPrecioBase) || 0) : null
       };
 
@@ -1720,26 +1811,40 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
           {/* SECCIÓN 3: ALIMENTOS Y BEBIDAS */}
           <div style={{ borderBottom: '1px solid var(--bg-color)', paddingBottom: '15px' }}>
             <h4 style={{ color: 'var(--accent-blue)', margin: '0 0 12px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🍕 Alimentos y Bebidas (Catering)</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               <div>
                 <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Pizza</label>
-                <select className="neu-input" value={pizza} onChange={(e) => setPizza(e.target.value)} style={{ marginTop: '5px' }}>
-                  <option value="Sin definir">Sin definir</option>
-                  <option value="Pepperoni">Pepperoni</option>
-                  <option value="Queso">Queso</option>
-                  <option value="Hawaiana">Hawaiana</option>
-                  <option value="Mitad y Mitad">Mitad y mitad</option>
-                </select>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                  {['Pepperoni', 'Queso', 'Hawaiana', 'Mitad y Mitad'].map(opt => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setPizza(prev => prev.includes(opt) ? prev.filter(x => x !== opt) : [...prev, opt])}
+                      className={pizza.includes(opt) ? 'neu-button' : 'neu-box'}
+                      style={{ padding: '7px 14px', fontSize: '0.78rem', cursor: 'pointer', borderRadius: '8px', border: pizza.includes(opt) ? '1.5px solid var(--accent-success)' : 'none', color: pizza.includes(opt) ? 'var(--accent-success)' : 'var(--text-muted)', fontWeight: pizza.includes(opt) ? 'bold' : 'normal' }}
+                    >
+                      {pizza.includes(opt) ? '✓ ' : ''}{opt}
+                    </button>
+                  ))}
+                </div>
+                {pizza.length > 0 && <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '5px 0 0 0', fontStyle: 'italic' }}>Seleccionado: {pizza.join(', ')}</p>}
               </div>
               <div>
                 <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Agua</label>
-                <select className="neu-input" value={agua} onChange={(e) => setAgua(e.target.value)} style={{ marginTop: '5px' }}>
-                  <option value="Sin definir">Sin definir</option>
-                  <option value="Limón">Limón</option>
-                  <option value="Jamaica">Jamaica</option>
-                  <option value="Horchata">Horchata</option>
-                  <option value="Natural">Natural</option>
-                </select>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                  {['Limón', 'Jamaica', 'Horchata', 'Natural'].map(opt => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setAgua(prev => prev.includes(opt) ? prev.filter(x => x !== opt) : [...prev, opt])}
+                      className={agua.includes(opt) ? 'neu-button' : 'neu-box'}
+                      style={{ padding: '7px 14px', fontSize: '0.78rem', cursor: 'pointer', borderRadius: '8px', border: agua.includes(opt) ? '1.5px solid var(--accent-blue)' : 'none', color: agua.includes(opt) ? 'var(--accent-blue)' : 'var(--text-muted)', fontWeight: agua.includes(opt) ? 'bold' : 'normal' }}
+                    >
+                      {agua.includes(opt) ? '✓ ' : ''}{opt}
+                    </button>
+                  ))}
+                </div>
+                {agua.length > 0 && <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '5px 0 0 0', fontStyle: 'italic' }}>Seleccionado: {agua.join(', ')}</p>}
               </div>
               <div>
                 <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Pastel</label>
@@ -1750,6 +1855,22 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
                   <option value="Fresa Pay">Fresa Pay</option>
                   <option value="Choco Fresa">Choco Fresa</option>
                 </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Tamaño del Pastel</label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                  {['Chico', 'Grande', 'Rectangular'].map(size => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setTamañoPastel(prev => prev === size ? '' : size)}
+                      className={tamañoPastel === size ? 'neu-button' : 'neu-box'}
+                      style={{ padding: '7px 14px', fontSize: '0.78rem', cursor: 'pointer', borderRadius: '8px', border: tamañoPastel === size ? '1.5px solid var(--accent-warning)' : 'none', color: tamañoPastel === size ? 'var(--accent-warning)' : 'var(--text-muted)', fontWeight: tamañoPastel === size ? 'bold' : 'normal' }}
+                    >
+                      {tamañoPastel === size ? '✓ ' : ''}{size}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -1900,6 +2021,43 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
                 style={{ padding: '9px 15px', color: 'var(--accent-blue)', fontWeight: 'bold', fontSize: '0.85rem' }}
               >
                 ➕ Agregar
+              </button>
+            </div>
+          </div>
+
+          {/* SECCIÓN: NOTAS EXTRA */}
+          <div style={{ borderTop: '2px solid var(--bg-color)', paddingTop: '15px', marginTop: '5px' }}>
+            <h4 style={{ color: 'var(--accent-blue)', margin: '0 0 12px 0', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>📝 Notas Extra</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'none' }}>Aparecen en el PDF impreso</span>
+            </h4>
+            {notasExtra.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                {notasExtra.map((nota, idx) => (
+                  <div key={idx} className="neu-box animate-fade-in" style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-color)', boxShadow: 'var(--shadow-inset)', borderRadius: '8px' }}>
+                    <span style={{ fontSize: '0.85rem' }}>📝 {nota}</span>
+                    <button type="button" onClick={() => setNotasExtra(notasExtra.filter((_, i) => i !== idx))} style={{ border: 'none', background: 'none', color: 'var(--accent-danger)', cursor: 'pointer', fontSize: '0.9rem', padding: '2px' }}>🗑️</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <input
+                type="text"
+                className="neu-input"
+                placeholder="Ej. Helado de limón de cortesía"
+                value={nuevaNota}
+                onChange={(e) => setNuevaNota(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (!nuevaNota.trim()) return; setNotasExtra([...notasExtra, nuevaNota.trim()]); setNuevaNota(''); }}}
+                style={{ flex: 1 }}
+              />
+              <button
+                type="button"
+                className="neu-button"
+                onClick={() => { if (!nuevaNota.trim()) return; setNotasExtra([...notasExtra, nuevaNota.trim()]); setNuevaNota(''); }}
+                style={{ padding: '9px 15px', color: 'var(--accent-blue)', fontWeight: 'bold', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+              >
+                ➕ Agregar nota
               </button>
             </div>
           </div>
@@ -2560,8 +2718,8 @@ const EventDetailModal = ({ event, onClose, onEdit, onAbonar, onPrint }) => {
           <div>
             <h4 style={{ margin: '0 0 12px 0', color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.85rem' }}>🍕 Catering y F&B</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.85rem' }}>
-              <div><strong>Pizza sabor:</strong> {event.pizza && event.pizza !== 'Sin definir' ? event.pizza : 'Pendiente'}</div>
-              <div><strong>Agua sabor:</strong> {event.agua && event.agua !== 'Sin definir' ? event.agua : 'Pendiente'}</div>
+              <div><strong>Pizza:</strong> {Array.isArray(event.pizza) ? (event.pizza.length > 0 ? event.pizza.join(', ') : 'Pendiente') : (event.pizza && event.pizza !== 'Sin definir' ? event.pizza : 'Pendiente')}</div>
+              <div><strong>Agua:</strong> {Array.isArray(event.agua) ? (event.agua.length > 0 ? event.agua.join(', ') : 'Pendiente') : (event.agua && event.agua !== 'Sin definir' ? event.agua : 'Pendiente')}</div>
               <div><strong>Pastel sabor:</strong> {event.pastel && event.pastel !== 'Sin definir' ? event.pastel : 'Pendiente'}</div>
             </div>
 
@@ -2794,7 +2952,7 @@ const PDFReservacionPrint = ({ event }) => {
       {/* Encabezado */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
         <div>
-          <img src="/img/logo en png.png" alt="Sky Zone" style={{ height: '55px', objectFit: 'contain' }} />
+          <img src="/img/logo2 en png.png" alt="Sky Zone" style={{ height: '75px', objectFit: 'contain' }} />
           <div style={{ fontSize: '9px', fontWeight: 'bold', letterSpacing: '1px', marginTop: '2px', textAlign: 'center', width: '130px' }}>
             INDOOR TRAMPOLINE PARK
           </div>
@@ -2900,7 +3058,7 @@ const PDFReservacionPrint = ({ event }) => {
               </tr>
               <tr>
                 <td style={{ fontWeight: 'bold', padding: '1px 0' }}>PASTEL:</td>
-                <td style={{ padding: '1px 0' }}>{event.pastel && event.pastel !== 'Sin definir' ? event.pastel : 'S/H'}</td>
+                <td style={{ padding: '1px 0' }}>{event.pastel && event.pastel !== 'Sin definir' ? `${event.pastel}${event.tamañoPastel ? ` (${event.tamañoPastel})` : ''}` : 'S/H'}</td>
               </tr>
               <tr>
                 <td style={{ fontWeight: 'bold', padding: '1px 0' }}>HORA GLOW:</td>
@@ -2919,6 +3077,12 @@ const PDFReservacionPrint = ({ event }) => {
                     : (event.decoracionTipo === 'Neon' ? 'Neon' : 'No incluye')}
                 </td>
               </tr>
+              {event.notasExtra && event.notasExtra.map((nota, idx) => (
+                <tr key={idx}>
+                  <td style={{ fontWeight: 'bold', padding: '1px 0' }}>NOTA:</td>
+                  <td style={{ padding: '1px 0' }}>{nota}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -3036,7 +3200,7 @@ const PDFReservacionPrint = ({ event }) => {
               </tr>
               <tr>
                 <td style={{ padding: '4px 0', color: '#333' }}>Pagos:</td>
-                <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 'bold', color: 'var(--accent-blue)' }}>
+                <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 'bold', color: '#ef4444' }}>
                   ${totalAbonado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                 </td>
               </tr>
