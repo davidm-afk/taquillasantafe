@@ -3046,27 +3046,45 @@ const PDFReservacionPrint = ({ event }) => {
             <tbody>
               <tr>
                 <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>ENTRADA:</td>
-                <td style={{ padding: '1px 0' }}>{event.horaLlegada || 'S/H'}</td>
+                <td style={{ padding: '1px 0' }}>{event.horaLlegada || ''}</td>
               </tr>
               <tr>
                 <td style={{ fontWeight: 'bold', padding: '1px 0' }}>COMIDA:</td>
-                <td style={{ padding: '1px 0' }}>{event.horaAlimentos || 'S/H'}</td>
+                <td style={{ padding: '1px 0' }}>{event.horaAlimentos || ''}</td>
+              </tr>
+              <tr>
+                <td style={{ fontWeight: 'bold', padding: '1px 0' }}>PIZZA:</td>
+                <td style={{ padding: '1px 0' }}>
+                  {(() => {
+                    const arr = Array.isArray(event.pizza) ? event.pizza : (event.pizza && event.pizza !== 'Sin definir' ? [event.pizza] : []);
+                    return arr.length > 0 ? arr.join(', ') : '';
+                  })()}
+                </td>
+              </tr>
+              <tr>
+                <td style={{ fontWeight: 'bold', padding: '1px 0' }}>AGUA:</td>
+                <td style={{ padding: '1px 0' }}>
+                  {(() => {
+                    const arr = Array.isArray(event.agua) ? event.agua : (event.agua && event.agua !== 'Sin definir' ? [event.agua] : []);
+                    return arr.length > 0 ? arr.join(', ') : '';
+                  })()}
+                </td>
               </tr>
               <tr>
                 <td style={{ fontWeight: 'bold', padding: '1px 0' }}>PIÑATA:</td>
-                <td style={{ padding: '1px 0' }}>{event.horaPinata || 'S/H'}</td>
+                <td style={{ padding: '1px 0' }}>{event.horaPinata || ''}</td>
               </tr>
               <tr>
                 <td style={{ fontWeight: 'bold', padding: '1px 0' }}>PASTEL:</td>
-                <td style={{ padding: '1px 0' }}>{event.pastel && event.pastel !== 'Sin definir' ? `${event.pastel}${event.tamañoPastel ? ` (${event.tamañoPastel})` : ''}` : 'S/H'}</td>
+                <td style={{ padding: '1px 0' }}>{event.pastel && event.pastel !== 'Sin definir' ? `${event.pastel}${event.tamañoPastel ? ` (${event.tamañoPastel})` : ''}` : ''}</td>
               </tr>
               <tr>
                 <td style={{ fontWeight: 'bold', padding: '1px 0' }}>HORA GLOW:</td>
-                <td style={{ padding: '1px 0' }}>{event.horaGlow || 'S/H'}</td>
+                <td style={{ padding: '1px 0' }}>{event.horaGlow || ''}</td>
               </tr>
               <tr>
                 <td style={{ fontWeight: 'bold', padding: '1px 0' }}>SALIDA:</td>
-                <td style={{ padding: '1px 0' }}>{event.horaSalida || 'S/H'}</td>
+                <td style={{ padding: '1px 0' }}>{event.horaSalida || ''}</td>
               </tr>
 
               <tr>
@@ -3074,15 +3092,15 @@ const PDFReservacionPrint = ({ event }) => {
                 <td style={{ padding: '1px 0' }}>
                   {event.decoracionTipo === 'Personalizada' 
                     ? `${event.decoracionConcepto || 'Personalizada'} ($${(parseFloat(event.decoracionMonto) || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })})`
-                    : (event.decoracionTipo === 'Neon' ? 'Neon' : 'No incluye')}
+                    : (event.decoracionTipo === 'Neon' ? 'Neon' : '')}
                 </td>
               </tr>
               {event.notasExtra && event.notasExtra.map((nota, idx) => (
                 <tr key={idx}>
-                  <td style={{ fontWeight: 'bold', padding: '1px 0' }}>NOTA:</td>
-                  <td style={{ padding: '1px 0' }}>{nota}</td>
+                  <td colSpan={2} style={{ padding: '1px 0' }}>{nota}</td>
                 </tr>
               ))}
+
             </tbody>
           </table>
         </div>
