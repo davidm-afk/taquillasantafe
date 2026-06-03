@@ -1,9 +1,11 @@
 import React from 'react';
-import { LogOut, Home, Sun, Moon } from 'lucide-react';
+import { LogOut, Home, Sun, Moon, Package } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Sidebar = ({ area }) => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   const [theme, setTheme] = React.useState(() => {
     return localStorage.getItem('theme') || 'light';
@@ -16,6 +18,14 @@ const Sidebar = ({ area }) => {
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
+  const handleHomeClick = () => {
+    if (user?.rol === 'Taquilla') navigate('/taquilla');
+    else if (user?.rol === 'Cafeteria') navigate('/cafeteria');
+    else if (user?.rol === 'Admin') navigate('/admin');
+    else if (user?.rol === 'Eventos') navigate('/eventos');
+    else navigate('/');
   };
 
   return (
@@ -33,9 +43,33 @@ const Sidebar = ({ area }) => {
         
         <div style={{ width: '50px', height: '2px', backgroundColor: 'var(--bg-color)', boxShadow: 'var(--shadow-inset)' }}></div>
         
-        <button className="neu-button" style={{ padding: '15px', borderRadius: '50%', color: 'var(--accent-blue)' }} title="Inicio">
+        <button 
+          className="neu-button" 
+          onClick={handleHomeClick}
+          style={{ padding: '15px', borderRadius: '50%', color: 'var(--accent-blue)', cursor: 'pointer' }} 
+          title="Inicio"
+        >
           <Home size={24} />
         </button>
+
+        {(user?.rol === 'Taquilla' || user?.rol === 'Cafeteria' || user?.rol === 'Admin') && (
+          <button 
+            className="neu-button" 
+            onClick={() => navigate('/inventario')}
+            style={{ 
+              padding: '15px', 
+              borderRadius: '50%', 
+              color: area === 'Inventario' ? 'var(--accent-success)' : 'var(--text-main)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer'
+            }} 
+            title="Inventario"
+          >
+            <Package size={24} />
+          </button>
+        )}
 
         <button 
           className="neu-button" 

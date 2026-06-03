@@ -3,8 +3,134 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import TicketImpresion from './TicketImpresion';
 import { db } from '../config/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, getDoc, setDoc, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { taquillaProducts } from '../data/products';
+
+// Helper function to update daily inventory for beverage sales
+const updateInventoryForSales = async (cartItems) => {
+  try {
+    // Get local date in YYYY-MM-DD format (CDMX time offset -6 hours)
+    const today = new Date();
+    const tzOffset = -6; // Central Time CDMX (approx)
+    const localTime = new Date(today.getTime() + tzOffset * 3600 * 1000);
+    const yyyy = localTime.getUTCFullYear();
+    const mm = String(localTime.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(localTime.getUTCDate()).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+
+    const inventoryMapping = {
+      "Coca cola": "Coca Cola Original",
+      "Coca Light": "Coca Cola Light",
+      "Coca Zero": "Coca Cola Zero",
+      "Sprite": "Sprite",
+      "Fanta": "Fanta",
+      "Mundet": "Mundet",
+      "Fresca": "Fresca",
+      "Delaware Punch": "Delaware Punch",
+      "Jugo Valle": "Jugo del Valle",
+      "Fuze Tea": "Fuze Tea",
+      "Topochico": "Topo chico",
+      "Powerade": "Powerade sabores",
+      "Agua": "Agua Ciel 600 ml",
+      "Garrafon Agua Simple": "Garrafon 19 lt",
+      "Garrafon Agua Sabor": "Garrafon 19 lt"
+    };
+
+    // Filter items in cart that are mapped to inventory drinks
+    const salesToApply = [];
+    cartItems.forEach(item => {
+      const mappedName = inventoryMapping[item.nombre];
+      if (mappedName) {
+        salesToApply.push({
+          nombre: mappedName,
+          qty: parseInt(item.qty) || 1
+        });
+      }
+    });
+
+    if (salesToApply.length === 0) return; // No beverages sold
+
+    const docRef = doc(db, 'inventario', dateStr);
+    const docSnap = await getDoc(docRef);
+
+    let inventoryData;
+    if (docSnap.exists()) {
+      inventoryData = docSnap.data();
+    } else {
+      // Initialize if it doesn't exist
+      const prevQuery = query(collection(db, 'inventario'), orderBy('fecha', 'desc'), limit(1));
+      const prevSnap = await getDocs(prevQuery);
+      
+      let previousProducts = {};
+      if (!prevSnap.empty) {
+        previousProducts = prevSnap.docs[0].data().productos || {};
+      }
+
+      const allProductNames = [
+        "Nuggets", "Chiken tenders", "Boneless", "Dedos de queso", "Carne para hamburguesa",
+        "Pan para hamburguesa", "Queso amarillo", "Pizza Congelada", "Queso", "Pepperoni",
+        "Papas a la francesa", "Salchichas", "Pan hot dogs", "Maíz Palomero Schettino", "Papas Ojuela",
+        "Frozen Fresas Con Crema", "Frozen Fruta Del Dragón", "Frozen Fruit Circle",
+        "Frozen Cookies And Cream", "Frozen Ositos", "Frozen Algodón De Azúcar",
+        "Coca Cola Original", "Coca Cola Zero", "Coca Cola Light", "Sprite", "Mundet", "Fresca",
+        "Fanta", "Delaware Punch", "Fuze Tea", "Powerade sabores", "Jugo del Valle", "Garrafon 19 lt",
+        "Agua Ciel 600 ml", "Topo chico", "salsa valentina", "salsa maggi", "salsa chamoy",
+        "Aceite", "Gomita Mango Enchilada", "Gomita pandita", "Gomita frituta", "Gomita lombriz",
+        "Gomita lombriz azucarada", "Gomita lombriz enchilada", "Cacahuate enchilado",
+        "Cacahuate salado", "Cacahuate japones", "Miguelito", "Plato para Pizza", "Plato Pastelero",
+        "Cuchara desechables", "Tenedores desechables", "Paquete Servilletas", "Toallas Sanitas",
+        "Toalla de Papel Marli", "Papel Higiénico Marli", "Papel encerado", "Cloro",
+        "Jabón para Manos", "Salvo Líquido Trastes", "Fabuloso Lavanda", "Aromatizante Glade",
+        "Servibolsa Extra Jumbo", "Servibolsa Grande", "Fibra de trastes", "Vaso coleccionable SZ",
+        "Charola de carton", "Vaso desechable 1Lt", "Vaso desechable 0.5Lt", "Vaso desechable 6OZ"
+      ];
+
+      const initialProducts = {};
+      allProductNames.forEach(prod => {
+        const prev = previousProducts[prod] || {};
+        const prevFinal = prev.final !== undefined ? parseInt(prev.final) || 0 : 0;
+        initialProducts[prod] = {
+          inicial: prevFinal,
+          entrada: 0,
+          merma: 0,
+          cortesia: 0,
+          venta: 0,
+          final: prevFinal
+        };
+      });
+
+      inventoryData = {
+        fecha: dateStr,
+        productos: initialProducts
+      };
+    }
+
+    // Apply the beverage sales to inventory data
+    salesToApply.forEach(sale => {
+      const prodData = inventoryData.productos[sale.nombre] || {
+        inicial: 0,
+        entrada: 0,
+        merma: 0,
+        cortesia: 0,
+        venta: 0,
+        final: 0
+      };
+      
+      prodData.venta = (parseInt(prodData.venta) || 0) + sale.qty;
+      prodData.final = (parseInt(prodData.inicial) || 0) + 
+                       (parseInt(prodData.entrada) || 0) - 
+                       (parseInt(prodData.merma) || 0) - 
+                       (parseInt(prodData.cortesia) || 0) - 
+                       prodData.venta;
+      
+      inventoryData.productos[sale.nombre] = prodData;
+    });
+
+    await setDoc(docRef, inventoryData);
+  } catch (err) {
+    console.error("Error adjusting inventory during checkout:", err);
+  }
+};
 
 const PaymentModal = ({ area, onClose }) => {
   const { cart, total, clearCart } = useCart();
@@ -96,6 +222,7 @@ const PaymentModal = ({ area, onClose }) => {
     }
 
     try {
+      await updateInventoryForSales(cart);
       await addDoc(collection(db, 'ventas'), ventaData);
       
       // Imprimir el ticket de manera sincrona después de enviar a Firebase

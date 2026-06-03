@@ -64,12 +64,27 @@ const normalizeToArray = (val) => {
 };
 
 // Lista de paquetes estándar del parque
-const paquetesEstandar = ['Sin definir', 'Platinum', 'VIP', 'NTP $6299', 'Grupos', 'Evento Privado'];
+const paquetesEstandar = [
+  'Sin definir', 'Platinum', 'VIP', 'NTP $6299', 'Grupos', 'Evento Privado',
+  'Grupos - Paquete A', 'Grupos - Paquete B', 'Grupos - Paquete C'
+];
 
 // Función de cálculo de precios automática oficial
 const calcularPrecioPaquete = (paquete, saltadoresCount, fechaStr) => {
   const saltadores = parseInt(saltadoresCount) || 0;
   if (saltadores <= 0) return 0;
+
+  // Cálculos para sub-planes de Grupos (mínimo 5 personas)
+  if (paquete === 'Grupos - Paquete A') {
+    return Math.max(5, saltadores) * 220;
+  }
+  if (paquete === 'Grupos - Paquete B') {
+    return Math.max(5, saltadores) * 260;
+  }
+  if (paquete === 'Grupos - Paquete C') {
+    return Math.max(5, saltadores) * 399;
+  }
+
   if (paquete !== 'VIP' && paquete !== 'Platinum' && paquete !== 'NTP $6299') return 0;
 
   // Regla para NTP $6299: Mínimo 15 niños cobrando base de $6,299, extras a $420 c/u
@@ -106,7 +121,7 @@ const calcularTotalVenta = (ev) => {
   let totalBase = 0;
   if (ev.precioBaseManual !== undefined && ev.precioBaseManual !== null && ev.precioBaseManual !== '') {
     totalBase = parseFloat(ev.precioBaseManual) || 0;
-  } else if (ev.paquete === 'VIP' || ev.paquete === 'Platinum' || ev.paquete === 'NTP $6299') {
+  } else if (ev.paquete === 'VIP' || ev.paquete === 'Platinum' || ev.paquete === 'NTP $6299' || (ev.paquete && ev.paquete.startsWith('Grupos'))) {
     totalBase = calcularPrecioPaquete(ev.paquete, ev.saltadores, ev.fecha);
   } else {
     // Valor de estimación estándar para otros paquetes: $350 por saltador
@@ -115,7 +130,19 @@ const calcularTotalVenta = (ev) => {
 
   const totalExtras = ev.extras ? ev.extras.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0) : 0;
   const totalDecoracion = (ev.decoracionTipo === 'Personalizada') ? (parseFloat(ev.decoracionMonto) || 0) : 0;
-  return totalBase + totalExtras + totalDecoracion;
+
+  // Calcular precio del pastel
+  let totalPastel = 0;
+  if (ev.pastel && ev.pastel !== 'Sin definir') {
+    const pastelGratis = ev.paquete === 'VIP' || ev.paquete === 'Platinum' || ev.paquete === 'Evento Privado';
+    if (!pastelGratis) {
+      if (ev.tamañoPastel === 'Chico') totalPastel = 699;
+      else if (ev.tamañoPastel === 'Grande') totalPastel = 799;
+      else if (ev.tamañoPastel === 'Rectangular') totalPastel = 899;
+    }
+  }
+
+  return totalBase + totalExtras + totalDecoracion + totalPastel;
 };
 
 const Eventos = () => {
@@ -198,6 +225,7 @@ const Eventos = () => {
       document.body.classList.add('print-reservation');
       window.print();
       document.body.classList.remove('print-reservation');
+      setPrintReservacionData(null);
     }, 200);
   };
 
@@ -340,14 +368,26 @@ const Eventos = () => {
   };
 
   // Precio dinámico en el formulario de creación (base + extras + decoración + base manual)
-  const precioFormularioBase = (paquete === 'VIP' || paquete === 'Platinum' || paquete === 'NTP $6299') 
+  const precioFormularioBase = (paquete === 'VIP' || paquete === 'Platinum' || paquete === 'NTP $6299' || paquete.startsWith('Grupos')) 
     ? calcularPrecioPaquete(paquete, saltadores, getFechaCalculo()) 
     : (parseInt(saltadores) || 0) * 350; // Estimación estándar de $350 para otros paquetes
 
   const totalExtrasForm = extrasForm.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0);
   const totalDecoracionForm = (decoracionTipo === 'Personalizada') ? (parseFloat(decoracionMonto) || 0) : 0;
   const finalBaseForm = (isManualPrecioBase && manualPrecioBase !== '') ? (parseFloat(manualPrecioBase) || 0) : precioFormularioBase;
-  const precioFormulario = finalBaseForm + totalExtrasForm + totalDecoracionForm;
+
+  // Calcular precio del pastel en el formulario
+  let totalPastelForm = 0;
+  if (pastel && pastel !== 'Sin definir') {
+    const pastelGratis = paquete === 'VIP' || paquete === 'Platinum' || paquete === 'Evento Privado';
+    if (!pastelGratis) {
+      if (tamañoPastel === 'Chico') totalPastelForm = 699;
+      else if (tamañoPastel === 'Grande') totalPastelForm = 799;
+      else if (tamañoPastel === 'Rectangular') totalPastelForm = 899;
+    }
+  }
+
+  const precioFormulario = finalBaseForm + totalExtrasForm + totalDecoracionForm + totalPastelForm;
 
   // Obtener reservaciones filtradas por período para las tarjetas de métricas
   const getFilteredEventsForMetrics = () => {
@@ -509,8 +549,14 @@ const Eventos = () => {
           </div>
           <div className="neu-box" style={{ padding: '20px', textAlign: 'center' }}>
             <p style={{ margin: '0 0 8px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.8rem' }}>SALTADORES TOTALES</p>
-            <h2 style={{ margin: 0, fontSize: '2.2rem', color: 'var(--accent-blue)' }}>
+            <h2 style={{ margin: 0, fontSize: '2.2rem', color: 'var(--accent-orange)' }}>
               {metricEvents.reduce((acc, curr) => acc + (parseInt(curr.saltadores) || 0), 0)}
+            </h2>
+          </div>
+          <div className="neu-box" style={{ padding: '20px', textAlign: 'center' }}>
+            <p style={{ margin: '0 0 8px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.8rem' }}>ADULTOS TOTALES</p>
+            <h2 style={{ margin: 0, fontSize: '2.2rem', color: 'var(--accent-orange)' }}>
+              {metricEvents.reduce((acc, curr) => acc + (parseInt(curr.adultos) || 0), 0)}
             </h2>
           </div>
           <div className="neu-box" style={{ padding: '20px', textAlign: 'center' }}>
@@ -634,10 +680,14 @@ const Eventos = () => {
                       <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🎁 PAQUETE</label>
                       <select 
                         className="neu-input"
-                        value={paquete}
+                        value={paquete.startsWith('Grupos') ? 'Grupos' : paquete}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setPaquete(val);
+                          if (val === 'Grupos') {
+                            setPaquete('Grupos - Paquete A');
+                          } else {
+                            setPaquete(val);
+                          }
                           if (val === 'VIP' || val === 'Platinum') {
                             setDecoracionTipo('Neon');
                           } else {
@@ -674,6 +724,25 @@ const Eventos = () => {
                       </select>
                     </div>
                   </div>
+
+                  {paquete.startsWith('Grupos') && (
+                    <div className="animate-fade-in">
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>📋 PLAN DE GRUPOS DETALLADO</label>
+                      <select
+                        className="neu-input"
+                        value={paquete}
+                        onChange={(e) => setPaquete(e.target.value)}
+                        style={{ marginTop: '5px' }}
+                      >
+                        <option value="Grupos - Paquete A">A: 90 minutos de salto + SkySocks en $220 por persona</option>
+                        <option value="Grupos - Paquete B">B: 2 horas de salto + SkySocks en $260 por persona</option>
+                        <option value="Grupos - Paquete C">C: DayPass salto ilimitado + SkySocks en $399 por persona</option>
+                      </select>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--accent-orange)', margin: '5px 0 0 0', fontWeight: 'bold' }}>
+                        * Nota: Reservas a partir de 5 personas.
+                      </p>
+                    </div>
+                  )}
 
                   {paquete === 'Otro (Elegir manualmente)' && (
                     <div className="animate-fade-in">
@@ -779,63 +848,7 @@ const Eventos = () => {
                     </div>
                   )}
                   
-                  {/* Vista Previa de Costo Automático con soporte de Extras */}
-                  {precioFormulario > 0 && (
-                    <div className="neu-box animate-fade-in" style={{ padding: '12px', borderLeft: '4px solid var(--accent-success)', background: 'rgba(16, 185, 129, 0.05)', fontSize: '0.85rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '10px' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>Costo Base ({paquete}):</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {isManualPrecioBase ? (
-                            <input 
-                              type="number" 
-                              className="neu-input" 
-                              style={{ width: '90px', padding: '3px 8px', height: '24px', fontSize: '0.8rem', textAlign: 'right' }}
-                              value={manualPrecioBase}
-                              onChange={(e) => setManualPrecioBase(e.target.value)}
-                              placeholder="Monto"
-                              min="0"
-                            />
-                          ) : (
-                            <strong style={{ color: 'var(--text-main)' }}>
-                              ${precioFormularioBase.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                            </strong>
-                          )}
-                          <button
-                            type="button"
-                            className="neu-button"
-                            style={{ padding: '2px 8px', fontSize: '0.65rem', color: 'var(--accent-blue)', height: '22px', display: 'flex', alignItems: 'center', fontWeight: 'bold' }}
-                            onClick={() => {
-                              if (!isManualPrecioBase) {
-                                setManualPrecioBase(precioFormularioBase);
-                              }
-                              setIsManualPrecioBase(!isManualPrecioBase);
-                            }}
-                          >
-                            {isManualPrecioBase ? 'Aceptar' : 'Editar cantidad'}
-                          </button>
-                        </div>
-                      </div>
-                      
-                      {paquete === 'NTP $6299' && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', paddingLeft: '10px' }}>
-                          * Mínimo 15 niños.
-                          {(parseInt(saltadores) || 0) > 15 && ` Extras: ${(parseInt(saltadores) || 0) - 15} x $420.`}
-                        </div>
-                      )}
 
-                      {extrasForm.length > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', borderTop: '1px dashed var(--bg-color)', paddingTop: '4px' }}>
-                          <span style={{ color: 'var(--text-muted)' }}>Conceptos Extras ({extrasForm.length}):</span>
-                          <strong style={{ color: 'var(--text-main)' }}>${totalExtrasForm.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
-                        </div>
-                      )}
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '0.95rem', color: 'var(--accent-success)', borderTop: '1.5px solid var(--bg-color)', paddingTop: '6px', marginTop: '4px' }}>
-                        <span>💰 COSTO ESTIMADO TOTAL:</span>
-                        <span>${precioFormulario.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -1136,6 +1149,71 @@ const Eventos = () => {
                 </div>
               )}
 
+              {/* Vista Previa de Costo Automático con soporte de Extras (Visible en todo momento) */}
+              {precioFormulario > 0 && (
+                <div className="neu-box animate-fade-in" style={{ padding: '12px', borderLeft: '4px solid var(--accent-success)', background: 'rgba(16, 185, 129, 0.05)', fontSize: '0.85rem', marginTop: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '10px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Costo Base ({paquete}):</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {isManualPrecioBase ? (
+                        <input 
+                          type="number" 
+                          className="neu-input" 
+                          style={{ width: '90px', padding: '3px 8px', height: '24px', fontSize: '0.8rem', textAlign: 'right' }}
+                          value={manualPrecioBase}
+                          onChange={(e) => setManualPrecioBase(e.target.value)}
+                          placeholder="Monto"
+                          min="0"
+                        />
+                      ) : (
+                        <strong style={{ color: 'var(--text-main)' }}>
+                          ${precioFormularioBase.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                        </strong>
+                      )}
+                      <button
+                        type="button"
+                        className="neu-button"
+                        style={{ padding: '2px 8px', fontSize: '0.65rem', color: 'var(--accent-blue)', height: '22px', display: 'flex', alignItems: 'center', fontWeight: 'bold' }}
+                        onClick={() => {
+                          if (!isManualPrecioBase) {
+                            setManualPrecioBase(precioFormularioBase);
+                          }
+                          setIsManualPrecioBase(!isManualPrecioBase);
+                        }}
+                      >
+                        {isManualPrecioBase ? 'Aceptar' : 'Editar cantidad'}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {paquete === 'NTP $6299' && (
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', paddingLeft: '10px' }}>
+                      * Mínimo 15 niños.
+                      {(parseInt(saltadores) || 0) > 15 && ` Extras: ${(parseInt(saltadores) || 0) - 15} x $420.`}
+                    </div>
+                  )}
+
+                  {extrasForm.length > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', borderTop: '1px dashed var(--bg-color)', paddingTop: '4px' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Conceptos Extras ({extrasForm.length}):</span>
+                      <strong style={{ color: 'var(--text-main)' }}>${totalExtrasForm.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
+                    </div>
+                  )}
+
+                  {pastel && pastel !== 'Sin definir' && totalPastelForm > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', borderTop: '1px dashed var(--bg-color)', paddingTop: '4px' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Pastel ({tamañoPastel}):</span>
+                      <strong style={{ color: 'var(--text-main)' }}>${totalPastelForm.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '0.95rem', color: 'var(--accent-success)', borderTop: '1.5px solid var(--bg-color)', paddingTop: '6px', marginTop: '4px' }}>
+                    <span>💰 COSTO ESTIMADO TOTAL:</span>
+                    <span>${precioFormulario.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              )}
+
               <button 
                 type="submit" 
                 className="neu-button" 
@@ -1146,225 +1224,264 @@ const Eventos = () => {
             </form>
           </div>
 
-          {/* Listado de Próximas Reservaciones con Detección de Faltantes */}
+          {/* Listado de Reservaciones de la Semana en Curso */}
           <div className="neu-box" style={{ padding: '25px', flex: '2', minWidth: '400px' }}>
-            <h3 className="text-gradient-blue" style={{ margin: '0 0 5px 0', fontSize: '1.4rem' }}>📅 Próximas Reservaciones</h3>
+            <h3 className="text-gradient-blue" style={{ margin: '0 0 5px 0', fontSize: '1.4rem' }}>📅 Reservaciones de la Semana</h3>
             <p style={{ margin: '0 0 20px 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Mostrando las próximas 10 fiestas. Abre el <strong>Calendario</strong> para explorar la agenda completa.
+              Mostrando los eventos programados para la semana en curso. Abre el <strong>Calendario</strong> para explorar la agenda completa.
             </p>
             
-            {loading ? (
-              <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Cargando reservaciones...</p>
-            ) : eventosReservados.length === 0 ? (
-              <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay reservaciones registradas.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {eventosReservados.slice(0, 10).map((ev) => {
-                  const totalEvento = calcularTotalVenta(ev);
-                  const totalAbonado = ev.abonos ? ev.abonos.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0) : 0;
-                  const saldoRestante = Math.max(0, totalEvento - totalAbonado);
+            {(() => {
+              if (loading) {
+                return <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Cargando reservaciones...</p>;
+              }
 
-                  return (
-                    <div 
-                      key={ev.id} 
-                      className="neu-box" 
-                      style={{ 
-                        padding: '20px', 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        gap: '15px', 
-                        background: 'var(--bg-color)', 
-                        boxShadow: 'var(--shadow-inset)' 
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                          <h4 style={{ margin: '0 0 5px 0', color: 'var(--text-main)', fontSize: '1.2rem' }}>{ev.cliente}</h4>
-                          <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                            📅 <strong>{formatFecha(ev.fecha)}</strong> <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginLeft: '4px' }}>({getDiaSemanaLabel(ev.fecha)})</span> • Paquete: <strong>{ev.paquete}</strong> • Saltadores: <strong>{ev.saltadores || 0}</strong> • Adultos: <strong>{ev.adultos || 0}</strong>
-                          </p>
-                          
-                          {/* Cotización y Estado de Abonos */}
-                          <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                            <div style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>
-                              💵 Costo Total: <strong>${totalEvento.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
-                            </div>
-                            {totalAbonado > 0 && (
-                              <div style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', display: 'flex', gap: '8px' }}>
-                                <span>Abonado: <strong>${totalAbonado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong></span>
-                                <span style={{ color: saldoRestante === 0 ? 'var(--accent-success)' : 'var(--accent-danger)' }}>
-                                  • Pendiente: <strong>${saldoRestante.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
-                                </span>
+              // Calcular límites de la semana actual (Lunes 00:00:00 a Domingo 23:59:59)
+              const start = new Date();
+              const day = start.getDay();
+              const diffToMonday = start.getDate() - day + (day === 0 ? -6 : 1);
+              start.setDate(diffToMonday);
+              start.setHours(0, 0, 0, 0);
+              
+              const end = new Date(start);
+              end.setDate(start.getDate() + 6);
+              end.setHours(23, 59, 59, 999);
+
+              const eventosSemana = eventosReservados.filter(ev => {
+                const evDate = parseDateString(ev.fecha);
+                return evDate && evDate >= start && evDate <= end;
+              });
+
+              if (eventosSemana.length === 0) {
+                return <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay reservaciones registradas para esta semana.</p>;
+              }
+
+              // Agrupar eventos por fecha
+              const eventosPorDia = {};
+              eventosSemana.forEach(ev => {
+                if (!ev.fecha) return;
+                if (!eventosPorDia[ev.fecha]) {
+                  eventosPorDia[ev.fecha] = [];
+                }
+                eventosPorDia[ev.fecha].push(ev);
+              });
+
+              // Ordenar las fechas cronológicamente
+              const fechasOrdenadas = Object.keys(eventosPorDia).sort();
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+                  {fechasOrdenadas.map((fechaKey) => {
+                    const eventosDia = eventosPorDia[fechaKey];
+                    const diaSemana = getDiaSemanaLabel(fechaKey);
+                    const fechaFormateada = formatFecha(fechaKey);
+
+                    return (
+                      <div key={fechaKey} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <h4 className="text-gradient-orange" style={{ margin: '0 0 5px 0', fontSize: '1.15rem', fontWeight: 'bold', borderBottom: '2px dashed rgba(255, 107, 53, 0.3)', paddingBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                          ⚡ {diaSemana} ({fechaFormateada})
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                          {eventosDia.map((ev) => {
+                            const totalEvento = calcularTotalVenta(ev);
+                            const totalAbonado = ev.abonos ? ev.abonos.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0) : 0;
+                            const saldoRestante = Math.max(0, totalEvento - totalAbonado);
+
+                            return (
+                              <div 
+                                key={ev.id} 
+                                className="neu-box" 
+                                style={{ 
+                                  padding: '20px', 
+                                  display: 'flex', 
+                                  flexDirection: 'column', 
+                                  gap: '15px', 
+                                  background: 'var(--bg-color)', 
+                                  boxShadow: 'var(--shadow-inset)' 
+                                }}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                  <div>
+                                    <h4 style={{ margin: '0 0 5px 0', color: 'var(--text-main)', fontSize: '1.2rem' }}>{ev.cliente}</h4>
+                                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                      📅 <strong>{formatFecha(ev.fecha)}</strong> <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginLeft: '4px' }}>({getDiaSemanaLabel(ev.fecha)})</span> • Paquete: <strong>{ev.paquete}</strong> • Saltadores: <strong>{ev.saltadores || 0}</strong> • Adultos: <strong>{ev.adultos || 0}</strong>
+                                    </p>
+                                    
+                                    {/* Cotización y Estado de Abonos */}
+                                    <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                      <div style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                                        💵 Costo Total: <strong>${totalEvento.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
+                                      </div>
+                                      {totalAbonado > 0 && (
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', display: 'flex', gap: '8px' }}>
+                                          <span>Abonado: <strong>${totalAbonado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong></span>
+                                          <span style={{ color: saldoRestante === 0 ? 'var(--accent-success)' : 'var(--accent-danger)' }}>
+                                            • Pendiente: <strong>${saldoRestante.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
+                                    <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                                      {totalAbonado > 0 && saldoRestante === 0 ? (
+                                        <span style={{ 
+                                          fontSize: '0.7rem', 
+                                          padding: '4px 8px', 
+                                          borderRadius: '12px', 
+                                          background: 'rgba(16, 185, 129, 0.2)',
+                                          color: 'var(--accent-success)',
+                                          fontWeight: 'bold',
+                                          border: '1px solid var(--accent-success)'
+                                        }}>
+                                          LIQUIDADO
+                                        </span>
+                                      ) : (
+                                        <span style={{ 
+                                          fontSize: '0.7rem', 
+                                          padding: '4px 8px', 
+                                          borderRadius: '12px', 
+                                          background: 'rgba(239, 68, 68, 0.15)',
+                                          color: 'var(--accent-danger)',
+                                          fontWeight: 'bold',
+                                          border: '1px solid var(--accent-danger)'
+                                        }}>
+                                          POR LIQUIDAR
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '5px' }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => setEditingReservacion(ev)}
+                                        className="neu-button"
+                                        style={{ padding: '6px 12px', fontSize: '0.8rem', color: 'var(--accent-blue)' }}
+                                      >
+                                        ✏️ Editar
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setAbonosReservacion(ev)}
+                                        className="neu-button"
+                                        style={{ padding: '6px 12px', fontSize: '0.8rem', color: 'var(--accent-success)', fontWeight: 'bold' }}
+                                      >
+                                        💰 Abonar
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handlePrintReservacion(ev)}
+                                        className="neu-button"
+                                        style={{ padding: '6px 12px', fontSize: '0.8rem', color: 'var(--text-main)' }}
+                                        title="Generar ficha PDF de reservación"
+                                      >
+                                        📄 PDF
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Desglose de Datos Opcionales (Coloreados si existen, gris con borde discontinuo si faltan) */}
+                                <div style={{ borderTop: '1px solid var(--bg-color)', paddingTop: '10px' }}>
+                                  <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Detalles de Reservación:
+                                  </div>
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                    
+                                    {/* Espacio Asignado */}
+                                    <span style={{ 
+                                      fontSize: '0.75rem', 
+                                      padding: '4px 10px', 
+                                      borderRadius: '8px', 
+                                      background: ev.espacio && ev.espacio !== 'Sin definir' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(239, 68, 68, 0.05)', 
+                                      color: ev.espacio && ev.espacio !== 'Sin definir' ? 'var(--accent-blue)' : 'var(--accent-danger)', 
+                                      border: ev.espacio && ev.espacio !== 'Sin definir' ? 'none' : '1px dashed rgba(239, 68, 68, 0.3)',
+                                      fontWeight: ev.espacio && ev.espacio !== 'Sin definir' ? 'bold' : 'normal'
+                                    }}>
+                                      🏡 Espacio: {ev.espacio && ev.espacio !== 'Sin definir' ? (ev.espacio === 'salon 1' ? 'Salón 1' : ev.espacio === 'salon 2' ? 'Salón 2' : ev.espacio === 'salon 3' ? 'Salón 3' : ev.espacio === 'Cafeteria' ? 'Cafetería' : ev.espacio) : 'Sin asignar'}
+                                    </span>
+
+                                    {/* Teléfono */}
+                                    <span style={{ 
+                                      fontSize: '0.75rem', 
+                                      padding: '4px 10px', 
+                                      borderRadius: '8px', 
+                                      background: ev.telefono ? 'rgba(59, 130, 246, 0.1)' : 'rgba(239, 68, 68, 0.05)', 
+                                      color: ev.telefono ? 'var(--accent-blue)' : 'var(--accent-danger)', 
+                                      border: ev.telefono ? 'none' : '1px dashed rgba(239, 68, 68, 0.3)' 
+                                    }}>
+                                      📞 {ev.telefono ? ev.telefono : 'Teléfono Faltante'}
+                                    </span>
+
+                                    {/* Festejado */}
+                                    <span style={{ 
+                                      fontSize: '0.75rem', 
+                                      padding: '4px 10px', 
+                                      borderRadius: '8px', 
+                                      background: ev.festejado ? 'rgba(139, 92, 246, 0.1)' : 'rgba(107, 114, 128, 0.05)', 
+                                      color: ev.festejado ? 'var(--accent-purple)' : 'var(--text-muted)', 
+                                      border: ev.festejado ? 'none' : '1px dashed rgba(107, 114, 128, 0.3)' 
+                                    }}>
+                                      🎂 {ev.festejado ? `Festejad@: ${ev.festejado}` : 'Festejad@ Faltante'}
+                                    </span>
+
+                                    {/* Pizza - array-aware */}
+                                    {(() => {
+                                      const pizzaArr = Array.isArray(ev.pizza) ? ev.pizza : (ev.pizza && ev.pizza !== 'Sin definir' ? [ev.pizza] : []);
+                                      const hasPizza = pizzaArr.length > 0;
+                                      return (
+                                        <span style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: '8px', background: hasPizza ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.05)', color: hasPizza ? 'var(--accent-success)' : 'var(--accent-warning)', border: hasPizza ? 'none' : '1px dashed rgba(245, 158, 11, 0.3)' }}>
+                                          🍕 Pizza: {hasPizza ? pizzaArr.join(', ') : 'Pendiente'}
+                                        </span>
+                                      );
+                                    })()}
+
+                                    {/* Agua - array-aware */}
+                                    {(() => {
+                                      const aguaArr = Array.isArray(ev.agua) ? ev.agua : (ev.agua && ev.agua !== 'Sin definir' ? [ev.agua] : []);
+                                      const hasAgua = aguaArr.length > 0;
+                                      return (
+                                        <span style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: '8px', background: hasAgua ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.05)', color: hasAgua ? 'var(--accent-success)' : 'var(--accent-warning)', border: hasAgua ? 'none' : '1px dashed rgba(245, 158, 11, 0.3)' }}>
+                                          🥤 Agua: {hasAgua ? aguaArr.join(', ') : 'Pendiente'}
+                                        </span>
+                                      );
+                                    })()}
+
+                                    {/* Pastel */}
+                                    <span style={{ 
+                                      fontSize: '0.75rem', 
+                                      padding: '4px 10px', 
+                                      borderRadius: '8px', 
+                                      background: ev.pastel && ev.pastel !== 'Sin definir' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.05)', 
+                                      color: ev.pastel && ev.pastel !== 'Sin definir' ? 'var(--accent-success)' : 'var(--accent-warning)', 
+                                      border: ev.pastel && ev.pastel !== 'Sin definir' ? 'none' : '1px dashed rgba(245, 158, 11, 0.3)' 
+                                    }}>
+                                      🍰 Pastel: {ev.pastel && ev.pastel !== 'Sin definir' ? ev.pastel : 'Pendiente'}
+                                    </span>
+
+                                    {/* Horarios */}
+                                    <span style={{ 
+                                      fontSize: '0.75rem', 
+                                      padding: '4px 10px', 
+                                      borderRadius: '8px', 
+                                      background: ev.horaLlegada ? 'rgba(59, 130, 246, 0.1)' : 'rgba(107, 114, 128, 0.05)', 
+                                      color: ev.horaLlegada ? 'var(--accent-blue)' : 'var(--text-muted)', 
+                                      border: ev.horaLlegada ? 'none' : '1px dashed rgba(107, 114, 128, 0.3)' 
+                                    }}>
+                                      ⏰ {ev.horaLlegada ? `Llegada: ${ev.horaLlegada}` : 'Horario sin definir'}
+                                      {ev.horaSalida ? ` - Salida: ${ev.horaSalida}` : ''}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
-                            )}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
-                          <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-                            {totalAbonado > 0 && saldoRestante === 0 ? (
-                              <span style={{ 
-                                fontSize: '0.7rem', 
-                                padding: '4px 8px', 
-                                borderRadius: '12px', 
-                                background: 'rgba(16, 185, 129, 0.2)',
-                                color: 'var(--accent-success)',
-                                fontWeight: 'bold',
-                                border: '1px solid var(--accent-success)'
-                              }}>
-                                LIQUIDADO
-                              </span>
-                            ) : (
-                              <span style={{ 
-                                fontSize: '0.7rem', 
-                                padding: '4px 8px', 
-                                borderRadius: '12px', 
-                                background: 'rgba(239, 68, 68, 0.15)',
-                                color: 'var(--accent-danger)',
-                                fontWeight: 'bold',
-                                border: '1px solid var(--accent-danger)'
-                              }}>
-                                POR LIQUIDAR
-                              </span>
-                            )}
-                            <span style={{ 
-                              fontSize: '0.75rem', 
-                              padding: '4px 10px', 
-                              borderRadius: '12px', 
-                              background: ev.estado === 'Confirmado' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                              color: ev.estado === 'Confirmado' ? 'var(--accent-success)' : 'var(--accent-warning)',
-                              fontWeight: 'bold'
-                            }}>
-                              {ev.estado}
-                            </span>
-                          </div>
-                          
-                          <div style={{ display: 'flex', gap: '8px', marginTop: '5px' }}>
-                            <button
-                              type="button"
-                              onClick={() => setEditingReservacion(ev)}
-                              className="neu-button"
-                              style={{ padding: '6px 12px', fontSize: '0.8rem', color: 'var(--accent-blue)' }}
-                            >
-                              ✏️ Editar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setAbonosReservacion(ev)}
-                              className="neu-button"
-                              style={{ padding: '6px 12px', fontSize: '0.8rem', color: 'var(--accent-success)', fontWeight: 'bold' }}
-                            >
-                              💰 Abonar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handlePrintReservacion(ev)}
-                              className="neu-button"
-                              style={{ padding: '6px 12px', fontSize: '0.8rem', color: 'var(--text-main)' }}
-                              title="Generar ficha PDF de reservación"
-                            >
-                              📄 PDF
-                            </button>
-                          </div>
+                            );
+                          })}
                         </div>
                       </div>
-
-                      {/* Desglose de Datos Opcionales (Coloreados si existen, gris con borde discontinuo si faltan) */}
-                      <div style={{ borderTop: '1px solid var(--bg-color)', paddingTop: '10px' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                          Detalles de Reservación:
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                          
-                          {/* Espacio Asignado */}
-                          <span style={{ 
-                            fontSize: '0.75rem', 
-                            padding: '4px 10px', 
-                            borderRadius: '8px', 
-                            background: ev.espacio && ev.espacio !== 'Sin definir' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(239, 68, 68, 0.05)', 
-                            color: ev.espacio && ev.espacio !== 'Sin definir' ? 'var(--accent-blue)' : 'var(--accent-danger)', 
-                            border: ev.espacio && ev.espacio !== 'Sin definir' ? 'none' : '1px dashed rgba(239, 68, 68, 0.3)',
-                            fontWeight: ev.espacio && ev.espacio !== 'Sin definir' ? 'bold' : 'normal'
-                          }}>
-                            🏡 Espacio: {ev.espacio && ev.espacio !== 'Sin definir' ? (ev.espacio === 'salon 1' ? 'Salón 1' : ev.espacio === 'salon 2' ? 'Salón 2' : ev.espacio === 'salon 3' ? 'Salón 3' : ev.espacio === 'Cafeteria' ? 'Cafetería' : ev.espacio) : 'Sin asignar'}
-                          </span>
-
-                          {/* Teléfono */}
-                          <span style={{ 
-                            fontSize: '0.75rem', 
-                            padding: '4px 10px', 
-                            borderRadius: '8px', 
-                            background: ev.telefono ? 'rgba(59, 130, 246, 0.1)' : 'rgba(239, 68, 68, 0.05)', 
-                            color: ev.telefono ? 'var(--accent-blue)' : 'var(--accent-danger)', 
-                            border: ev.telefono ? 'none' : '1px dashed rgba(239, 68, 68, 0.3)' 
-                          }}>
-                            📞 {ev.telefono ? ev.telefono : 'Teléfono Faltante'}
-                          </span>
-
-                          {/* Festejado */}
-                          <span style={{ 
-                            fontSize: '0.75rem', 
-                            padding: '4px 10px', 
-                            borderRadius: '8px', 
-                            background: ev.festejado ? 'rgba(139, 92, 246, 0.1)' : 'rgba(107, 114, 128, 0.05)', 
-                            color: ev.festejado ? 'var(--accent-purple)' : 'var(--text-muted)', 
-                            border: ev.festejado ? 'none' : '1px dashed rgba(107, 114, 128, 0.3)' 
-                          }}>
-                            🎂 {ev.festejado ? `Festejad@: ${ev.festejado}` : 'Festejad@ Faltante'}
-                          </span>
-
-                          {/* Pizza - array-aware */}
-                          {(() => {
-                            const pizzaArr = Array.isArray(ev.pizza) ? ev.pizza : (ev.pizza && ev.pizza !== 'Sin definir' ? [ev.pizza] : []);
-                            const hasPizza = pizzaArr.length > 0;
-                            return (
-                              <span style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: '8px', background: hasPizza ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.05)', color: hasPizza ? 'var(--accent-success)' : 'var(--accent-warning)', border: hasPizza ? 'none' : '1px dashed rgba(245, 158, 11, 0.3)' }}>
-                                🍕 Pizza: {hasPizza ? pizzaArr.join(', ') : 'Pendiente'}
-                              </span>
-                            );
-                          })()}
-
-                          {/* Agua - array-aware */}
-                          {(() => {
-                            const aguaArr = Array.isArray(ev.agua) ? ev.agua : (ev.agua && ev.agua !== 'Sin definir' ? [ev.agua] : []);
-                            const hasAgua = aguaArr.length > 0;
-                            return (
-                              <span style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: '8px', background: hasAgua ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.05)', color: hasAgua ? 'var(--accent-success)' : 'var(--accent-warning)', border: hasAgua ? 'none' : '1px dashed rgba(245, 158, 11, 0.3)' }}>
-                                🥤 Agua: {hasAgua ? aguaArr.join(', ') : 'Pendiente'}
-                              </span>
-                            );
-                          })()}
-
-                          {/* Pastel */}
-                          <span style={{ 
-                            fontSize: '0.75rem', 
-                            padding: '4px 10px', 
-                            borderRadius: '8px', 
-                            background: ev.pastel && ev.pastel !== 'Sin definir' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.05)', 
-                            color: ev.pastel && ev.pastel !== 'Sin definir' ? 'var(--accent-success)' : 'var(--accent-warning)', 
-                            border: ev.pastel && ev.pastel !== 'Sin definir' ? 'none' : '1px dashed rgba(245, 158, 11, 0.3)' 
-                          }}>
-                            🍰 Pastel: {ev.pastel && ev.pastel !== 'Sin definir' ? ev.pastel : 'Pendiente'}
-                          </span>
-
-                          {/* Horarios */}
-                          <span style={{ 
-                            fontSize: '0.75rem', 
-                            padding: '4px 10px', 
-                            borderRadius: '8px', 
-                            background: ev.horaLlegada ? 'rgba(59, 130, 246, 0.1)' : 'rgba(107, 114, 128, 0.05)', 
-                            color: ev.horaLlegada ? 'var(--accent-blue)' : 'var(--text-muted)', 
-                            border: ev.horaLlegada ? 'none' : '1px dashed rgba(107, 114, 128, 0.3)' 
-                          }}>
-                            ⏰ {ev.horaLlegada ? `Llegada: ${ev.horaLlegada}` : 'Horario sin definir'}
-                            {ev.horaSalida ? ` - Salida: ${ev.horaSalida}` : ''}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -1566,14 +1683,26 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
     return `${parts[2]}-${parts[1]}-${parts[0]}`;
   };
 
-  const precioCalculadoModal = (paquete === 'VIP' || paquete === 'Platinum' || paquete === 'NTP $6299')
+  const precioCalculadoModal = (paquete === 'VIP' || paquete === 'Platinum' || paquete === 'NTP $6299' || (paquete && paquete.startsWith('Grupos')))
     ? calcularPrecioPaquete(paquete, saltadores, getFechaCalculoModal())
     : (parseInt(saltadores) || 0) * 350; // Tarifa estándar de $350 para otros paquetes
 
   const totalExtrasModal = extras.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0);
   const totalDecoracionModal = (decoracionTipo === 'Personalizada') ? (parseFloat(decoracionMonto) || 0) : 0;
   const finalBaseModal = (isManualPrecioBase && manualPrecioBase !== '') ? (parseFloat(manualPrecioBase) || 0) : precioCalculadoModal;
-  const totalEventoModal = finalBaseModal + totalExtrasModal + totalDecoracionModal;
+
+  // Calcular precio del pastel en el modal
+  let totalPastelModal = 0;
+  if (pastel && pastel !== 'Sin definir') {
+    const pastelGratis = paquete === 'VIP' || paquete === 'Platinum' || paquete === 'Evento Privado';
+    if (!pastelGratis) {
+      if (tamañoPastel === 'Chico') totalPastelModal = 699;
+      else if (tamañoPastel === 'Grande') totalPastelModal = 799;
+      else if (tamañoPastel === 'Rectangular') totalPastelModal = 899;
+    }
+  }
+
+  const totalEventoModal = finalBaseModal + totalExtrasModal + totalDecoracionModal + totalPastelModal;
 
   return (
     <div className="modal-overlay" style={{ display: 'flex', position: 'fixed', zIndex: 1000, left: 0, top: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', overflowY: 'auto', padding: '20px' }}>
@@ -1646,10 +1775,14 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
                 <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Paquete de Fiesta</label>
                 <select 
                   className="neu-input" 
-                  value={paquete} 
+                  value={paquete.startsWith('Grupos') ? 'Grupos' : paquete} 
                   onChange={(e) => {
                     const val = e.target.value;
-                    setPaquete(val);
+                    if (val === 'Grupos') {
+                      setPaquete('Grupos - Paquete A');
+                    } else {
+                      setPaquete(val);
+                    }
                     if (val === 'VIP' || val === 'Platinum') {
                       setDecoracionTipo('Neon');
                     } else {
@@ -1669,6 +1802,25 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
                   <option value="Otro (Elegir manualmente)">Nombre a elegir manualmente</option>
                 </select>
               </div>
+
+              {paquete.startsWith('Grupos') && (
+                <div className="animate-fade-in" style={{ gridColumn: 'span 2' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>📋 Plan de Grupos Detallado</label>
+                  <select
+                    className="neu-input"
+                    value={paquete}
+                    onChange={(e) => setPaquete(e.target.value)}
+                    style={{ marginTop: '5px' }}
+                  >
+                    <option value="Grupos - Paquete A">A: 90 minutos de salto + SkySocks en $220 por persona</option>
+                    <option value="Grupos - Paquete B">B: 2 horas de salto + SkySocks en $260 por persona</option>
+                    <option value="Grupos - Paquete C">C: DayPass salto ilimitado + SkySocks en $399 por persona</option>
+                  </select>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--accent-orange)', margin: '5px 0 0 0', fontWeight: 'bold' }}>
+                    * Reserva a partir de 5 personas.
+                  </p>
+                </div>
+              )}
               <div>
                 <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🏡 Espacio Designado</label>
                 <select className="neu-input" value={espacio} onChange={(e) => setEspacio(e.target.value)} style={{ marginTop: '5px' }}>
@@ -1794,10 +1946,17 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
                 </div>
               )}
 
-              {extras.length > 0 && (
+               {extras.length > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', borderTop: '1px dashed var(--bg-color)', paddingTop: '6px' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Conceptos Extras ({extras.length}):</span>
                   <strong style={{ color: 'var(--text-main)' }}>${totalExtrasModal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
+                </div>
+              )}
+
+              {pastel && pastel !== 'Sin definir' && totalPastelModal > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', borderTop: '1px dashed var(--bg-color)', paddingTop: '6px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Pastel ({tamañoPastel}):</span>
+                  <strong style={{ color: 'var(--text-main)' }}>${totalPastelModal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
                 </div>
               )}
 
@@ -1901,7 +2060,7 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
               </div>
             </div>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
               <div>
                 <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Hora Pastel</label>
                 <input type="time" className="neu-input" value={horaPastel} onChange={(e) => setHoraPastel(e.target.value)} style={{ marginTop: '5px' }} />
@@ -1909,13 +2068,6 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
               <div>
                 <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Hora Piñata</label>
                 <input type="time" className="neu-input" value={horaPinata} onChange={(e) => setHoraPinata(e.target.value)} style={{ marginTop: '5px' }} />
-              </div>
-              <div>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🚩 ESTADO DE RESERVACIÓN</label>
-                <select className="neu-input" value={estado} onChange={(e) => setEstado(e.target.value)} style={{ marginTop: '5px', fontWeight: 'bold' }}>
-                  <option value="Pendiente">Pendiente</option>
-                  <option value="Confirmado">Confirmado</option>
-                </select>
               </div>
             </div>
           </div>
@@ -2418,7 +2570,8 @@ const GoogleCalendarModal = ({
   };
 
   // Matemática de grilla mensual (42 celdas)
-  const firstDayIndex = new Date(year, month, 1).getDay();
+  const firstDayIndexRaw = new Date(year, month, 1).getDay();
+  const firstDayIndex = firstDayIndexRaw === 0 ? 6 : firstDayIndexRaw - 1;
   const totalDays = new Date(year, month + 1, 0).getDate();
   const prevTotalDays = new Date(year, month, 0).getDate();
 
@@ -2507,16 +2660,16 @@ const GoogleCalendarModal = ({
         </div>
 
         {/* Nombres de días de la semana */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px', textAlign: 'center', marginBottom: '8px' }}>
-          {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((d, i) => (
-            <div key={i} style={{ fontWeight: 'bold', fontSize: '0.85rem', color: i === 0 || i === 6 ? 'var(--accent-blue)' : 'var(--text-muted)', paddingBottom: '5px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: '5px', textAlign: 'center', marginBottom: '8px' }}>
+          {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d, i) => (
+            <div key={i} style={{ fontWeight: 'bold', fontSize: '0.85rem', color: i === 5 || i === 6 ? 'var(--accent-blue)' : 'var(--text-muted)', paddingBottom: '5px' }}>
               {d}
             </div>
           ))}
         </div>
 
         {/* Grilla del Calendario (Días del mes) */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridTemplateRows: 'repeat(6, 1fr)', gap: '5px', flex: 1, overflowY: 'auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gridTemplateRows: 'repeat(6, minmax(130px, 1fr))', gap: '5px', flex: 1, overflowY: 'auto' }}>
           {dayCells.map((cell, idx) => {
             const cellDateStr = `${cell.year}-${pad(cell.month + 1)}-${pad(cell.day)}`;
             const isToday = cellDateStr === todayStr;
@@ -2542,7 +2695,8 @@ const GoogleCalendarModal = ({
                   display: 'flex', 
                   flexDirection: 'column', 
                   opacity: cell.isCurrentMonth ? 1 : 0.45,
-                  minHeight: '80px',
+                  minHeight: '130px',
+                  minWidth: 0,
                   border: isToday ? '2px solid var(--accent-blue)' : '1px solid transparent',
                   position: 'relative',
                   cursor: cellEvents.length > 0 ? 'pointer' : 'default'
@@ -2701,7 +2855,6 @@ const EventDetailModal = ({ event, onClose, onEdit, onAbonar, onPrint }) => {
               <div><strong>Teléfono:</strong> {event.telefono || 'Faltante'}</div>
               <div><strong>Email:</strong> {event.email || 'Faltante'}</div>
               <div><strong>Código Postal:</strong> {event.codigoPostal || 'Faltante'}</div>
-              <div><strong>Estado:</strong> <span style={{ fontWeight: 'bold', color: event.estado === 'Confirmado' ? 'var(--accent-success)' : 'var(--accent-warning)' }}>{event.estado}</span></div>
             </div>
 
             <h4 style={{ margin: '15px 0 12px 0', color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.85rem' }}>🎉 Detalles de la Fiesta</h4>
@@ -2983,32 +3136,32 @@ const PDFReservacionPrint = ({ event }) => {
             <tr>
               <td style={{ width: '15%', fontWeight: 'bold', padding: '2px 0' }}>Organización:</td>
               <td style={{ width: '35%', padding: '2px 0' }}>B-Fitness, Skyzone Santa Fe</td>
-              <td style={{ width: '15%', fontWeight: 'bold', padding: '2px 0' }}>Telefono:</td>
-              <td style={{ width: '35%', padding: '2px 0' }}>{event.telefono || 'N/A'}</td>
+              <td style={{ width: '15%', fontWeight: 'bold', padding: '2px 0' }}>Teléfono Parque:</td>
+              <td style={{ width: '35%', padding: '2px 0' }}>55 5476 5425</td>
             </tr>
             <tr>
-              <td style={{ fontWeight: 'bold', padding: '2px 0' }}>Contacto:</td>
-              <td style={{ padding: '2px 0' }}>55 5476 5425</td>
-              <td style={{ fontWeight: 'bold', padding: '2px 0' }}></td>
-              <td style={{ padding: '2px 0' }}></td>
-            </tr>
-            <tr>
-              <td style={{ fontWeight: 'bold', padding: '2px 0' }}>Correo electronico:</td>
-              <td style={{ padding: '2px 0' }}>{event.email || 'N/A'}</td>
+              <td style={{ fontWeight: 'bold', padding: '2px 0' }}>A nombre de:</td>
+              <td style={{ padding: '2px 0' }}>{event.cliente}</td>
               <td style={{ fontWeight: 'bold', padding: '2px 0' }}>Tipo de evento:</td>
               <td style={{ padding: '2px 0' }}>{event.paquete}</td>
             </tr>
             <tr>
-              <td style={{ fontWeight: 'bold', padding: '2px 0' }}>Direccion:</td>
-              <td style={{ padding: '2px 0' }}>{event.codigoPostal || 'N/A'}</td>
+              <td style={{ fontWeight: 'bold', padding: '2px 0' }}>Contacto:</td>
+              <td style={{ padding: '2px 0' }}>{event.telefono || 'N/A'}</td>
               <td style={{ fontWeight: 'bold', padding: '2px 0' }}>Programado por:</td>
               <td style={{ padding: '2px 0' }}>{event.vendedor || 'N/A'}</td>
             </tr>
             <tr>
-              <td></td>
-              <td></td>
-              <td style={{ fontWeight: 'bold', padding: '2px 0' }}>Fecha de reservacion:</td>
+              <td style={{ fontWeight: 'bold', padding: '2px 0' }}>Correo electrónico:</td>
+              <td style={{ padding: '2px 0' }}>{event.email || 'N/A'}</td>
+              <td style={{ fontWeight: 'bold', padding: '2px 0' }}>Fecha de reservación:</td>
               <td style={{ padding: '2px 0' }}>{formatTimestamp(event.timestamp)}</td>
+            </tr>
+            <tr>
+              <td style={{ fontWeight: 'bold', padding: '2px 0' }}>Dirección:</td>
+              <td style={{ padding: '2px 0' }}>{event.codigoPostal || 'N/A'}</td>
+              <td></td>
+              <td></td>
             </tr>
           </tbody>
         </table>
@@ -3044,57 +3197,70 @@ const PDFReservacionPrint = ({ event }) => {
           <strong style={{ textDecoration: 'underline' }}>Notas:</strong>
           <table style={{ width: '100%', marginTop: '6px', borderCollapse: 'collapse' }}>
             <tbody>
-              <tr>
-                <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>ENTRADA:</td>
-                <td style={{ padding: '1px 0' }}>{event.horaLlegada || ''}</td>
-              </tr>
-              <tr>
-                <td style={{ fontWeight: 'bold', padding: '1px 0' }}>COMIDA:</td>
-                <td style={{ padding: '1px 0' }}>{event.horaAlimentos || ''}</td>
-              </tr>
-              <tr>
-                <td style={{ fontWeight: 'bold', padding: '1px 0' }}>PIZZA:</td>
-                <td style={{ padding: '1px 0' }}>
-                  {(() => {
-                    const arr = Array.isArray(event.pizza) ? event.pizza : (event.pizza && event.pizza !== 'Sin definir' ? [event.pizza] : []);
-                    return arr.length > 0 ? arr.join(', ') : '';
-                  })()}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ fontWeight: 'bold', padding: '1px 0' }}>AGUA:</td>
-                <td style={{ padding: '1px 0' }}>
-                  {(() => {
-                    const arr = Array.isArray(event.agua) ? event.agua : (event.agua && event.agua !== 'Sin definir' ? [event.agua] : []);
-                    return arr.length > 0 ? arr.join(', ') : '';
-                  })()}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ fontWeight: 'bold', padding: '1px 0' }}>PIÑATA:</td>
-                <td style={{ padding: '1px 0' }}>{event.horaPinata || ''}</td>
-              </tr>
-              <tr>
-                <td style={{ fontWeight: 'bold', padding: '1px 0' }}>PASTEL:</td>
-                <td style={{ padding: '1px 0' }}>{event.pastel && event.pastel !== 'Sin definir' ? `${event.pastel}${event.tamañoPastel ? ` (${event.tamañoPastel})` : ''}` : ''}</td>
-              </tr>
-              <tr>
-                <td style={{ fontWeight: 'bold', padding: '1px 0' }}>HORA GLOW:</td>
-                <td style={{ padding: '1px 0' }}>{event.horaGlow || ''}</td>
-              </tr>
-              <tr>
-                <td style={{ fontWeight: 'bold', padding: '1px 0' }}>SALIDA:</td>
-                <td style={{ padding: '1px 0' }}>{event.horaSalida || ''}</td>
-              </tr>
-
-              <tr>
-                <td style={{ fontWeight: 'bold', padding: '1px 0' }}>DECORACION:</td>
-                <td style={{ padding: '1px 0' }}>
-                  {event.decoracionTipo === 'Personalizada' 
-                    ? `${event.decoracionConcepto || 'Personalizada'} ($${(parseFloat(event.decoracionMonto) || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })})`
-                    : (event.decoracionTipo === 'Neon' ? 'Neon' : '')}
-                </td>
-              </tr>
+              {event.horaLlegada && (
+                <tr>
+                  <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>ENTRADA:</td>
+                  <td style={{ padding: '1px 0' }}>{event.horaLlegada}</td>
+                </tr>
+              )}
+              {event.horaAlimentos && (
+                <tr>
+                  <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>COMIDA:</td>
+                  <td style={{ padding: '1px 0' }}>{event.horaAlimentos}</td>
+                </tr>
+              )}
+              {(() => {
+                const arr = Array.isArray(event.pizza) ? event.pizza : (event.pizza && event.pizza !== 'Sin definir' ? [event.pizza] : []);
+                return arr.length > 0 ? (
+                  <tr>
+                    <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>PIZZA:</td>
+                    <td style={{ padding: '1px 0' }}>{arr.join(', ')}</td>
+                  </tr>
+                ) : null;
+              })()}
+              {(() => {
+                const arr = Array.isArray(event.agua) ? event.agua : (event.agua && event.agua !== 'Sin definir' ? [event.agua] : []);
+                return arr.length > 0 ? (
+                  <tr>
+                    <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>AGUA:</td>
+                    <td style={{ padding: '1px 0' }}>{arr.join(', ')}</td>
+                  </tr>
+                ) : null;
+              })()}
+              {event.horaPinata && (
+                <tr>
+                  <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>PIÑATA:</td>
+                  <td style={{ padding: '1px 0' }}>{event.horaPinata}</td>
+                </tr>
+              )}
+              {event.pastel && event.pastel !== 'Sin definir' && (
+                <tr>
+                  <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>PASTEL:</td>
+                  <td style={{ padding: '1px 0' }}>{event.pastel}{event.tamañoPastel ? ` (${event.tamañoPastel})` : ''}</td>
+                </tr>
+              )}
+              {event.horaGlow && (
+                <tr>
+                  <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>HORA GLOW:</td>
+                  <td style={{ padding: '1px 0' }}>{event.horaGlow}</td>
+                </tr>
+              )}
+              {event.horaSalida && (
+                <tr>
+                  <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>SALIDA:</td>
+                  <td style={{ padding: '1px 0' }}>{event.horaSalida}</td>
+                </tr>
+              )}
+              {event.decoracionTipo && event.decoracionTipo !== 'No incluye' && (
+                <tr>
+                  <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>DECORACION:</td>
+                  <td style={{ padding: '1px 0' }}>
+                    {event.decoracionTipo === 'Personalizada' 
+                      ? `${event.decoracionConcepto || 'Personalizada'} ($${(parseFloat(event.decoracionMonto) || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })})`
+                      : (event.decoracionTipo === 'Neon' ? 'Neon' : '')}
+                  </td>
+                </tr>
+              )}
               {event.notasExtra && event.notasExtra.map((nota, idx) => (
                 <tr key={idx}>
                   <td colSpan={2} style={{ padding: '1px 0' }}>{nota}</td>
@@ -3145,6 +3311,25 @@ const PDFReservacionPrint = ({ event }) => {
                   </td>
                 </tr>
               )}
+              {event.pastel && event.pastel !== 'Sin definir' && (() => {
+                let precioPastel = 0;
+                const pastelGratis = event.paquete === 'VIP' || event.paquete === 'Platinum' || event.paquete === 'Evento Privado';
+                if (!pastelGratis) {
+                  if (event.tamañoPastel === 'Chico') precioPastel = 699;
+                  else if (event.tamañoPastel === 'Grande') precioPastel = 799;
+                  else if (event.tamañoPastel === 'Rectangular') precioPastel = 899;
+                }
+
+                return precioPastel > 0 ? (
+                  <tr>
+                    <td style={{ padding: '3px 0' }}>1</td>
+                    <td style={{ padding: '3px 0' }}>Pastel: {event.pastel} ({event.tamañoPastel})</td>
+                    <td style={{ padding: '3px 0', textAlign: 'right' }}>
+                      ${precioPastel.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                ) : null;
+              })()}
               {event.extras && event.extras.map((ext, idx) => (
                 <tr key={idx}>
                   <td style={{ padding: '3px 0' }}>1</td>

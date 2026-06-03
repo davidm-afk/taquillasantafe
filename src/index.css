@@ -7,7 +7,7 @@
   /* Brand Colors */
   --accent-orange: #ff6b35;
   --accent-blue: #00b4d8;
-  --accent-success: #38bdf8;
+  --accent-success: #10b981;
   --accent-warning: #f59e0b;
   --accent-danger: #ef4444;
 
@@ -27,7 +27,7 @@
   /* Brighter accents for Dark Mode contrast */
   --accent-orange: #ff7d4d;
   --accent-blue: #33c2e1;
-  --accent-success: #5ccdfb;
+  --accent-success: #34d399;
   --accent-warning: #fbbf24;
   --accent-danger: #f87171;
 
