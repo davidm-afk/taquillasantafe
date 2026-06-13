@@ -20,7 +20,8 @@ const ALL_PRODUCTS = [
   "Toalla de Papel Marli", "Papel Higiénico Marli", "Papel encerado", "Cloro",
   "Jabón para Manos", "Salvo Líquido Trastes", "Fabuloso Lavanda", "Aromatizante Glade",
   "Servibolsa Extra Jumbo", "Servibolsa Grande", "Fibra de trastes", "Vaso coleccionable SZ",
-  "Charola de carton", "Vaso desechable 1Lt", "Vaso desechable 0.5Lt", "Vaso desechable 6OZ"
+  "Charola de carton", "Vaso desechable 1Lt", "Vaso desechable 0.5Lt", "Vaso desechable 6OZ",
+  "Vaso condimentero", "Vaso Frozen"
 ];
 
 const getCategory = (name) => {
@@ -28,7 +29,7 @@ const getCategory = (name) => {
   const frozen = ["Frozen Fresas Con Crema", "Frozen Fruta Del Dragón", "Frozen Fruit Circle", "Frozen Cookies And Cream", "Frozen Ositos", "Frozen Algodón De Azúcar"];
   const drinks = ["Coca Cola Original", "Coca Cola Zero", "Coca Cola Light", "Sprite", "Mundet", "Fresca", "Fanta", "Delaware Punch", "Fuze Tea", "Powerade sabores", "Jugo del Valle", "Garrafon 19 lt", "Agua Ciel 600 ml", "Topo chico"];
   const candy = ["Gomita Mango Enchilada", "Gomita pandita", "Gomita frituta", "Gomita lombriz", "Gomita lombriz azucarada", "Gomita lombriz enchilada", "Cacahuate enchilado", "Cacahuate salado", "Cacahuate japones", "Miguelito", "salsa valentina", "salsa maggi", "salsa chamoy"];
-  const disposable = ["Plato para Pizza", "Plato Pastelero", "Cuchara desechables", "Tenedores desechables", "Paquete Servilletas", "Vaso coleccionable SZ", "Charola de carton", "Vaso desechable 1Lt", "Vaso desechable 0.5Lt", "Vaso desechable 6OZ"];
+  const disposable = ["Plato para Pizza", "Plato Pastelero", "Cuchara desechables", "Tenedores desechables", "Paquete Servilletas", "Vaso coleccionable SZ", "Charola de carton", "Vaso desechable 1Lt", "Vaso desechable 0.5Lt", "Vaso desechable 6OZ", "Vaso condimentero", "Vaso Frozen"];
   const cleaning = ["Toallas Sanitas", "Toalla de Papel Marli", "Papel Higiénico Marli", "Papel encerado", "Cloro", "Jabón para Manos", "Salvo Líquido Trastes", "Fabuloso Lavanda", "Aromatizante Glade", "Servibolsa Extra Jumbo", "Servibolsa Grande", "Fibra de trastes"];
 
   if (food.includes(name)) return "Alimentos";
@@ -195,6 +196,25 @@ const Inventario = () => {
         [productName]: updatedProd
       };
     });
+  };
+
+  const handleKeyDown = (e, rowIndex, colIndex) => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      e.preventDefault();
+      let nextRow = rowIndex;
+      let nextCol = colIndex;
+
+      if (e.key === 'ArrowUp') nextRow = Math.max(0, rowIndex - 1);
+      if (e.key === 'ArrowDown') nextRow = Math.min(filteredProductsList.length - 1, rowIndex + 1);
+      if (e.key === 'ArrowLeft') nextCol = Math.max(0, colIndex - 1);
+      if (e.key === 'ArrowRight') nextCol = Math.min(4, colIndex + 1);
+
+      const nextInput = document.getElementById(`input-${nextRow}-${nextCol}`);
+      if (nextInput) {
+        nextInput.focus();
+        nextInput.select();
+      }
+    }
   };
 
   // Adjust Date by +/- 1 day
@@ -478,7 +498,7 @@ const Inventario = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredProductsList.map(name => {
+                {filteredProductsList.map((name, rowIndex) => {
                   const p = productos[name] || { inicial: 0, entrada: 0, merma: 0, cortesia: 0, venta: 0, final: 0 };
                   const isNegative = p.final < 0;
 
@@ -494,54 +514,69 @@ const Inventario = () => {
                       {/* Inicial */}
                       <td style={{ padding: '8px', textAlign: 'center' }}>
                         <input
+                          id={`input-${rowIndex}-0`}
                           type="number"
                           className="inv-number-input"
                           value={p.inicial}
                           onChange={(e) => handleValueChange(name, 'inicial', e.target.value)}
+                          onWheel={(e) => e.target.blur()}
+                          onKeyDown={(e) => handleKeyDown(e, rowIndex, 0)}
                         />
                       </td>
 
                       {/* Entrada */}
                       <td style={{ padding: '8px', textAlign: 'center' }}>
                         <input
+                          id={`input-${rowIndex}-1`}
                           type="number"
                           className="inv-number-input"
                           style={{ color: 'var(--accent-success)' }}
                           value={p.entrada}
                           onChange={(e) => handleValueChange(name, 'entrada', e.target.value)}
+                          onWheel={(e) => e.target.blur()}
+                          onKeyDown={(e) => handleKeyDown(e, rowIndex, 1)}
                         />
                       </td>
 
                       {/* Merma */}
                       <td style={{ padding: '8px', textAlign: 'center' }}>
                         <input
+                          id={`input-${rowIndex}-2`}
                           type="number"
                           className="inv-number-input"
                           style={{ color: 'var(--accent-danger)' }}
                           value={p.merma}
                           onChange={(e) => handleValueChange(name, 'merma', e.target.value)}
+                          onWheel={(e) => e.target.blur()}
+                          onKeyDown={(e) => handleKeyDown(e, rowIndex, 2)}
                         />
                       </td>
 
                       {/* Cortesía */}
                       <td style={{ padding: '8px', textAlign: 'center' }}>
                         <input
+                          id={`input-${rowIndex}-3`}
                           type="number"
                           className="inv-number-input"
                           style={{ color: 'var(--accent-warning)' }}
                           value={p.cortesia}
                           onChange={(e) => handleValueChange(name, 'cortesia', e.target.value)}
+                          onWheel={(e) => e.target.blur()}
+                          onKeyDown={(e) => handleKeyDown(e, rowIndex, 3)}
                         />
                       </td>
 
                       {/* Venta */}
                       <td style={{ padding: '8px', textAlign: 'center' }}>
                         <input
+                          id={`input-${rowIndex}-4`}
                           type="number"
                           className="inv-number-input"
                           style={{ color: 'var(--accent-orange)' }}
                           value={p.venta}
                           onChange={(e) => handleValueChange(name, 'venta', e.target.value)}
+                          onWheel={(e) => e.target.blur()}
+                          onKeyDown={(e) => handleKeyDown(e, rowIndex, 4)}
                         />
                       </td>
 

@@ -1,14 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus, X } from 'lucide-react';
+import { cafeteriaProducts } from '../data/products';
 
 const ProductCard = ({ product, colorClass = "text-gradient-blue" }) => {
   const { cart, addItem, updateQty } = useCart();
+  const [showDrinkModal, setShowDrinkModal] = useState(false);
   
   const cartItem = cart.find(item => item.nombre === product.nombre);
   const qty = cartItem ? cartItem.qty : 0;
 
   const handleAddItem = () => {
+    if (product.nombre === "Combo Hamburguesa") {
+      setShowDrinkModal(true);
+      return;
+    }
+
     if (product.precioAbierto) {
       const inputVal = window.prompt(`Ingrese el precio para ${product.nombre}:`, "");
       if (inputVal === null) return; // Cancelado
@@ -58,6 +65,40 @@ const ProductCard = ({ product, colorClass = "text-gradient-blue" }) => {
           </div>
         )}
       </div>
+
+      {showDrinkModal && (
+        <div className="modal-overlay">
+          <div className="neu-box animate-fade-in" style={{ padding: '20px', width: '90%', maxWidth: '500px', maxHeight: '80vh', overflowY: 'auto', position: 'relative' }}>
+            <button 
+              className="neu-button" 
+              style={{ position: 'absolute', top: '15px', right: '15px', padding: '8px' }}
+              onClick={() => setShowDrinkModal(false)}
+            >
+              <X size={18} />
+            </button>
+            <h2 className="text-gradient-blue" style={{ marginTop: 0, marginBottom: '20px' }}>Seleccionar Bebida</h2>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>¿Qué bebida desea el cliente para su Combo Hamburguesa?</p>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '15px' }}>
+              {cafeteriaProducts.bebidas
+                .filter(b => !b.nombre.includes("Garrafon") && !b.nombre.includes("hielo") && !b.nombre.includes("sabor")) // Filtramos garrafones y vasos sueltos
+                .map(bebida => (
+                <button
+                  key={bebida.nombre}
+                  className="neu-button"
+                  style={{ padding: '12px', fontSize: '0.9rem', fontWeight: 'bold' }}
+                  onClick={() => {
+                    addItem({ ...product, nombre: `${product.nombre} (${bebida.nombre})`, originalName: product.nombre, drinkOption: bebida.nombre });
+                    setShowDrinkModal(false);
+                  }}
+                >
+                  {bebida.nombre}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

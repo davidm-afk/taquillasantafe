@@ -18,37 +18,118 @@ const updateInventoryForSales = async (cartItems) => {
     const dd = String(localTime.getUTCDate()).padStart(2, '0');
     const dateStr = `${yyyy}-${mm}-${dd}`;
 
-    const inventoryMapping = {
-      "Coca cola": "Coca Cola Original",
-      "Coca Light": "Coca Cola Light",
-      "Coca Zero": "Coca Cola Zero",
-      "Sprite": "Sprite",
-      "Fanta": "Fanta",
-      "Mundet": "Mundet",
-      "Fresca": "Fresca",
-      "Delaware Punch": "Delaware Punch",
-      "Jugo Valle": "Jugo del Valle",
-      "Fuze Tea": "Fuze Tea",
-      "Topochico": "Topo chico",
-      "Powerade": "Powerade sabores",
-      "Agua": "Agua Ciel 600 ml",
-      "Garrafon Agua Simple": "Garrafon 19 lt",
-      "Garrafon Agua Sabor": "Garrafon 19 lt"
+    const getInventoryItemsToDiscount = (item) => {
+      const baseName = item.originalName || item.nombre;
+      const qty = parseInt(item.qty) || 1;
+      let insumos = [];
+
+      switch (baseName) {
+        // Bebidas
+        case "Coca cola": insumos.push({ nombre: "Coca Cola Original", qty: 1 }); break;
+        case "Coca Light": insumos.push({ nombre: "Coca Cola Light", qty: 1 }); break;
+        case "Coca Zero": insumos.push({ nombre: "Coca Cola Zero", qty: 1 }); break;
+        case "Sprite": insumos.push({ nombre: "Sprite", qty: 1 }); break;
+        case "Fanta": insumos.push({ nombre: "Fanta", qty: 1 }); break;
+        case "Mundet": insumos.push({ nombre: "Mundet", qty: 1 }); break;
+        case "Fresca": insumos.push({ nombre: "Fresca", qty: 1 }); break;
+        case "Delaware Punch": insumos.push({ nombre: "Delaware Punch", qty: 1 }); break;
+        case "Jugo Valle": insumos.push({ nombre: "Jugo del Valle", qty: 1 }); break;
+        case "Fuze Tea": insumos.push({ nombre: "Fuze Tea", qty: 1 }); break;
+        case "Topochico": insumos.push({ nombre: "Topo chico", qty: 1 }); break;
+        case "Powerade": insumos.push({ nombre: "Powerade sabores", qty: 1 }); break;
+        case "Agua": insumos.push({ nombre: "Agua Ciel 600 ml", qty: 1 }); break;
+        case "Agua de sabor": insumos.push({ nombre: "Vaso desechable 1Lt", qty: 1 }); break;
+        case "Garrafon Agua Simple": insumos.push({ nombre: "Garrafon 19 lt", qty: 1 }); break;
+        case "Garrafon Agua Sabor": insumos.push({ nombre: "Garrafon 19 lt", qty: 1 }); break;
+        case "Vaso con hielo": insumos.push({ nombre: "Vaso desechable 0.5Lt", qty: 1 }); break;
+
+        // Comida
+        case "Palomitas": insumos.push({ nombre: "Maíz Palomero Schettino", qty: 1 }); break;
+        case "Pizza": insumos.push({ nombre: "Pizza Congelada", qty: 1 }); break;
+        case "Nuggets": 
+          insumos.push({ nombre: "Nuggets", qty: 1 }); 
+          insumos.push({ nombre: "Papas a la francesa", qty: 1 }); 
+          break;
+        case "Burguer Sencilla": 
+        case "Hamburguesa especial": 
+          insumos.push({ nombre: "Pan para hamburguesa", qty: 1 }); 
+          insumos.push({ nombre: "Carne para hamburguesa", qty: 1 }); 
+          insumos.push({ nombre: "Queso amarillo", qty: 1 }); 
+          break;
+        case "Hotdog (2)": 
+        case "Hotdog pizza": 
+          insumos.push({ nombre: "Pan hot dogs", qty: 2 }); 
+          insumos.push({ nombre: "Salchichas", qty: 2 }); 
+          insumos.push({ nombre: "Papas a la francesa", qty: 1 }); 
+          break;
+        case "Chicken Tenders": 
+          insumos.push({ nombre: "Chiken tenders", qty: 1 }); 
+          insumos.push({ nombre: "Papas a la francesa", qty: 1 }); 
+          break;
+        case "Papas Francesa": 
+          insumos.push({ nombre: "Papas a la francesa", qty: 1 }); 
+          break;
+        case "Dedos Queso": 
+          insumos.push({ nombre: "Dedos de queso", qty: 1 }); 
+          insumos.push({ nombre: "Vaso condimentero", qty: 1 }); 
+          break;
+        case "Boneless": 
+          insumos.push({ nombre: "Boneless", qty: 1 }); 
+          insumos.push({ nombre: "Papas a la francesa", qty: 1 }); 
+          insumos.push({ nombre: "Vaso condimentero", qty: 1 }); 
+          break;
+        case "Crazy Papas": 
+          insumos.push({ nombre: "Charola de carton", qty: 1 }); 
+          break;
+        case "Vaso Loco": 
+          insumos.push({ nombre: "Vaso desechable 6OZ", qty: 1 }); 
+          break;
+        case "Helado Frozen": 
+          insumos.push({ nombre: "Vaso Frozen", qty: 1 }); 
+          break;
+        case "Charola de verdura": 
+        case "Charola de verdura especial": 
+        case "Extra queso amarillo": 
+          insumos.push({ nombre: "Vaso condimentero", qty: 1 }); 
+          break;
+        
+        // Combos
+        case "Combo Hamburguesa":
+          insumos.push({ nombre: "Pan para hamburguesa", qty: 1 }); 
+          insumos.push({ nombre: "Carne para hamburguesa", qty: 1 }); 
+          insumos.push({ nombre: "Queso amarillo", qty: 1 }); 
+          insumos.push({ nombre: "Papas a la francesa", qty: 1 }); 
+          if (item.drinkOption) {
+            const drinkInsumos = getInventoryItemsToDiscount({ nombre: item.drinkOption, qty: 1 });
+            insumos = insumos.concat(drinkInsumos);
+          }
+          break;
+        case "Combo SkyFriends":
+          insumos.push({ nombre: "Boneless", qty: 1 });
+          insumos.push({ nombre: "Nuggets", qty: 1 });
+          insumos.push({ nombre: "Dedos de queso", qty: 1 });
+          insumos.push({ nombre: "Papas a la francesa", qty: 2 });
+          insumos.push({ nombre: "Vaso condimentero", qty: 1 });
+          break;
+      }
+
+      return insumos.map(ins => ({ ...ins, qty: ins.qty * qty }));
     };
 
-    // Filter items in cart that are mapped to inventory drinks
     const salesToApply = [];
     cartItems.forEach(item => {
-      const mappedName = inventoryMapping[item.nombre];
-      if (mappedName) {
-        salesToApply.push({
-          nombre: mappedName,
-          qty: parseInt(item.qty) || 1
-        });
-      }
+      const insumos = getInventoryItemsToDiscount(item);
+      insumos.forEach(ins => {
+        const existing = salesToApply.find(s => s.nombre === ins.nombre);
+        if (existing) {
+          existing.qty += ins.qty;
+        } else {
+          salesToApply.push(ins);
+        }
+      });
     });
 
-    if (salesToApply.length === 0) return; // No beverages sold
+    if (salesToApply.length === 0) return; // No mapped items sold
 
     const docRef = doc(db, 'inventario', dateStr);
     const docSnap = await getDoc(docRef);
@@ -82,7 +163,8 @@ const updateInventoryForSales = async (cartItems) => {
         "Toalla de Papel Marli", "Papel Higiénico Marli", "Papel encerado", "Cloro",
         "Jabón para Manos", "Salvo Líquido Trastes", "Fabuloso Lavanda", "Aromatizante Glade",
         "Servibolsa Extra Jumbo", "Servibolsa Grande", "Fibra de trastes", "Vaso coleccionable SZ",
-        "Charola de carton", "Vaso desechable 1Lt", "Vaso desechable 0.5Lt", "Vaso desechable 6OZ"
+        "Charola de carton", "Vaso desechable 1Lt", "Vaso desechable 0.5Lt", "Vaso desechable 6OZ",
+        "Vaso condimentero", "Vaso Frozen"
       ];
 
       const initialProducts = {};
