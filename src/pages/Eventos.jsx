@@ -160,7 +160,15 @@ const calcularTotalVenta = (ev) => {
     }
   }
 
-  return totalBase + totalExtras + totalDecoracion + totalPastel;
+  // PAQUETES DE COMIDA PARA ADULTOS
+  const costPaquete1 = (parseInt(ev.adultosPaquete1) || 0) * 180;
+  const costPaquete2 = (parseInt(ev.adultosPaquete2) || 0) * 220;
+  let costPaquete3 = 0;
+  if (ev.adultosPaquete3 === '100 Tacos') costPaquete3 = (parseInt(ev.adultosPaquete3Qty) || 1) * 1950;
+  else if (ev.adultosPaquete3 === '200 Tacos') costPaquete3 = (parseInt(ev.adultosPaquete3Qty) || 1) * 2650;
+  else if (ev.adultosPaquete3 === '300 Tacos') costPaquete3 = (parseInt(ev.adultosPaquete3Qty) || 1) * 3350;
+
+  return totalBase + totalExtras + totalDecoracion + totalPastel + costPaquete1 + costPaquete2 + costPaquete3;
 };
 
 const Eventos = () => {
@@ -203,6 +211,10 @@ const Eventos = () => {
   const [decoracionMonto, setDecoracionMonto] = useState('');
   const [horaPinata, setHoraPinata] = useState('');
   const [cronogramaExtraForm, setCronogramaExtraForm] = useState([]);
+  const [adultosPaquete1, setAdultosPaquete1] = useState('');
+  const [adultosPaquete2, setAdultosPaquete2] = useState('');
+  const [adultosPaquete3, setAdultosPaquete3] = useState('Sin definir');
+  const [adultosPaquete3Qty, setAdultosPaquete3Qty] = useState('');
   const [tamañoPastel, setTamañoPastel] = useState('');
   const [notasExtra, setNotasExtra] = useState([]);
   const [nuevaNota, setNuevaNota] = useState('');
@@ -327,6 +339,10 @@ const Eventos = () => {
       decoracionMonto: decoracionTipo === 'Personalizada' ? (parseFloat(decoracionMonto) || 0) : 0,
       horaPinata: horaPinata,
       cronogramaExtra: cronogramaExtraForm,
+      adultosPaquete1: parseInt(adultosPaquete1) || 0,
+      adultosPaquete2: parseInt(adultosPaquete2) || 0,
+      adultosPaquete3: adultosPaquete3,
+      adultosPaquete3Qty: adultosPaquete3 !== 'Sin definir' ? (parseInt(adultosPaquete3Qty) || 1) : 0,
       tamañoPastel: tamañoPastel,
       notasExtra: notasExtra,
       precioBaseManual: isManualPrecioBase && manualPrecioBase !== '' ? (parseFloat(manualPrecioBase) || 0) : null,
@@ -362,6 +378,10 @@ const Eventos = () => {
       setDecoracionMonto('');
       setHoraPinata('');
       setCronogramaExtraForm([]);
+      setAdultosPaquete1('');
+      setAdultosPaquete2('');
+      setAdultosPaquete3('Sin definir');
+      setAdultosPaquete3Qty('');
       setTamañoPastel('');
       setNotasExtra([]);
       setNuevaNota('');
@@ -408,7 +428,14 @@ const Eventos = () => {
     }
   }
 
-  const precioFormulario = finalBaseForm + totalExtrasForm + totalDecoracionForm + totalPastelForm;
+  const costPaquete1Form = (parseInt(adultosPaquete1) || 0) * 180;
+  const costPaquete2Form = (parseInt(adultosPaquete2) || 0) * 220;
+  let costPaquete3Form = 0;
+  if (adultosPaquete3 === '100 Tacos') costPaquete3Form = (parseInt(adultosPaquete3Qty) || 1) * 1950;
+  else if (adultosPaquete3 === '200 Tacos') costPaquete3Form = (parseInt(adultosPaquete3Qty) || 1) * 2650;
+  else if (adultosPaquete3 === '300 Tacos') costPaquete3Form = (parseInt(adultosPaquete3Qty) || 1) * 3350;
+
+  const precioFormulario = finalBaseForm + totalExtrasForm + totalDecoracionForm + totalPastelForm + costPaquete1Form + costPaquete2Form + costPaquete3Form;
 
   // Obtener reservaciones filtradas por período para las tarjetas de métricas
   const getFilteredEventsForMetrics = () => {
@@ -962,6 +989,74 @@ const Eventos = () => {
                           {tamañoPastel === size ? '✓ ' : ''}{size}
                         </button>
                       ))}
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '15px', borderTop: '1px solid var(--bg-color)', paddingTop: '15px' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--accent-blue)', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>🍔 PAQUETES DE COMIDA PARA ADULTOS (Opcional)</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                        <div style={{ flex: 2, fontSize: '0.8rem' }}>
+                          <strong>Paquete 1:</strong> 2 Rebanadas de Pizza, Agua y Rebanada de pastel ($180 c/u)
+                        </div>
+                        <input 
+                          type="number" 
+                          placeholder="Cant." 
+                          className="neu-input" 
+                          value={adultosPaquete1}
+                          onChange={(e) => setAdultosPaquete1(e.target.value)}
+                          style={{ flex: 1, fontSize: '0.8rem', padding: '6px 12px' }}
+                          min="0"
+                        />
+                      </div>
+                      <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                        <div style={{ flex: 2, fontSize: '0.8rem' }}>
+                          <strong>Paquete 2:</strong> Hamburguesa o Boneless, Agua y Rebanada de pastel ($220 c/u)
+                        </div>
+                        <input 
+                          type="number" 
+                          placeholder="Cant." 
+                          className="neu-input" 
+                          value={adultosPaquete2}
+                          onChange={(e) => setAdultosPaquete2(e.target.value)}
+                          style={{ flex: 1, fontSize: '0.8rem', padding: '6px 12px' }}
+                          min="0"
+                        />
+                      </div>
+                      <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                        <div style={{ flex: 2 }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Paquete 3 (Tacos de Canasta)</label>
+                          <select 
+                            className="neu-input"
+                            value={adultosPaquete3}
+                            onChange={(e) => {
+                              setAdultosPaquete3(e.target.value);
+                              if (e.target.value !== 'Sin definir' && !adultosPaquete3Qty) {
+                                setAdultosPaquete3Qty('1');
+                              }
+                            }}
+                            style={{ marginTop: '3px', fontSize: '0.8rem', padding: '6px 12px' }}
+                          >
+                            <option value="Sin definir">No incluye tacos</option>
+                            <option value="100 Tacos">100 Tacos + 4 Refrescos (2L) - $1,950</option>
+                            <option value="200 Tacos">200 Tacos + 6 Refrescos (2L) - $2,650</option>
+                            <option value="300 Tacos">300 Tacos + 6 Refrescos (2L) - $3,350</option>
+                          </select>
+                        </div>
+                        {adultosPaquete3 !== 'Sin definir' && (
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Cant. Paq.</label>
+                            <input 
+                              type="number" 
+                              className="neu-input" 
+                              value={adultosPaquete3Qty}
+                              onChange={(e) => setAdultosPaquete3Qty(e.target.value)}
+                              style={{ marginTop: '3px', fontSize: '0.8rem', padding: '6px 12px' }}
+                              min="1"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1656,6 +1751,10 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
   const [decoracionMonto, setDecoracionMonto] = useState(reservacion.decoracionMonto || '');
   const [horaPinata, setHoraPinata] = useState(reservacion.horaPinata || '');
   const [cronogramaExtra, setCronogramaExtra] = useState(reservacion.cronogramaExtra || []);
+  const [adultosPaquete1, setAdultosPaquete1] = useState(reservacion.adultosPaquete1 || '');
+  const [adultosPaquete2, setAdultosPaquete2] = useState(reservacion.adultosPaquete2 || '');
+  const [adultosPaquete3, setAdultosPaquete3] = useState(reservacion.adultosPaquete3 || 'Sin definir');
+  const [adultosPaquete3Qty, setAdultosPaquete3Qty] = useState(reservacion.adultosPaquete3Qty || '');
   const [tamañoPastel, setTamañoPastel] = useState(reservacion.tamañoPastel || '');
   const [notasExtra, setNotasExtra] = useState(reservacion.notasExtra || []);
   const [nuevaNota, setNuevaNota] = useState('');
@@ -1732,6 +1831,10 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
         decoracionMonto: decoracionTipo === 'Personalizada' ? (parseFloat(decoracionMonto) || 0) : 0,
         horaPinata: horaPinata,
         cronogramaExtra: cronogramaExtra,
+        adultosPaquete1: parseInt(adultosPaquete1) || 0,
+        adultosPaquete2: parseInt(adultosPaquete2) || 0,
+        adultosPaquete3: adultosPaquete3,
+        adultosPaquete3Qty: adultosPaquete3 !== 'Sin definir' ? (parseInt(adultosPaquete3Qty) || 1) : 0,
         tamañoPastel: tamañoPastel,
         notasExtra: notasExtra,
         precioBaseManual: isManualPrecioBase && manualPrecioBase !== '' ? (parseFloat(manualPrecioBase) || 0) : null
@@ -1788,7 +1891,14 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
     }
   }
 
-  const totalEventoModal = finalBaseModal + totalExtrasModal + totalDecoracionModal + totalPastelModal;
+  const costPaquete1Modal = (parseInt(adultosPaquete1) || 0) * 180;
+  const costPaquete2Modal = (parseInt(adultosPaquete2) || 0) * 220;
+  let costPaquete3Modal = 0;
+  if (adultosPaquete3 === '100 Tacos') costPaquete3Modal = (parseInt(adultosPaquete3Qty) || 1) * 1950;
+  else if (adultosPaquete3 === '200 Tacos') costPaquete3Modal = (parseInt(adultosPaquete3Qty) || 1) * 2650;
+  else if (adultosPaquete3 === '300 Tacos') costPaquete3Modal = (parseInt(adultosPaquete3Qty) || 1) * 3350;
+
+  const totalEventoModal = finalBaseModal + totalExtrasModal + totalDecoracionModal + totalPastelModal + costPaquete1Modal + costPaquete2Modal + costPaquete3Modal;
 
   return (
     <div className="modal-overlay" style={{ display: 'flex', position: 'fixed', zIndex: 1000, left: 0, top: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', overflowY: 'auto', padding: '20px' }}>
@@ -2128,6 +2238,69 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
                       {tamañoPastel === size ? '✓ ' : ''}{size}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* PAQUETES DE COMIDA PARA ADULTOS */}
+              <div style={{ borderTop: '1px solid var(--bg-color)', paddingTop: '15px', marginTop: '15px' }}>
+                <label style={{ fontSize: '0.78rem', color: 'var(--accent-blue)', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>🍔 Paquetes de Comida para Adultos (Opcional)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '10px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Paquete 1 Qty ($180)</label>
+                    <input 
+                      type="number" 
+                      className="neu-input" 
+                      value={adultosPaquete1} 
+                      onChange={(e) => setAdultosPaquete1(e.target.value)} 
+                      style={{ marginTop: '3px', fontSize: '0.8rem', padding: '5px 10px' }} 
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Paquete 2 Qty ($220)</label>
+                    <input 
+                      type="number" 
+                      className="neu-input" 
+                      value={adultosPaquete2} 
+                      onChange={(e) => setAdultosPaquete2(e.target.value)} 
+                      style={{ marginTop: '3px', fontSize: '0.8rem', padding: '5px 10px' }} 
+                      min="0"
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                  <div style={{ flex: 2 }}>
+                    <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Paquete 3 (Tacos de Canasta)</label>
+                    <select 
+                      className="neu-input"
+                      value={adultosPaquete3}
+                      onChange={(e) => {
+                        setAdultosPaquete3(e.target.value);
+                        if (e.target.value !== 'Sin definir' && !adultosPaquete3Qty) {
+                          setAdultosPaquete3Qty('1');
+                        }
+                      }}
+                      style={{ marginTop: '3px', fontSize: '0.8rem', padding: '5px 10px' }}
+                    >
+                      <option value="Sin definir">No incluye tacos</option>
+                      <option value="100 Tacos">100 Tacos + 4 Refrescos (2L) - $1,950</option>
+                      <option value="200 Tacos">200 Tacos + 6 Refrescos (2L) - $2,650</option>
+                      <option value="300 Tacos">300 Tacos + 6 Refrescos (2L) - $3,350</option>
+                    </select>
+                  </div>
+                  {adultosPaquete3 !== 'Sin definir' && (
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Cant. Paq.</label>
+                      <input 
+                        type="number" 
+                        className="neu-input" 
+                        value={adultosPaquete3Qty}
+                        onChange={(e) => setAdultosPaquete3Qty(e.target.value)}
+                        style={{ marginTop: '3px', fontSize: '0.8rem', padding: '5px 10px' }}
+                        min="1"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -3032,6 +3205,13 @@ const EventDetailModal = ({ event, onClose, onEdit, onAbonar, onPrint }) => {
               <div><strong>Pizza:</strong> {Array.isArray(event.pizza) ? (event.pizza.length > 0 ? event.pizza.join(', ') : 'Pendiente') : (event.pizza && event.pizza !== 'Sin definir' ? event.pizza : 'Pendiente')}</div>
               <div><strong>Agua:</strong> {Array.isArray(event.agua) ? (event.agua.length > 0 ? event.agua.join(', ') : 'Pendiente') : (event.agua && event.agua !== 'Sin definir' ? event.agua : 'Pendiente')}</div>
               <div><strong>Pastel sabor:</strong> {event.pastel && event.pastel !== 'Sin definir' ? event.pastel : 'Pendiente'}</div>
+              {event.adultosPaquete1 > 0 && <div><strong>Paq. 1 Adultos:</strong> {event.adultosPaquete1} pzas (${(event.adultosPaquete1 * 180).toLocaleString('es-MX')})</div>}
+              {event.adultosPaquete2 > 0 && <div><strong>Paq. 2 Adultos:</strong> {event.adultosPaquete2} pzas (${(event.adultosPaquete2 * 220).toLocaleString('es-MX')})</div>}
+              {event.adultosPaquete3 && event.adultosPaquete3 !== 'Sin definir' && (
+                <div>
+                  <strong>Paq. 3 Adultos ({event.adultosPaquete3}):</strong> {event.adultosPaquete3Qty || 1} paq. (${((event.adultosPaquete3Qty || 1) * (event.adultosPaquete3 === '100 Tacos' ? 1950 : event.adultosPaquete3 === '200 Tacos' ? 2650 : 3350)).toLocaleString('es-MX')})
+                </div>
+              )}
             </div>
 
             <h4 style={{ margin: '15px 0 12px 0', color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.85rem' }}>⏰ Cronograma</h4>
@@ -3480,6 +3660,33 @@ const PDFReservacionPrint = ({ event }) => {
                   ${totalBase.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                 </td>
               </tr>
+              {event.adultosPaquete1 > 0 && (
+                <tr>
+                  <td style={{ padding: '3px 0' }}>{event.adultosPaquete1}</td>
+                  <td style={{ padding: '3px 0' }}>Paquete 1 Comida Adultos (2 Rebanadas Pizza, Agua, Pastel)</td>
+                  <td style={{ padding: '3px 0', textAlign: 'right' }}>
+                    ${(event.adultosPaquete1 * 180).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              )}
+              {event.adultosPaquete2 > 0 && (
+                <tr>
+                  <td style={{ padding: '3px 0' }}>{event.adultosPaquete2}</td>
+                  <td style={{ padding: '3px 0' }}>Paquete 2 Comida Adultos (Hamburguesa/Boneless, Agua, Pastel)</td>
+                  <td style={{ padding: '3px 0', textAlign: 'right' }}>
+                    ${(event.adultosPaquete2 * 220).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              )}
+              {event.adultosPaquete3 && event.adultosPaquete3 !== 'Sin definir' && (
+                <tr>
+                  <td style={{ padding: '3px 0' }}>{event.adultosPaquete3Qty || 1}</td>
+                  <td style={{ padding: '3px 0' }}>Paquete 3 Adultos ({event.adultosPaquete3 === '100 Tacos' ? '100 Tacos de Canasta + 4 Refrescos 2L' : event.adultosPaquete3 === '200 Tacos' ? '200 Tacos de Canasta + 6 Refrescos 2L' : '300 Tacos de Canasta + 6 Refrescos 2L'})</td>
+                  <td style={{ padding: '3px 0', textAlign: 'right' }}>
+                    ${((event.adultosPaquete3Qty || 1) * (event.adultosPaquete3 === '100 Tacos' ? 1950 : event.adultosPaquete3 === '200 Tacos' ? 2650 : 3350)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              )}
               {event.decoracionTipo === 'Personalizada' && parseFloat(event.decoracionMonto) > 0 && (
                 <tr>
                   <td style={{ padding: '3px 0' }}>1</td>
