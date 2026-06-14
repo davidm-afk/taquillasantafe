@@ -193,8 +193,11 @@ const Eventos = () => {
   const [nuevoExtraConceptoForm, setNuevoExtraConceptoForm] = useState('');
   const [nuevoExtraMontoForm, setNuevoExtraMontoForm] = useState('');
   const [horaGlow, setHoraGlow] = useState('');
+  const [horaGlow2, setHoraGlow2] = useState('');
   const [horaAlimentos, setHoraAlimentos] = useState('');
+  const [horaAlimentos2, setHoraAlimentos2] = useState('');
   const [horaPastel, setHoraPastel] = useState('');
+  const [horaPastel2, setHoraPastel2] = useState('');
   
   // Nuevos Estados para Vendedor, Decoración y Piñata
   const [vendedor, setVendedor] = useState('');
@@ -202,6 +205,7 @@ const Eventos = () => {
   const [decoracionConcepto, setDecoracionConcepto] = useState('');
   const [decoracionMonto, setDecoracionMonto] = useState('');
   const [horaPinata, setHoraPinata] = useState('');
+  const [horaPinata2, setHoraPinata2] = useState('');
   const [tamañoPastel, setTamañoPastel] = useState('');
   const [notasExtra, setNotasExtra] = useState([]);
   const [nuevaNota, setNuevaNota] = useState('');
@@ -315,8 +319,11 @@ const Eventos = () => {
       horaLlegada: horaLlegada,
       horaSalida: horaSalida,
       horaGlow: horaGlow,
+      horaGlow2: horaGlow2,
       horaAlimentos: horaAlimentos,
+      horaAlimentos2: horaAlimentos2,
       horaPastel: horaPastel,
+      horaPastel2: horaPastel2,
       estado: "Pendiente",
       extras: extrasForm, // Guardar extras locales
       abonos: [], // Inicializar abonos vacíos
@@ -325,6 +332,7 @@ const Eventos = () => {
       decoracionConcepto: decoracionTipo === 'Personalizada' ? decoracionConcepto.trim() : '',
       decoracionMonto: decoracionTipo === 'Personalizada' ? (parseFloat(decoracionMonto) || 0) : 0,
       horaPinata: horaPinata,
+      horaPinata2: horaPinata2,
       tamañoPastel: tamañoPastel,
       notasExtra: notasExtra,
       precioBaseManual: isManualPrecioBase && manualPrecioBase !== '' ? (parseFloat(manualPrecioBase) || 0) : null,
@@ -352,13 +360,17 @@ const Eventos = () => {
       setHoraLlegada('');
       setHoraSalida('');
       setHoraGlow('');
+      setHoraGlow2('');
       setHoraAlimentos('');
+      setHoraAlimentos2('');
       setHoraPastel('');
+      setHoraPastel2('');
       setVendedor('');
       setDecoracionTipo('No incluye');
       setDecoracionConcepto('');
       setDecoracionMonto('');
       setHoraPinata('');
+      setHoraPinata2('');
       setTamañoPastel('');
       setNotasExtra([]);
       setNuevaNota('');
@@ -990,7 +1002,7 @@ const Eventos = () => {
                   </div>
                   <div style={{ display: 'flex', gap: '15px' }}>
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>✨ HORA SHOW GLOW</label>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>✨ HORA SHOW GLOW (1)</label>
                       <input 
                         type="time" 
                         className="neu-input" 
@@ -1000,7 +1012,19 @@ const Eventos = () => {
                       />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🍕 HORA ALIMENTOS</label>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>✨ HORA SHOW GLOW (2)</label>
+                      <input 
+                        type="time" 
+                        className="neu-input" 
+                        value={horaGlow2}
+                        onChange={(e) => setHoraGlow2(e.target.value)}
+                        style={{ marginTop: '5px' }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '15px' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🍕 HORA ALIMENTOS (1)</label>
                       <input 
                         type="time" 
                         className="neu-input" 
@@ -1009,10 +1033,20 @@ const Eventos = () => {
                         style={{ marginTop: '5px' }}
                       />
                     </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🍕 HORA ALIMENTOS (2)</label>
+                      <input 
+                        type="time" 
+                        className="neu-input" 
+                        value={horaAlimentos2}
+                        onChange={(e) => setHoraAlimentos2(e.target.value)}
+                        style={{ marginTop: '5px' }}
+                      />
+                    </div>
                   </div>
                   <div style={{ display: 'flex', gap: '15px' }}>
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🍰 HORA DEL PASTEL</label>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🍰 HORA DEL PASTEL (1)</label>
                       <input 
                         type="time" 
                         className="neu-input" 
@@ -1022,12 +1056,34 @@ const Eventos = () => {
                       />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🪅 HORA DE PIÑATA</label>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🍰 HORA DEL PASTEL (2)</label>
+                      <input 
+                        type="time" 
+                        className="neu-input" 
+                        value={horaPastel2}
+                        onChange={(e) => setHoraPastel2(e.target.value)}
+                        style={{ marginTop: '5px' }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '15px' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🪅 HORA DE PIÑATA (1)</label>
                       <input 
                         type="time" 
                         className="neu-input" 
                         value={horaPinata}
                         onChange={(e) => setHoraPinata(e.target.value)}
+                        style={{ marginTop: '5px' }}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🪅 HORA DE PIÑATA (2)</label>
+                      <input 
+                        type="time" 
+                        className="neu-input" 
+                        value={horaPinata2}
+                        onChange={(e) => setHoraPinata2(e.target.value)}
                         style={{ marginTop: '5px' }}
                       />
                     </div>
@@ -1586,8 +1642,11 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
   const [horaLlegada, setHoraLlegada] = useState(reservacion.horaLlegada || '');
   const [horaSalida, setHoraSalida] = useState(reservacion.horaSalida || ''); // Nuevo campo en edición
   const [horaGlow, setHoraGlow] = useState(reservacion.horaGlow || '');
+  const [horaGlow2, setHoraGlow2] = useState(reservacion.horaGlow2 || '');
   const [horaAlimentos, setHoraAlimentos] = useState(reservacion.horaAlimentos || '');
+  const [horaAlimentos2, setHoraAlimentos2] = useState(reservacion.horaAlimentos2 || '');
   const [horaPastel, setHoraPastel] = useState(reservacion.horaPastel || '');
+  const [horaPastel2, setHoraPastel2] = useState(reservacion.horaPastel2 || '');
   
   // Nuevos Estados en Edición
   const [vendedor, setVendedor] = useState(reservacion.vendedor || '');
@@ -1595,6 +1654,7 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
   const [decoracionConcepto, setDecoracionConcepto] = useState(reservacion.decoracionConcepto || '');
   const [decoracionMonto, setDecoracionMonto] = useState(reservacion.decoracionMonto || '');
   const [horaPinata, setHoraPinata] = useState(reservacion.horaPinata || '');
+  const [horaPinata2, setHoraPinata2] = useState(reservacion.horaPinata2 || '');
   const [tamañoPastel, setTamañoPastel] = useState(reservacion.tamañoPastel || '');
   const [notasExtra, setNotasExtra] = useState(reservacion.notasExtra || []);
   const [nuevaNota, setNuevaNota] = useState('');
@@ -1661,8 +1721,11 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
         horaLlegada: horaLlegada,
         horaSalida: horaSalida,
         horaGlow: horaGlow,
+        horaGlow2: horaGlow2,
         horaAlimentos: horaAlimentos,
+        horaAlimentos2: horaAlimentos2,
         horaPastel: horaPastel,
+        horaPastel2: horaPastel2,
         estado: estado,
         extras: extras, // Guardar la lista de extras
         vendedor: vendedor.trim(),
@@ -1670,6 +1733,7 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
         decoracionConcepto: decoracionTipo === 'Personalizada' ? decoracionConcepto.trim() : '',
         decoracionMonto: decoracionTipo === 'Personalizada' ? (parseFloat(decoracionMonto) || 0) : 0,
         horaPinata: horaPinata,
+        horaPinata2: horaPinata2,
         tamañoPastel: tamañoPastel,
         notasExtra: notasExtra,
         precioBaseManual: isManualPrecioBase && manualPrecioBase !== '' ? (parseFloat(manualPrecioBase) || 0) : null
@@ -2087,24 +2151,44 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Hora Show Glow</label>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Hora Show Glow (1)</label>
                   <input type="time" className="neu-input" value={horaGlow} onChange={(e) => setHoraGlow(e.target.value)} style={{ marginTop: '5px' }} />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Hora Alimentos</label>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Hora Show Glow (2)</label>
+                  <input type="time" className="neu-input" value={horaGlow2} onChange={(e) => setHoraGlow2(e.target.value)} style={{ marginTop: '5px' }} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Hora Alimentos (1)</label>
                   <input type="time" className="neu-input" value={horaAlimentos} onChange={(e) => setHoraAlimentos(e.target.value)} style={{ marginTop: '5px' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Hora Alimentos (2)</label>
+                  <input type="time" className="neu-input" value={horaAlimentos2} onChange={(e) => setHoraAlimentos2(e.target.value)} style={{ marginTop: '5px' }} />
                 </div>
               </div>
             </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
               <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Hora Pastel</label>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Hora Pastel (1)</label>
                 <input type="time" className="neu-input" value={horaPastel} onChange={(e) => setHoraPastel(e.target.value)} style={{ marginTop: '5px' }} />
               </div>
               <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Hora Piñata</label>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Hora Pastel (2)</label>
+                <input type="time" className="neu-input" value={horaPastel2} onChange={(e) => setHoraPastel2(e.target.value)} style={{ marginTop: '5px' }} />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Hora Piñata (1)</label>
                 <input type="time" className="neu-input" value={horaPinata} onChange={(e) => setHoraPinata(e.target.value)} style={{ marginTop: '5px' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Hora Piñata (2)</label>
+                <input type="time" className="neu-input" value={horaPinata2} onChange={(e) => setHoraPinata2(e.target.value)} style={{ marginTop: '5px' }} />
               </div>
             </div>
           </div>
@@ -2918,8 +3002,13 @@ const EventDetailModal = ({ event, onClose, onEdit, onAbonar, onPrint }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.85rem' }}>
               <div><strong>Hora de Llegada:</strong> {event.horaLlegada || 'Sin definir'}</div>
               <div><strong>Hora Show Glow:</strong> {event.horaGlow || 'Sin definir'}</div>
+              {event.horaGlow2 && <div><strong>Hora Show Glow 2:</strong> {event.horaGlow2}</div>}
               <div><strong>Hora Alimentos:</strong> {event.horaAlimentos || 'Sin definir'}</div>
+              {event.horaAlimentos2 && <div><strong>Hora Alimentos 2:</strong> {event.horaAlimentos2}</div>}
+              {event.horaPinata && <div><strong>Hora Piñata:</strong> {event.horaPinata}</div>}
+              {event.horaPinata2 && <div><strong>Hora Piñata 2:</strong> {event.horaPinata2}</div>}
               <div><strong>Hora Pastel:</strong> {event.horaPastel || 'Sin definir'}</div>
+              {event.horaPastel2 && <div><strong>Hora Pastel 2:</strong> {event.horaPastel2}</div>}
               <div><strong>Hora de Salida:</strong> {event.horaSalida || 'Sin definir'}</div>
             </div>
           </div>
@@ -3247,6 +3336,12 @@ const PDFReservacionPrint = ({ event }) => {
                   <td style={{ padding: '1px 0' }}>{event.horaAlimentos}</td>
                 </tr>
               )}
+              {event.horaAlimentos2 && (
+                <tr>
+                  <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>COMIDA 2:</td>
+                  <td style={{ padding: '1px 0' }}>{event.horaAlimentos2}</td>
+                </tr>
+              )}
               {(() => {
                 const arr = Array.isArray(event.pizza) ? event.pizza : (event.pizza && event.pizza !== 'Sin definir' ? [event.pizza] : []);
                 return arr.length > 0 ? (
@@ -3271,6 +3366,12 @@ const PDFReservacionPrint = ({ event }) => {
                   <td style={{ padding: '1px 0' }}>{event.horaPinata}</td>
                 </tr>
               )}
+              {event.horaPinata2 && (
+                <tr>
+                  <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>PIÑATA 2:</td>
+                  <td style={{ padding: '1px 0' }}>{event.horaPinata2}</td>
+                </tr>
+              )}
               {event.pastel && event.pastel !== 'Sin definir' && (
                 <tr>
                   <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>PASTEL:</td>
@@ -3283,10 +3384,22 @@ const PDFReservacionPrint = ({ event }) => {
                   <td style={{ padding: '1px 0' }}>{event.horaPastel}</td>
                 </tr>
               )}
+              {event.horaPastel2 && (
+                <tr>
+                  <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>HORA PASTEL 2:</td>
+                  <td style={{ padding: '1px 0' }}>{event.horaPastel2}</td>
+                </tr>
+              )}
               {event.horaGlow && (
                 <tr>
                   <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>HORA GLOW:</td>
                   <td style={{ padding: '1px 0' }}>{event.horaGlow}</td>
+                </tr>
+              )}
+              {event.horaGlow2 && (
+                <tr>
+                  <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>HORA GLOW 2:</td>
+                  <td style={{ padding: '1px 0' }}>{event.horaGlow2}</td>
                 </tr>
               )}
               {event.horaSalida && (
