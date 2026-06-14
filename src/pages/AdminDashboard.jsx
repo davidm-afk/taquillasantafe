@@ -102,7 +102,6 @@ const AdminDashboard = () => {
               const lowerNombre = nombre.toLowerCase();
               if (lowerNombre.includes('skysocks') || lowerNombre.includes('calceta')) {
                 totalCalcetas += qty;
-                desgloseAdicionales[nombre] = (desgloseAdicionales[nombre] || 0) + qty;
                 
                 // Extraer talla
                 const matchTalla = nombre.match(/\((XS|S|M|L|XL|XXL|XXXL)\)/i);
@@ -146,8 +145,9 @@ const AdminDashboard = () => {
                 } else {
                   desgloseTallasCalcetas["Sin Talla (Incluidas / Legacy)"] = (desgloseTallasCalcetas["Sin Talla (Incluidas / Legacy)"] || 0) + qty;
                 }
+              } else {
+                desgloseAdicionales[nombre] = (desgloseAdicionales[nombre] || 0) + qty;
               }
-              desgloseAdicionales[nombre] = (desgloseAdicionales[nombre] || 0) + qty;
             }
           });
         }
@@ -280,7 +280,7 @@ const AdminDashboard = () => {
                 </div>
                 <div className="neu-box" style={{ padding: '20px' }}>
                   <h3 style={{ margin: '0 0 15px 0', borderBottom: '2px solid var(--bg-color)', paddingBottom: '10px' }}>
-                    Adicionales y Calcetas (Total Calcetas Vendidas: {totalCalcetas})
+                    Adicionales (Excluyendo Calcetas)
                   </h3>
                   {Object.keys(desgloseAdicionales).length === 0 ? <p>No hay adicionales</p> : null}
                   {Object.keys(desgloseAdicionales).map(k => (
