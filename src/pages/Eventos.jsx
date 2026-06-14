@@ -65,9 +65,15 @@ const normalizeToArray = (val) => {
 
 // Lista de paquetes estándar del parque
 const paquetesEstandar = [
-  'Sin definir', 'Platinum', 'VIP', 'NTP $6299', 'Grupos', 'Evento Privado',
+  'Sin definir', 'Platinum', 'VIP', 'NTP $6299', 'NTP $6100', 'Grupos', 'Evento Privado',
   'Grupos - Paquete A', 'Grupos - Paquete B', 'Grupos - Paquete C'
 ];
+
+const staffVendedores = [
+  'Sin definir', 'Isaac', 'Jeshua', 'Fernanda', 'David', 'Tania', 'Monserrat', 'Brigitte', 'Javier', 'Valentina', 'Sandy', 'Yunn'
+];
+
+
 
 // Función de cálculo de precios automática oficial
 const calcularPrecioPaquete = (paquete, saltadoresCount, fechaStr) => {
@@ -85,11 +91,23 @@ const calcularPrecioPaquete = (paquete, saltadoresCount, fechaStr) => {
     return Math.max(5, saltadores) * 399;
   }
 
-  if (paquete !== 'VIP' && paquete !== 'Platinum' && paquete !== 'NTP $6299') return 0;
+  if (paquete !== 'VIP' && paquete !== 'Platinum' && paquete !== 'NTP $6299' && paquete !== 'NTP $6100') return 0;
 
   // Regla para NTP $6299: Mínimo 15 niños cobrando base de $6,299, extras a $420 c/u
   if (paquete === 'NTP $6299') {
     const basePrice = 6299;
+    const baseJumpers = 15;
+    if (saltadores <= baseJumpers) {
+      return basePrice;
+    } else {
+      const extraJumpers = saltadores - baseJumpers;
+      return basePrice + (extraJumpers * 420);
+    }
+  }
+
+  // Regla para NTP $6100: Mínimo 15 niños cobrando base de $6,100, extras a $420 c/u
+  if (paquete === 'NTP $6100') {
+    const basePrice = 6100;
     const baseJumpers = 15;
     if (saltadores <= baseJumpers) {
       return basePrice;
@@ -121,7 +139,7 @@ const calcularTotalVenta = (ev) => {
   let totalBase = 0;
   if (ev.precioBaseManual !== undefined && ev.precioBaseManual !== null && ev.precioBaseManual !== '') {
     totalBase = parseFloat(ev.precioBaseManual) || 0;
-  } else if (ev.paquete === 'VIP' || ev.paquete === 'Platinum' || ev.paquete === 'NTP $6299' || (ev.paquete && ev.paquete.startsWith('Grupos'))) {
+  } else if (ev.paquete === 'VIP' || ev.paquete === 'Platinum' || ev.paquete === 'NTP $6299' || ev.paquete === 'NTP $6100' || (ev.paquete && ev.paquete.startsWith('Grupos'))) {
     totalBase = calcularPrecioPaquete(ev.paquete, ev.saltadores, ev.fecha);
   } else {
     // Valor de estimación estándar para otros paquetes: $350 por saltador
@@ -368,7 +386,7 @@ const Eventos = () => {
   };
 
   // Precio dinámico en el formulario de creación (base + extras + decoración + base manual)
-  const precioFormularioBase = (paquete === 'VIP' || paquete === 'Platinum' || paquete === 'NTP $6299' || paquete.startsWith('Grupos')) 
+  const precioFormularioBase = (paquete === 'VIP' || paquete === 'Platinum' || paquete === 'NTP $6299' || paquete === 'NTP $6100' || paquete.startsWith('Grupos')) 
     ? calcularPrecioPaquete(paquete, saltadores, getFechaCalculo()) 
     : (parseInt(saltadores) || 0) * 350; // Estimación estándar de $350 para otros paquetes
 
@@ -650,14 +668,19 @@ const Eventos = () => {
                   </div>
                   <div>
                     <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>👤 NOMBRE DE VENDEDOR</label>
-                    <input 
-                      type="text" 
-                      placeholder="Nombre del personal que reserva" 
+                    <select 
                       className="neu-input" 
-                      value={vendedor}
+                      value={vendedor || 'Sin definir'}
                       onChange={(e) => setVendedor(e.target.value)}
                       style={{ marginTop: '5px' }}
-                    />
+                    >
+                      {staffVendedores.map((name) => (
+                        <option key={name} value={name}>{name === 'Sin definir' ? 'Seleccionar vendedor' : name}</option>
+                      ))}
+                      {vendedor && !staffVendedores.includes(vendedor) && (
+                        <option value={vendedor}>{vendedor}</option>
+                      )}
+                    </select>
                   </div>
                 </div>
               )}
@@ -702,6 +725,7 @@ const Eventos = () => {
                         <option value="Platinum">Plan Platinum</option>
                         <option value="VIP">Plan VIP</option>
                         <option value="NTP $6299">Plan NTP $6299</option>
+                        <option value="NTP $6100">Plan NTP $6100</option>
                         <option value="Grupos">Plan Grupos</option>
                         <option value="Evento Privado">Plan Evento Privado</option>
                         <option value="Otro (Elegir manualmente)">Nombre a elegir manualmente</option>
@@ -1186,7 +1210,7 @@ const Eventos = () => {
                     </div>
                   </div>
                   
-                  {paquete === 'NTP $6299' && (
+                  {(paquete === 'NTP $6299' || paquete === 'NTP $6100') && (
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', paddingLeft: '10px' }}>
                       * Mínimo 15 niños.
                       {(parseInt(saltadores) || 0) > 15 && ` Extras: ${(parseInt(saltadores) || 0) - 15} x $420.`}
@@ -1683,7 +1707,7 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
     return `${parts[2]}-${parts[1]}-${parts[0]}`;
   };
 
-  const precioCalculadoModal = (paquete === 'VIP' || paquete === 'Platinum' || paquete === 'NTP $6299' || (paquete && paquete.startsWith('Grupos')))
+  const precioCalculadoModal = (paquete === 'VIP' || paquete === 'Platinum' || paquete === 'NTP $6299' || paquete === 'NTP $6100' || (paquete && paquete.startsWith('Grupos')))
     ? calcularPrecioPaquete(paquete, saltadores, getFechaCalculoModal())
     : (parseInt(saltadores) || 0) * 350; // Tarifa estándar de $350 para otros paquetes
 
@@ -1744,7 +1768,19 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
               </div>
               <div>
                 <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Vendedor</label>
-                <input type="text" className="neu-input" value={vendedor} onChange={(e) => setVendedor(e.target.value)} style={{ marginTop: '5px' }} />
+                <select 
+                  className="neu-input" 
+                  value={vendedor || 'Sin definir'}
+                  onChange={(e) => setVendedor(e.target.value)}
+                  style={{ marginTop: '5px' }}
+                >
+                  {staffVendedores.map((name) => (
+                    <option key={name} value={name}>{name === 'Sin definir' ? 'Seleccionar vendedor' : name}</option>
+                  ))}
+                  {vendedor && !staffVendedores.includes(vendedor) && (
+                    <option value={vendedor}>{vendedor}</option>
+                  )}
+                </select>
               </div>
             </div>
           </div>
@@ -1797,6 +1833,7 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
                   <option value="Platinum">Plan Platinum</option>
                   <option value="VIP">Plan VIP</option>
                   <option value="NTP $6299">Plan NTP $6299</option>
+                  <option value="NTP $6100">Plan NTP $6100</option>
                   <option value="Grupos">Plan Grupos</option>
                   <option value="Evento Privado">Plan Evento Privado</option>
                   <option value="Otro (Elegir manualmente)">Nombre a elegir manualmente</option>
@@ -1939,7 +1976,7 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
                 </div>
               </div>
 
-              {paquete === 'NTP $6299' && (
+              {(paquete === 'NTP $6299' || paquete === 'NTP $6100') && (
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '6px', paddingLeft: '10px' }}>
                   * Incluye hasta 15 niños.
                   {(parseInt(saltadores) || 0) > 15 && ` Niños extras: ${(parseInt(saltadores) || 0) - 15} x $420.`}
@@ -2620,6 +2657,7 @@ const GoogleCalendarModal = ({
       case 'Platinum':
         return { bg: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-blue)', border: '1px solid rgba(59, 130, 246, 0.3)' };
       case 'NTP $6299':
+      case 'NTP $6100':
         return { bg: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-success)', border: '1px solid rgba(16, 185, 129, 0.3)' };
       case 'Grupos':
         return { bg: 'rgba(245, 158, 11, 0.15)', color: 'var(--accent-warning)', border: '1px solid rgba(245, 158, 11, 0.3)' };
@@ -3062,7 +3100,7 @@ const PDFReservacionPrint = ({ event }) => {
 
   const totalBase = (event.precioBaseManual !== undefined && event.precioBaseManual !== null && event.precioBaseManual !== '')
     ? (parseFloat(event.precioBaseManual) || 0)
-    : (event.paquete === 'VIP' || event.paquete === 'Platinum' || event.paquete === 'NTP $6299')
+    : (event.paquete === 'VIP' || event.paquete === 'Platinum' || event.paquete === 'NTP $6299' || event.paquete === 'NTP $6100')
       ? calcularPrecioPaquete(event.paquete, event.saltadores, event.fecha)
       : (parseInt(event.saltadores) || 0) * 350;
 
@@ -3237,6 +3275,12 @@ const PDFReservacionPrint = ({ event }) => {
                 <tr>
                   <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>PASTEL:</td>
                   <td style={{ padding: '1px 0' }}>{event.pastel}{event.tamañoPastel ? ` (${event.tamañoPastel})` : ''}</td>
+                </tr>
+              )}
+              {event.horaPastel && (
+                <tr>
+                  <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>HORA PASTEL:</td>
+                  <td style={{ padding: '1px 0' }}>{event.horaPastel}</td>
                 </tr>
               )}
               {event.horaGlow && (

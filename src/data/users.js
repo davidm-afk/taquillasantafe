@@ -6,4 +6,3 @@ export const usuariosPermitidos = {
   "Fernanda": { pin: "0108", rol: "Eventos" },
   "Brigitte": { pin: "1606", rol: "Eventos" }
 };
-
