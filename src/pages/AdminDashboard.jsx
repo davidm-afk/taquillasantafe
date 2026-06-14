@@ -59,6 +59,16 @@ const AdminDashboard = () => {
   let totalCalcetas = 0;
   let desgloseEntradas = {};
   let desgloseAdicionales = {};
+  let desgloseTallasCalcetas = {
+    "XS": 0,
+    "S": 0,
+    "M": 0,
+    "L": 0,
+    "XL": 0,
+    "XXL": 0,
+    "XXXL": 0,
+    "Sin Talla (Incluidas / Legacy)": 0
+  };
 
   // Cafe stats
   let totalArticulosCafe = 0;
@@ -93,6 +103,15 @@ const AdminDashboard = () => {
               if (lowerNombre.includes('skysocks') || lowerNombre.includes('calceta')) {
                 totalCalcetas += qty;
                 desgloseAdicionales[nombre] = (desgloseAdicionales[nombre] || 0) + qty;
+                
+                // Extraer talla
+                const matchTalla = nombre.match(/\((XS|S|M|L|XL|XXL|XXXL)\)/i);
+                if (matchTalla) {
+                  const talla = matchTalla[1].toUpperCase();
+                  desgloseTallasCalcetas[talla] = (desgloseTallasCalcetas[talla] || 0) + qty;
+                } else {
+                  desgloseTallasCalcetas["Sin Talla (Incluidas / Legacy)"] = (desgloseTallasCalcetas["Sin Talla (Incluidas / Legacy)"] || 0) + qty;
+                }
               } else {
                 totalSaltadores += qty;
                 desgloseEntradas[nombre] = (desgloseEntradas[nombre] || 0) + qty;
@@ -100,7 +119,9 @@ const AdminDashboard = () => {
 
               const matchCalc = item.match(/\(\+(\d+)\s+calcetas/);
               if (matchCalc) {
-                totalCalcetas += parseInt(matchCalc[1]) * qty;
+                const incSocks = parseInt(matchCalc[1]) * qty;
+                totalCalcetas += incSocks;
+                desgloseTallasCalcetas["Sin Talla (Incluidas / Legacy)"] = (desgloseTallasCalcetas["Sin Talla (Incluidas / Legacy)"] || 0) + incSocks;
               }
             }
           });
@@ -116,6 +137,15 @@ const AdminDashboard = () => {
               const lowerNombre = nombre.toLowerCase();
               if (lowerNombre.includes('skysocks') || lowerNombre.includes('calceta')) {
                 totalCalcetas += qty;
+                
+                // Extraer talla
+                const matchTalla = nombre.match(/\((XS|S|M|L|XL|XXL|XXXL)\)/i);
+                if (matchTalla) {
+                  const talla = matchTalla[1].toUpperCase();
+                  desgloseTallasCalcetas[talla] = (desgloseTallasCalcetas[talla] || 0) + qty;
+                } else {
+                  desgloseTallasCalcetas["Sin Talla (Incluidas / Legacy)"] = (desgloseTallasCalcetas["Sin Talla (Incluidas / Legacy)"] || 0) + qty;
+                }
               }
               desgloseAdicionales[nombre] = (desgloseAdicionales[nombre] || 0) + qty;
             }
@@ -259,6 +289,21 @@ const AdminDashboard = () => {
                       <strong>{desgloseAdicionales[k]}</strong>
                     </div>
                   ))}
+                </div>
+                <div className="neu-box" style={{ padding: '20px' }}>
+                  <h3 style={{ margin: '0 0 15px 0', borderBottom: '2px solid var(--bg-color)', paddingBottom: '10px' }}>
+                    🧦 Calcetas por Talla (Total: {totalCalcetas})
+                  </h3>
+                  {Object.keys(desgloseTallasCalcetas).map(talla => {
+                    const count = desgloseTallasCalcetas[talla];
+                    if (count === 0 && talla === "Sin Talla (Incluidas / Legacy)") return null;
+                    return (
+                      <div key={talla} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span>Talla {talla}</span>
+                        <strong>{count}</strong>
+                      </div>
+                    );
+                  })}
                 </div>
               </>
             ) : (
