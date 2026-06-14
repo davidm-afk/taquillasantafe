@@ -3588,6 +3588,28 @@ const PDFReservacionPrint = ({ event }) => {
                 </tr>
               )}
               {(() => {
+                const parts = [];
+                if (event.adultosPaquete1 > 0) {
+                  parts.push(`${event.adultosPaquete1} x Paq. 1`);
+                }
+                if (event.adultosPaquete21 > 0) {
+                  parts.push(`${event.adultosPaquete21} x Paq. 2.1 (Hamburguesa)`);
+                }
+                if (event.adultosPaquete22 > 0) {
+                  parts.push(`${event.adultosPaquete22} x Paq. 2.2 (Boneless)`);
+                }
+                if (event.adultosPaquete3 && event.adultosPaquete3 !== 'Sin definir') {
+                  const qty = event.adultosPaquete3Qty || 1;
+                  parts.push(`${qty} x Paq. 3 (${event.adultosPaquete3})`);
+                }
+                return parts.length > 0 ? (
+                  <tr>
+                    <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>COMIDA ADULTOS:</td>
+                    <td style={{ padding: '1px 0' }}>{parts.join(', ')}</td>
+                  </tr>
+                ) : null;
+              })()}
+              {(() => {
                 const arr = Array.isArray(event.pizza) ? event.pizza : (event.pizza && event.pizza !== 'Sin definir' ? [event.pizza] : []);
                 return arr.length > 0 ? (
                   <tr>
