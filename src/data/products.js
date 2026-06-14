@@ -5,9 +5,6 @@ export const taquillaProducts = {
     { nombre: "PREMIUM", subtitle: "180 minutos", precio: 359, incCalcetas: 0, duration: 180 },
     { nombre: "SKY PASS", subtitle: "tiempo ilimitado", precio: 459, incCalcetas: 0, duration: 0 },
     { nombre: "APOYO", subtitle: "acompañamiento", precio: 159, incCalcetas: 0, duration: 0 },
-    { nombre: "Paquete Peque Aventura", precio: 299, incCalcetas: 1, duration: 120 },
-    { nombre: "Paquete Peque Diversion", precio: 349, incCalcetas: 1, duration: 120 },
-    { nombre: "Paquete Super Aventura", precio: 299, incCalcetas: 1, duration: 120 },
     { nombre: "Paquete familiar", precio: 999, incCalcetas: 0, duration: 0 }
   ],
   adicionales: [
