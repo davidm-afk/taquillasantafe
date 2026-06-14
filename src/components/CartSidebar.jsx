@@ -12,7 +12,8 @@ const CartSidebar = ({ onCheckout, titleColorClass = "text-gradient-blue", enabl
     createCart, 
     switchCart, 
     deleteCart,
-    removeItem
+    removeItem,
+    updateQty
   } = useCart();
 
   const [expandedId, setExpandedId] = React.useState(null);
@@ -184,10 +185,31 @@ const CartSidebar = ({ onCheckout, titleColorClass = "text-gradient-blue", enabl
               }}>
                 <div style={{ flex: 1 }}>
                   <p style={{ margin: '0 0 5px 0', fontWeight: 600, fontSize: '0.9rem' }}>{item.nombre}</p>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>${item.precio} x {item.qty}</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>${item.precio} c/u</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <strong style={{ fontSize: '1.05rem', color: 'var(--text-main)' }}>${item.precio * item.qty}</strong>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginRight: '5px' }}>
+                    <button 
+                      className="neu-button" 
+                      style={{ padding: '2px 6px', fontSize: '0.75rem', fontWeight: 'bold' }} 
+                      onClick={() => updateQty(item.nombre, -1)}
+                    >
+                      -
+                    </button>
+                    <span style={{ fontSize: '0.85rem', minWidth: '15px', textAlign: 'center', fontWeight: 'bold' }}>
+                      {item.qty}
+                    </span>
+                    <button 
+                      className="neu-button" 
+                      style={{ padding: '2px 6px', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--accent-blue)' }} 
+                      onClick={() => updateQty(item.nombre, 1)}
+                    >
+                      +
+                    </button>
+                  </div>
+                  <strong style={{ fontSize: '1.05rem', color: 'var(--text-main)', minWidth: '60px', textAlign: 'right' }}>
+                    ${(item.precio * item.qty).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  </strong>
                   <button 
                     onClick={() => removeItem(item.nombre)} 
                     style={{ 

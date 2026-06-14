@@ -44,24 +44,87 @@ const ProductCard = ({ product, colorClass = "text-gradient-blue" }) => {
         )}
       </div>
 
-      <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        {qty === 0 ? (
-          <button 
-            className="neu-button" 
-            style={{ width: '100%', padding: '10px', color: 'var(--text-main)' }}
-            onClick={handleAddItem}
-          >
-            Agregar
-          </button>
+      <div style={{ marginTop: '15px' }}>
+        {product.nombre === "SkySocks" ? (
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(4, 1fr)', 
+            gap: '8px', 
+            width: '100%' 
+          }}>
+            {["XS", "S", "M", "L", "XL", "XXL", "XXXL"].map(talla => {
+              const sizeName = `${product.nombre} (${talla})`;
+              const cartItemTalla = cart.find(item => item.nombre === sizeName);
+              const tallaQty = cartItemTalla ? cartItemTalla.qty : 0;
+              return (
+                <button
+                  key={talla}
+                  className="neu-button"
+                  onClick={() => {
+                    if (tallaQty > 0) {
+                      updateQty(sizeName, 1);
+                    } else {
+                      addItem({ ...product, nombre: sizeName });
+                    }
+                  }}
+                  style={{
+                    padding: '8px 4px',
+                    fontSize: '0.75rem',
+                    fontWeight: 'bold',
+                    position: 'relative',
+                    aspectRatio: '1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: '0'
+                  }}
+                >
+                  {talla}
+                  {tallaQty > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '-6px',
+                      right: '-6px',
+                      background: 'var(--accent-orange)',
+                      color: 'white',
+                      borderRadius: '50%',
+                      width: '16px',
+                      height: '16px',
+                      fontSize: '0.65rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 'bold',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                    }}>
+                      {tallaQty}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         ) : (
           <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
-            <button className="neu-button" style={{ padding: '10px' }} onClick={() => updateQty(product.nombre, -1)}>
-              <Minus size={16} />
-            </button>
-            <strong style={{ fontSize: '1.2rem' }}>{qty}</strong>
-            <button className="neu-button" style={{ padding: '10px', color: 'var(--accent-blue)' }} onClick={() => updateQty(product.nombre, 1)}>
-              <Plus size={16} />
-            </button>
+            {qty === 0 ? (
+              <button 
+                className="neu-button" 
+                style={{ width: '100%', padding: '10px', color: 'var(--text-main)' }}
+                onClick={handleAddItem}
+              >
+                Agregar
+              </button>
+            ) : (
+              <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+                <button className="neu-button" style={{ padding: '10px' }} onClick={() => updateQty(product.nombre, -1)}>
+                  <Minus size={16} />
+                </button>
+                <strong style={{ fontSize: '1.2rem' }}>{qty}</strong>
+                <button className="neu-button" style={{ padding: '10px', color: 'var(--accent-blue)' }} onClick={() => updateQty(product.nombre, 1)}>
+                  <Plus size={16} />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
