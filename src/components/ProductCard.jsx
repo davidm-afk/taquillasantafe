@@ -30,8 +30,15 @@ const ProductCard = ({ product, colorClass = "text-gradient-blue" }) => {
     }
   };
 
+  const isSkySocks = product.nombre === "SkySocks";
   return (
-    <div className="neu-box" style={{ padding: '15px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+    <div className="neu-box" style={{ 
+      padding: '15px', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      justifyContent: 'space-between',
+      gridColumn: isSkySocks ? 'span 2' : 'auto'
+    }}>
       <div>
         <h4 style={{ margin: '0 0 5px 0', fontSize: '1rem', color: 'var(--text-main)' }}>{product.nombre}</h4>
         <span className={colorClass} style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>
@@ -48,7 +55,7 @@ const ProductCard = ({ product, colorClass = "text-gradient-blue" }) => {
         {product.nombre === "SkySocks" ? (
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(4, 1fr)', 
+            gridTemplateColumns: 'repeat(7, 1fr)', 
             gap: '8px', 
             width: '100%' 
           }}>
