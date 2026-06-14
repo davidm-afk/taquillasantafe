@@ -67,7 +67,7 @@ const AdminDashboard = () => {
     "XL": 0,
     "XXL": 0,
     "XXXL": 0,
-    "Sin Talla (Incluidas / Legacy)": 0
+    "Sin especificar": 0
   };
 
   // Cafe stats
@@ -102,14 +102,14 @@ const AdminDashboard = () => {
               const lowerNombre = nombre.toLowerCase();
               if (lowerNombre.includes('skysocks') || lowerNombre.includes('calceta')) {
                 totalCalcetas += qty;
-                
+
                 // Extraer talla
                 const matchTalla = nombre.match(/\((XS|S|M|L|XL|XXL|XXXL)\)/i);
                 if (matchTalla) {
                   const talla = matchTalla[1].toUpperCase();
                   desgloseTallasCalcetas[talla] = (desgloseTallasCalcetas[talla] || 0) + qty;
                 } else {
-                  desgloseTallasCalcetas["Sin Talla (Incluidas / Legacy)"] = (desgloseTallasCalcetas["Sin Talla (Incluidas / Legacy)"] || 0) + qty;
+                  desgloseTallasCalcetas["Sin especificar"] = (desgloseTallasCalcetas["Sin especificar"] || 0) + qty;
                 }
               } else {
                 totalSaltadores += qty;
@@ -120,7 +120,7 @@ const AdminDashboard = () => {
               if (matchCalc) {
                 const incSocks = parseInt(matchCalc[1]) * qty;
                 totalCalcetas += incSocks;
-                desgloseTallasCalcetas["Sin Talla (Incluidas / Legacy)"] = (desgloseTallasCalcetas["Sin Talla (Incluidas / Legacy)"] || 0) + incSocks;
+                desgloseTallasCalcetas["Sin especificar"] = (desgloseTallasCalcetas["Sin especificar"] || 0) + incSocks;
               }
             }
           });
@@ -136,14 +136,14 @@ const AdminDashboard = () => {
               const lowerNombre = nombre.toLowerCase();
               if (lowerNombre.includes('skysocks') || lowerNombre.includes('calceta')) {
                 totalCalcetas += qty;
-                
+
                 // Extraer talla
                 const matchTalla = nombre.match(/\((XS|S|M|L|XL|XXL|XXXL)\)/i);
                 if (matchTalla) {
                   const talla = matchTalla[1].toUpperCase();
                   desgloseTallasCalcetas[talla] = (desgloseTallasCalcetas[talla] || 0) + qty;
                 } else {
-                  desgloseTallasCalcetas["Sin Talla (Incluidas / Legacy)"] = (desgloseTallasCalcetas["Sin Talla (Incluidas / Legacy)"] || 0) + qty;
+                  desgloseTallasCalcetas["Sin especificar"] = (desgloseTallasCalcetas["Sin especificar"] || 0) + qty;
                 }
               } else {
                 desgloseAdicionales[nombre] = (desgloseAdicionales[nombre] || 0) + qty;
@@ -280,7 +280,7 @@ const AdminDashboard = () => {
                 </div>
                 <div className="neu-box" style={{ padding: '20px' }}>
                   <h3 style={{ margin: '0 0 15px 0', borderBottom: '2px solid var(--bg-color)', paddingBottom: '10px' }}>
-                    Adicionales (Excluyendo Calcetas)
+                    Adicionales
                   </h3>
                   {Object.keys(desgloseAdicionales).length === 0 ? <p>No hay adicionales</p> : null}
                   {Object.keys(desgloseAdicionales).map(k => (
@@ -296,10 +296,10 @@ const AdminDashboard = () => {
                   </h3>
                   {Object.keys(desgloseTallasCalcetas).map(talla => {
                     const count = desgloseTallasCalcetas[talla];
-                    if (count === 0 && talla === "Sin Talla (Incluidas / Legacy)") return null;
+                    if (count === 0 && talla === "Sin especificar") return null;
                     return (
                       <div key={talla} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <span>Talla {talla}</span>
+                        <span>{talla === "Sin especificar" ? "Sin especificar" : `Talla ${talla}`}</span>
                         <strong>{count}</strong>
                       </div>
                     );
