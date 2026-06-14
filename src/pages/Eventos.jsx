@@ -3853,7 +3853,7 @@ const PDFReservacionPrint = ({ event }) => {
               </tr>
               <tr>
                 <td style={{ padding: '4px 0', color: '#333' }}>Pagos:</td>
-                <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 'bold', color: '#ef4444' }}>
+                <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 'bold' }}>
                   ${totalAbonado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                 </td>
               </tr>
@@ -3867,7 +3867,7 @@ const PDFReservacionPrint = ({ event }) => {
         <div style={{ width: '45%', borderTop: '1px dotted black', paddingTop: '6px', textAlign: 'center', fontSize: '9px' }}>
           Firma del cliente / Conformidad
         </div>
-        <div style={{ border: '1.5px dashed black', padding: '8px 15px', width: '45%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '2px' }}>
+        <div style={{ border: '1.5px dashed black', padding: '8px 15px', width: '45%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '2px', color: '#ef4444' }}>
           <strong style={{ fontSize: '11px' }}>Total a pagar</strong>
           <strong style={{ fontSize: '12px' }}>
             ${saldoRestante.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
