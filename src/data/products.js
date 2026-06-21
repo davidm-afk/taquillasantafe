@@ -29,6 +29,7 @@ export const cafeteriaProducts = {
     { nombre: "Topochico", precio: 39 },
     { nombre: "Powerade", precio: 49 },
     { nombre: "Agua", precio: 35 },
+    { nombre: "Agua chica", precio: 25 },
     { nombre: "Agua de sabor", precio: 60 },
     { nombre: "Garrafon Agua Simple", precio: 110 },
     { nombre: "Garrafon Agua Sabor", precio: 130 },

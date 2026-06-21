@@ -38,6 +38,7 @@ const updateInventoryForSales = async (cartItems) => {
         case "Topochico": insumos.push({ nombre: "Topo chico", qty: 1 }); break;
         case "Powerade": insumos.push({ nombre: "Powerade sabores", qty: 1 }); break;
         case "Agua": insumos.push({ nombre: "Agua Ciel 600 ml", qty: 1 }); break;
+        case "Agua chica": insumos.push({ nombre: "Agua Ciel 350 ml", qty: 1 }); break;
         case "Agua de sabor": insumos.push({ nombre: "Vaso desechable 1Lt", qty: 1 }); break;
         case "Garrafon Agua Simple": insumos.push({ nombre: "Garrafon 19 lt", qty: 1 }); break;
         case "Garrafon Agua Sabor": insumos.push({ nombre: "Garrafon 19 lt", qty: 1 }); break;
@@ -155,7 +156,7 @@ const updateInventoryForSales = async (cartItems) => {
         "Frozen Cookies And Cream", "Frozen Ositos", "Frozen Algodón De Azúcar",
         "Coca Cola Original", "Coca Cola Zero", "Coca Cola Light", "Sprite", "Mundet", "Fresca",
         "Fanta", "Delaware Punch", "Fuze Tea", "Powerade sabores", "Jugo del Valle", "Garrafon 19 lt",
-        "Agua Ciel 600 ml", "Topo chico", "salsa valentina", "salsa maggi", "salsa chamoy",
+        "Agua Ciel 600 ml", "Agua Ciel 350 ml", "Topo chico", "salsa valentina", "salsa maggi", "salsa chamoy",
         "Aceite", "Gomita Mango Enchilada", "Gomita pandita", "Gomita frituta", "Gomita lombriz",
         "Gomita lombriz azucarada", "Gomita lombriz enchilada", "Cacahuate enchilado",
         "Cacahuate salado", "Cacahuate japones", "Miguelito", "Plato para Pizza", "Plato Pastelero",
