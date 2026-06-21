@@ -1,6 +1,8 @@
 import React from 'react';
 import { useCart } from '../context/CartContext';
 import { Trash2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import TicketResumen from './TicketResumen';
 
 const CartSidebar = ({ onCheckout, titleColorClass = "text-gradient-blue", enableMultiCart = false }) => {
   const { 
@@ -16,7 +18,19 @@ const CartSidebar = ({ onCheckout, titleColorClass = "text-gradient-blue", enabl
     updateQty
   } = useCart();
 
+  const { user } = useAuth();
   const [expandedId, setExpandedId] = React.useState(null);
+  const [isPrinting, setIsPrinting] = React.useState(false);
+
+  const handlePrintSummary = () => {
+    setIsPrinting(true);
+    setTimeout(() => {
+      document.body.classList.add('print-ticket');
+      window.print();
+      document.body.classList.remove('print-ticket');
+      setIsPrinting(false);
+    }, 100);
+  };
 
   // Al agregar un producto, si estamos en modo multicarrito y minimizados, expandir el carrito activo
   React.useEffect(() => {
@@ -246,12 +260,42 @@ const CartSidebar = ({ onCheckout, titleColorClass = "text-gradient-blue", enabl
             padding: '15px', 
             fontSize: '1.1rem', 
             color: cart.length > 0 ? 'var(--accent-blue)' : 'var(--text-muted)',
-            cursor: cart.length > 0 ? 'pointer' : 'not-allowed'
+            cursor: cart.length > 0 ? 'pointer' : 'not-allowed',
+            marginBottom: enableMultiCart ? '12px' : '0'
           }}
         >
           COMPLETAR ORDEN
         </button>
+        {enableMultiCart && (
+          <button 
+            className="neu-button" 
+            onClick={handlePrintSummary}
+            disabled={cart.length === 0}
+            style={{ 
+              width: '100%', 
+              padding: '15px', 
+              fontSize: '1.1rem', 
+              color: cart.length > 0 ? 'var(--accent-orange)' : 'var(--text-muted)',
+              cursor: cart.length > 0 ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            🖨️ IMPRIMIR RESUMEN
+          </button>
+        )}
       </div>
+
+      {isPrinting && (
+        <TicketResumen 
+          accountName={carts[expandedId]?.name || 'Principal'} 
+          cart={cart} 
+          total={total} 
+          user={user} 
+        />
+      )}
     </div>
   );
 };
