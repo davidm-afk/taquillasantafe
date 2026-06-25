@@ -46,19 +46,22 @@ const updateInventoryForSales = async (cartItems) => {
 
         // Comida
         case "Palomitas": insumos.push({ nombre: "Maíz Palomero Schettino", qty: 1 }); break;
-        case "Pizza": insumos.push({ nombre: "Pizza Congelada", qty: 1 }); break;
+        case "Pizza": 
+        case "Pizza individual": 
+          insumos.push({ nombre: "Pizza Congelada", qty: 1 }); 
+          break;
         case "Nuggets": 
           insumos.push({ nombre: "Nuggets", qty: 1 }); 
           insumos.push({ nombre: "Papas a la francesa", qty: 1 }); 
           break;
-        case "Burguer Sencilla": 
+        case "Hamburguesa sencilla": 
         case "Hamburguesa especial": 
           insumos.push({ nombre: "Pan para hamburguesa", qty: 1 }); 
           insumos.push({ nombre: "Carne para hamburguesa", qty: 1 }); 
           insumos.push({ nombre: "Queso amarillo", qty: 1 }); 
           break;
         case "Hotdog (2)": 
-        case "Hotdog pizza": 
+        case "Hotdog pizza (2)": 
           insumos.push({ nombre: "Pan hot dogs", qty: 2 }); 
           insumos.push({ nombre: "Salchichas", qty: 2 }); 
           insumos.push({ nombre: "Papas a la francesa", qty: 1 }); 
@@ -90,7 +93,6 @@ const updateInventoryForSales = async (cartItems) => {
           break;
         case "Charola de verdura": 
         case "Charola de verdura especial": 
-        case "Extra queso amarillo": 
           insumos.push({ nombre: "Vaso condimentero", qty: 1 }); 
           break;
         

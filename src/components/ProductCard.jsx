@@ -39,16 +39,38 @@ const ProductCard = ({ product, colorClass = "text-gradient-blue" }) => {
       justifyContent: 'space-between',
       gridColumn: isSkySocks ? 'span 2' : 'auto'
     }}>
-      <div>
-        <h4 style={{ margin: '0 0 5px 0', fontSize: '1rem', color: 'var(--text-main)' }}>{product.nombre}</h4>
-        <span className={colorClass} style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>
-          {product.precioAbierto && qty > 0 ? `$${cartItem.precio}` : product.precioAbierto ? 'Precio Abierto' : `$${product.precio}`}
-        </span>
-        {product.incCalcetas !== undefined && (
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '5px 0' }}>
-            {product.incCalcetas > 0 ? `Incluye ${product.incCalcetas} calcetas` : 'Base'}
-          </p>
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        {product.imagen && (
+          <img 
+            src={product.imagen} 
+            alt={product.nombre} 
+            style={{ 
+              width: '45px', 
+              height: '45px', 
+              objectFit: 'contain', 
+              borderRadius: '8px',
+              padding: '4px',
+              background: 'rgba(255, 255, 255, 0.3)',
+              boxShadow: 'var(--shadow-inset)'
+            }} 
+          />
         )}
+        <div style={{ flex: 1 }}>
+          <h4 style={{ margin: '0 0 5px 0', fontSize: '1rem', color: 'var(--text-main)' }}>{product.nombre}</h4>
+          {product.subtitle && (
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '-2px 0 6px 0', lineHeight: '1.2' }}>
+              {product.subtitle}
+            </p>
+          )}
+          <span className={colorClass} style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>
+            {product.precioAbierto && qty > 0 ? `$${cartItem.precio}` : product.precioAbierto ? 'Precio Abierto' : `$${product.precio}`}
+          </span>
+          {product.incCalcetas !== undefined && (
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '5px 0' }}>
+              {product.incCalcetas > 0 ? `Incluye ${product.incCalcetas} calcetas` : 'Base'}
+            </p>
+          )}
+        </div>
       </div>
 
       <div style={{ marginTop: '15px' }}>

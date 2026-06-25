@@ -3,6 +3,7 @@ import Sidebar from '../components/Sidebar';
 import CartSidebar from '../components/CartSidebar';
 import ProductCard from '../components/ProductCard';
 import PaymentModal from '../components/PaymentModal';
+import SearchBar from '../components/SearchBar';
 import { taquillaProducts } from '../data/products';
 import { useCart } from '../context/CartContext';
 
@@ -14,6 +15,28 @@ const PosTaquilla = () => {
   const [customPrice, setCustomPrice] = React.useState('');
   const [customType, setCustomType] = React.useState('entrada'); // 'entrada' o 'adicional'
   const [customSocks, setCustomSocks] = React.useState('0');
+
+  const allTaquillaProducts = React.useMemo(() => {
+    return [
+      ...taquillaProducts.entradas,
+      ...taquillaProducts.adicionales
+    ];
+  }, []);
+
+  const handleSelectProduct = (product) => {
+    if (product.precioAbierto) {
+      const inputVal = window.prompt(`Ingrese el precio para ${product.nombre}:`, "");
+      if (inputVal === null) return; // Cancelado
+      const price = parseFloat(inputVal);
+      if (isNaN(price) || price < 0) {
+        alert("Por favor ingrese un precio válido.");
+        return;
+      }
+      addItem({ ...product, precio: price });
+    } else {
+      addItem(product);
+    }
+  };
 
   const handleCheckout = () => {
     setShowPayment(true);
@@ -52,7 +75,14 @@ const PosTaquilla = () => {
       <Sidebar area="Taquilla" />
       
       <div style={{ flex: 1, padding: '20px 20px 20px 0', display: 'flex', flexDirection: 'column' }}>
-        <h1 className="text-gradient-orange" style={{ margin: '0 0 20px 0', fontSize: '2rem' }}>Taquilla</h1>
+        <h1 className="text-gradient-orange" style={{ margin: '0 0 15px 0', fontSize: '2rem' }}>Taquilla</h1>
+        
+        <SearchBar 
+          products={allTaquillaProducts} 
+          onSelect={handleSelectProduct} 
+          placeholder="Buscar entrada o adicional..." 
+          accentColorClass="text-gradient-orange"
+        />
         
         <div style={{ flex: 1, overflowY: 'auto', paddingRight: '10px' }}>
           <h3 style={{ color: 'var(--text-muted)', marginBottom: '15px' }}>Entradas</h3>
