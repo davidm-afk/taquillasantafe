@@ -13,7 +13,7 @@ El sistema cuenta con un control estricto de accesos basado en roles para evitar
 2.  Visualizarás la pantalla de inicio de sesión neumórfica (revisa la *Figura 1*).
 3.  Haz clic en el menú desplegable **"SELECCIONAR USUARIO"** y elige tu nombre. Los cajeros asignados y programados son:
     *   **Tania:** Asignada a la terminal de **Taquilla**.
-    *   **Monse:** Asignada a la terminal de **Cafetería**.
+    *   **Jeshua:** Asignada a la terminal de **Cafetería**.
     *   **Yunn / Sandy:** Asignados a tareas de **Administración**.
 4.  Haz clic en el campo **"PIN DE ACCESO"** e ingresa tu código de seguridad de 4 dígitos o contraseña de cajero asignado.
 5.  Haz clic en el botón **"ENTRAR AL SISTEMA"**. La aplicación validará tu rol en la base de datos de Firebase y te redirigirá instantáneamente a tu área de trabajo autorizada.
