@@ -38,7 +38,6 @@ export const cafeteriaProducts = {
   comida: [
     { nombre: "Palomitas", precio: 80 },
     { nombre: "Pizza", precio: 250 },
-    { nombre: "Rebanada de pizza", precio: 30 },
     { nombre: "Nuggets", precio: 120 },
     { nombre: "Burguer Sencilla", precio: 140 },
     { nombre: "Hamburguesa especial", precio: 160 },
@@ -50,7 +49,6 @@ export const cafeteriaProducts = {
     { nombre: "Boneless", precio: 120 },
     { nombre: "Crazy Papas", precio: 105 },
     { nombre: "Vaso Loco", precio: 60 },
-    { nombre: "Helado Frozen", precio: 80 },
     { nombre: "Charola de verdura", precio: 170 },
     { nombre: "Charola de verdura especial", precio: 299 },
     { nombre: "Extra queso amarillo", precio: 25 }
