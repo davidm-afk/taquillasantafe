@@ -82,13 +82,13 @@ const calcularPrecioPaquete = (paquete, saltadoresCount, fechaStr) => {
 
   // Cálculos para sub-planes de Grupos (mínimo 5 personas)
   if (paquete === 'Grupos - Paquete A') {
-    return Math.max(5, saltadores) * 220;
+    return Math.max(5, saltadores) * 280;
   }
   if (paquete === 'Grupos - Paquete B') {
-    return Math.max(5, saltadores) * 260;
+    return Math.max(5, saltadores) * 380;
   }
   if (paquete === 'Grupos - Paquete C') {
-    return Math.max(5, saltadores) * 399;
+    return Math.max(5, saltadores) * 460;
   }
 
   if (paquete !== 'VIP' && paquete !== 'Platinum' && paquete !== 'NTP $6299' && paquete !== 'NTP $6100') return 0;
@@ -793,9 +793,9 @@ const Eventos = () => {
                         onChange={(e) => setPaquete(e.target.value)}
                         style={{ marginTop: '5px' }}
                       >
-                        <option value="Grupos - Paquete A">A: 90 minutos de salto + SkySocks en $220 por persona</option>
-                        <option value="Grupos - Paquete B">B: 2 horas de salto + SkySocks en $260 por persona</option>
-                        <option value="Grupos - Paquete C">C: DayPass salto ilimitado + SkySocks en $399 por persona</option>
+                        <option value="Grupos - Paquete A">A: 90 minutos de salto + SkySocks en $280 por persona</option>
+                        <option value="Grupos - Paquete B">B: 3 horas de salto + SkySocks en $380 por persona</option>
+                        <option value="Grupos - Paquete C">C: DayPass salto ilimitado + SkySocks en $460 por persona</option>
                       </select>
                       <p style={{ fontSize: '0.75rem', color: 'var(--accent-orange)', margin: '5px 0 0 0', fontWeight: 'bold' }}>
                         * Nota: Reservas a partir de 5 personas.
@@ -2043,9 +2043,9 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
                     onChange={(e) => setPaquete(e.target.value)}
                     style={{ marginTop: '5px' }}
                   >
-                    <option value="Grupos - Paquete A">A: 90 minutos de salto + SkySocks en $220 por persona</option>
-                    <option value="Grupos - Paquete B">B: 2 horas de salto + SkySocks en $260 por persona</option>
-                    <option value="Grupos - Paquete C">C: DayPass salto ilimitado + SkySocks en $399 por persona</option>
+                    <option value="Grupos - Paquete A">A: 90 minutos de salto + SkySocks en $280 por persona</option>
+                    <option value="Grupos - Paquete B">B: 3 horas de salto + SkySocks en $380 por persona</option>
+                    <option value="Grupos - Paquete C">C: DayPass salto ilimitado + SkySocks en $460 por persona</option>
                   </select>
                   <p style={{ fontSize: '0.75rem', color: 'var(--accent-orange)', margin: '5px 0 0 0', fontWeight: 'bold' }}>
                     * Reserva a partir de 5 personas.

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import TicketImpresion from './TicketImpresion';
@@ -227,6 +227,8 @@ const PaymentModal = ({ area, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  const isProcessing = useRef(false);
+
   const numRecibido = parseFloat(recibido) || 0;
   const isMixto = metodo === 'Efectivo' && numRecibido > 0 && numRecibido < total;
 
@@ -235,11 +237,14 @@ const PaymentModal = ({ area, onClose }) => {
   const cambio = isMixto ? 0 : (metodo === 'Efectivo' && numRecibido >= total ? numRecibido - total : 0);
 
   const handleConfirm = async () => {
+    if (isProcessing.current) return;
+
     if (metodo === 'Efectivo' && numRecibido <= 0) {
       alert("Por favor, ingresa un monto recibido en efectivo válido.");
       return;
     }
 
+    isProcessing.current = true;
     setLoading(true);
 
     // Preparar objeto para Firebase
@@ -323,6 +328,7 @@ const PaymentModal = ({ area, onClose }) => {
     } catch (error) {
       alert("Error de conexión al guardar la venta.");
       setLoading(false);
+      isProcessing.current = false;
     }
   };
 
