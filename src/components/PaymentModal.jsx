@@ -46,6 +46,7 @@ const updateInventoryForSales = async (cartItems) => {
 
         // Comida
         case "Palomitas": insumos.push({ nombre: "Maíz Palomero Schettino", qty: 1 }); break;
+        case "Bowl grande de palomitas": insumos.push({ nombre: "Maíz Palomero Schettino", qty: 2 }); break;
         case "Pizza": 
         case "Pizza individual": 
           insumos.push({ nombre: "Pizza Congelada", qty: 1 }); 
@@ -72,6 +73,9 @@ const updateInventoryForSales = async (cartItems) => {
           break;
         case "Papas Francesa": 
           insumos.push({ nombre: "Papas a la francesa", qty: 1 }); 
+          break;
+        case "Bowl grande de papas": 
+          insumos.push({ nombre: "Papas a la francesa", qty: 2 }); 
           break;
         case "Dedos Queso": 
           insumos.push({ nombre: "Dedos de queso", qty: 1 }); 
