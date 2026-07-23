@@ -6,9 +6,8 @@ import { cafeteriaProducts } from '../data/products';
 const ProductCard = ({ product, colorClass = "text-gradient-blue" }) => {
   const { cart, addItem, updateQty } = useCart();
   const [showDrinkModal, setShowDrinkModal] = useState(false);
-  
-  const cartItem = cart.find(item => item.nombre === product.nombre);
-  const qty = cartItem ? cartItem.qty : 0;
+  const [showCustomPriceModal, setShowCustomPriceModal] = useState(false);
+  const [customPriceInput, setCustomPriceInput] = useState('');
 
   const handleAddItem = () => {
     if (product.nombre === "Combo Hamburguesa") {
@@ -17,16 +16,20 @@ const ProductCard = ({ product, colorClass = "text-gradient-blue" }) => {
     }
 
     if (product.precioAbierto) {
-      const inputVal = window.prompt(`Ingrese el precio para ${product.nombre}:`, "");
-      if (inputVal === null) return; // Cancelado
-      const price = parseFloat(inputVal);
-      if (isNaN(price) || price < 0) {
-        alert("Por favor ingrese un precio válido.");
-        return;
-      }
+      setShowCustomPriceModal(true);
+      return;
+    }
+
+    addItem(product);
+  };
+
+  const handleCustomPriceSubmit = (e) => {
+    e.preventDefault();
+    const price = parseFloat(customPriceInput);
+    if (!isNaN(price) && price >= 0) {
       addItem({ ...product, precio: price });
-    } else {
-      addItem(product);
+      setShowCustomPriceModal(false);
+      setCustomPriceInput('');
     }
   };
 
@@ -188,6 +191,48 @@ const ProductCard = ({ product, colorClass = "text-gradient-blue" }) => {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {showCustomPriceModal && (
+        <div className="modal-overlay" style={{ zIndex: 2000 }}>
+          <div className="neu-box animate-fade-in" style={{ padding: '30px', maxWidth: '380px', width: '90%', textAlign: 'center' }}>
+            <h3 className={colorClass} style={{ margin: '0 0 15px 0', fontSize: '1.3rem' }}>Precio de {product.nombre}</h3>
+            <form onSubmit={handleCustomPriceSubmit}>
+              <div style={{ position: 'relative', marginBottom: '20px' }}>
+                <span style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', fontWeight: 'bold', color: 'var(--text-muted)' }}>$</span>
+                <input
+                  type="number"
+                  step="1"
+                  min="0"
+                  placeholder="0.00"
+                  className="neu-input"
+                  value={customPriceInput}
+                  onChange={(e) => setCustomPriceInput(e.target.value)}
+                  style={{ paddingLeft: '35px', width: '100%', fontSize: '1.2rem', textAlign: 'center' }}
+                  autoFocus
+                  required
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  className="neu-button"
+                  onClick={() => { setShowCustomPriceModal(false); setCustomPriceInput(''); }}
+                  style={{ flex: 1, padding: '10px', color: 'var(--text-muted)' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="neu-button"
+                  style={{ flex: 1, padding: '10px', color: 'var(--accent-blue)', fontWeight: 'bold' }}
+                >
+                  Agregar
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
