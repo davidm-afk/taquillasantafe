@@ -17,7 +17,7 @@
     "productName": "SkyZone POS",
     "forceCodeSigning": false,
     "directories": {
-      "output": "dist-electron"
+      "output": "release"
     },
     "files": [
       "dist/**/*",
