@@ -42,7 +42,7 @@ const ProductCard = ({ product, colorClass = "text-gradient-blue" }) => {
       <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
         {product.imagen && (
           <img 
-            src={product.imagen} 
+            src={product.imagen?.startsWith('/') ? '.' + product.imagen : product.imagen} 
             alt={product.nombre} 
             style={{ 
               width: '45px', 

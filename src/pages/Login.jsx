@@ -33,7 +33,7 @@ const Login = () => {
     <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
       <div className="neu-box" style={{ padding: '3rem', maxWidth: '420px', width: '100%', textAlign: 'center' }}>
         <img 
-          src="/img/logo en png.png" 
+          src="./img/logo en png.png" 
           alt="Sky Zone Logo" 
           style={{ width: '180px', marginBottom: '20px' }} 
         />
