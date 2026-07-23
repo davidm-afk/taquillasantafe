@@ -39,7 +39,7 @@ const Sidebar = ({ area }) => {
       justifyContent: 'space-between'
     }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
-        <img src="/img/logo2 en png.png" alt="Logo" style={{ width: '60px', opacity: 0.8 }} />
+        <img src="./img/logo2 en png.png" alt="Logo" style={{ width: '60px', opacity: 0.8 }} />
         
         <div style={{ width: '50px', height: '2px', backgroundColor: 'var(--bg-color)', boxShadow: 'var(--shadow-inset)' }}></div>
         

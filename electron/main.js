@@ -19,6 +19,14 @@ function createWindow() {
     },
   });
 
+  // Permitir abrir la consola de diagnóstico (DevTools) con F12
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12' || (input.control && input.shift && input.key.toLowerCase() === 'i')) {
+      win.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+  });
+
   // Si estamos en desarrollo, cargar URL de Vite; en producción, cargar index.html desde dist
   const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 

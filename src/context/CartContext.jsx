@@ -8,8 +8,8 @@ export const CartProvider = ({ children }) => {
   });
   const [activeCartId, setActiveCartId] = useState('default');
 
-  const activeCart = carts[activeCartId] || { name: 'Principal', items: [] };
-  const cart = activeCart.items;
+  const activeCart = carts[activeCartId] || carts.default || { name: 'Principal', items: [] };
+  const cart = Array.isArray(activeCart.items) ? activeCart.items : [];
 
   const addItem = (item) => {
     setCarts((prevCarts) => {
