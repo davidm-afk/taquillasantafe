@@ -142,15 +142,16 @@ body {
   body.print-ticket #ticketImpresion {
     display: block !important;
     position: absolute;
-    left: 0;
+    left: 4mm;
     top: 0;
-    width: 75mm; 
+    width: 67mm; 
+    box-sizing: border-box;
+    padding: 0 2mm;
     font-family: 'Courier New', Courier, monospace;
-    font-size: 11px;
+    font-size: 10.5px;
     color: black;
     background: white;
     margin: 0;
-    padding: 0;
   }
 
   .ticket-center {
