@@ -70,92 +70,135 @@ const CartSidebar = ({ onCheckout, titleColorClass = "text-gradient-blue", enabl
     setExpandedId(null);
   };
 
+  const renderNewCartModal = () => {
+    if (!showNewCartModal) return null;
+    return (
+      <div className="modal-overlay" style={{ zIndex: 2000 }}>
+        <div className="neu-box animate-fade-in" style={{ padding: '30px', maxWidth: '400px', width: '90%', textAlign: 'center' }}>
+          <h3 className={titleColorClass} style={{ margin: '0 0 15px 0', fontSize: '1.4rem' }}>Nueva Cuenta / Mesa</h3>
+          <form onSubmit={handleCreateCartSubmit}>
+            <input
+              type="text"
+              placeholder="Ej. Mesa 4, Cuenta Juan, Bar..."
+              className="neu-input"
+              value={newCartName}
+              onChange={(e) => setNewCartName(e.target.value)}
+              style={{ marginBottom: '20px', width: '100%', fontSize: '1rem' }}
+              autoFocus
+              required
+            />
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button
+                type="button"
+                className="neu-button"
+                onClick={() => { setShowNewCartModal(false); setNewCartName(''); }}
+                style={{ flex: 1, padding: '10px', color: 'var(--text-muted)' }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="neu-button"
+                style={{ flex: 1, padding: '10px', color: 'var(--accent-blue)', fontWeight: 'bold' }}
+              >
+                Crear Cuenta
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
   // Renderizado del Selector de Cuentas (Minimizado)
   if (enableMultiCart && expandedId === null) {
     return (
-      <div className="neu-box" style={{ 
-        width: '350px', 
-        margin: '20px 20px 20px 0', 
-        padding: '20px',
-        display: 'flex', 
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        height: 'calc(100vh - 40px)'
-      }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2 className={titleColorClass} style={{ margin: 0, fontSize: '1.5rem' }}>Cuentas Activas</h2>
-          </div>
-          <button 
-            className="neu-button" 
-            onClick={handleNewCart}
-            style={{ width: '100%', padding: '12px', color: 'var(--accent-blue)', fontWeight: 'bold', marginBottom: '20px', cursor: 'pointer' }}
-          >
-            ➕ NUEVA CUENTA
-          </button>
+      <>
+        <div className="neu-box" style={{ 
+          width: '350px', 
+          margin: '20px 20px 20px 0', 
+          padding: '20px',
+          display: 'flex', 
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          height: 'calc(100vh - 40px)'
+        }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 className={titleColorClass} style={{ margin: 0, fontSize: '1.5rem' }}>Cuentas Activas</h2>
+            </div>
+            <button 
+              className="neu-button" 
+              onClick={handleNewCart}
+              style={{ width: '100%', padding: '12px', color: 'var(--accent-blue)', fontWeight: 'bold', marginBottom: '20px', cursor: 'pointer' }}
+            >
+              ➕ NUEVA CUENTA
+            </button>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', overflowY: 'auto', maxHeight: 'calc(100vh - 200px)' }}>
-            {Object.keys(carts).map(id => {
-              const c = carts[id];
-              const cTotal = c.items.reduce((acc, item) => acc + item.precio * item.qty, 0);
-              const totalItems = c.items.reduce((acc, item) => acc + item.qty, 0);
-              const isActive = id === activeCartId;
-              return (
-                <div 
-                  key={id}
-                  className="neu-box animate-fade-in"
-                  onClick={() => {
-                    switchCart(id);
-                    setExpandedId(id);
-                  }}
-                  style={{
-                    padding: '15px 20px',
-                    borderRadius: '12px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    transition: 'all 0.2s ease',
-                    border: isActive ? '1px solid var(--accent-blue)' : '1px solid transparent',
-                    background: isActive ? 'var(--bg-color)' : 'rgba(255,255,255,0.01)',
-                    boxShadow: isActive ? 'var(--shadow-inset)' : 'var(--shadow-flat)'
-                  }}
-                >
-                  <div>
-                    <h4 style={{ margin: '0 0 5px 0', color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: isActive ? 'bold' : 'normal' }}>
-                      {c.name}
-                    </h4>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {totalItems} {totalItems === 1 ? 'producto' : 'productos'}
-                    </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', overflowY: 'auto', maxHeight: 'calc(100vh - 200px)' }}>
+              {Object.keys(carts).map(id => {
+                const c = carts[id];
+                const cTotal = c.items.reduce((acc, item) => acc + item.precio * item.qty, 0);
+                const totalItems = c.items.reduce((acc, item) => acc + item.qty, 0);
+                const isActive = id === activeCartId;
+                return (
+                  <div 
+                    key={id}
+                    className="neu-box animate-fade-in"
+                    onClick={() => {
+                      switchCart(id);
+                      setExpandedId(id);
+                    }}
+                    style={{
+                      padding: '15px 20px',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      transition: 'all 0.2s ease',
+                      border: isActive ? '1px solid var(--accent-blue)' : '1px solid transparent',
+                      background: isActive ? 'var(--bg-color)' : 'rgba(255,255,255,0.01)',
+                      boxShadow: isActive ? 'var(--shadow-inset)' : 'var(--shadow-flat)'
+                    }}
+                  >
+                    <div>
+                      <h4 style={{ margin: '0 0 5px 0', color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: isActive ? 'bold' : 'normal' }}>
+                        {c.name}
+                      </h4>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        {totalItems} {totalItems === 1 ? 'producto' : 'productos'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                      <strong style={{ fontSize: '1.15rem', color: 'var(--text-main)' }}>
+                        ${cTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                      </strong>
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteCart(id, c.name);
+                        }}
+                        style={{
+                          color: 'var(--accent-danger)',
+                          cursor: 'pointer',
+                          fontWeight: 'bold',
+                          fontSize: '1.1rem',
+                          padding: '4px'
+                        }}
+                        title="Eliminar Cuenta"
+                      >
+                        ✕
+                      </span>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <strong style={{ fontSize: '1.15rem', color: 'var(--text-main)' }}>
-                      ${cTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                    </strong>
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteCart(id, c.name);
-                      }}
-                      style={{
-                        color: 'var(--accent-danger)',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        fontSize: '1.1rem',
-                        padding: '4px'
-                      }}
-                      title="Eliminar Cuenta"
-                    >
-                      ✕
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
+        {renderNewCartModal()}
+      </>
     );
   }
 
@@ -305,42 +348,7 @@ const CartSidebar = ({ onCheckout, titleColorClass = "text-gradient-blue", enabl
         />
       )}
 
-      {showNewCartModal && (
-        <div className="modal-overlay" style={{ zIndex: 2000 }}>
-          <div className="neu-box animate-fade-in" style={{ padding: '30px', maxWidth: '400px', width: '90%', textAlign: 'center' }}>
-            <h3 className={titleColorClass} style={{ margin: '0 0 15px 0', fontSize: '1.4rem' }}>Nueva Cuenta / Mesa</h3>
-            <form onSubmit={handleCreateCartSubmit}>
-              <input
-                type="text"
-                placeholder="Ej. Mesa 4, Cuenta Juan, Bar..."
-                className="neu-input"
-                value={newCartName}
-                onChange={(e) => setNewCartName(e.target.value)}
-                style={{ marginBottom: '20px', width: '100%', fontSize: '1rem' }}
-                autoFocus
-                required
-              />
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                <button
-                  type="button"
-                  className="neu-button"
-                  onClick={() => { setShowNewCartModal(false); setNewCartName(''); }}
-                  style={{ flex: 1, padding: '10px', color: 'var(--text-muted)' }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="neu-button"
-                  style={{ flex: 1, padding: '10px', color: 'var(--accent-blue)', fontWeight: 'bold' }}
-                >
-                  Crear Cuenta
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {renderNewCartModal()}
     </div>
   );
 };
