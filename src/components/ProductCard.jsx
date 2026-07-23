@@ -9,6 +9,9 @@ const ProductCard = ({ product, colorClass = "text-gradient-blue" }) => {
   const [showCustomPriceModal, setShowCustomPriceModal] = useState(false);
   const [customPriceInput, setCustomPriceInput] = useState('');
 
+  const cartItem = cart.find(item => item.nombre === product.nombre);
+  const qty = cartItem ? cartItem.qty : 0;
+
   const handleAddItem = () => {
     if (product.nombre === "Combo Hamburguesa") {
       setShowDrinkModal(true);
