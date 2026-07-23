@@ -21,6 +21,8 @@ const CartSidebar = ({ onCheckout, titleColorClass = "text-gradient-blue", enabl
   const { user } = useAuth();
   const [expandedId, setExpandedId] = React.useState(null);
   const [isPrinting, setIsPrinting] = React.useState(false);
+  const [showNewCartModal, setShowNewCartModal] = React.useState(false);
+  const [newCartName, setNewCartName] = React.useState('');
 
   const handlePrintSummary = () => {
     setIsPrinting(true);
@@ -40,10 +42,16 @@ const CartSidebar = ({ onCheckout, titleColorClass = "text-gradient-blue", enabl
   }, [cart.length, activeCartId, enableMultiCart]);
 
   const handleNewCart = () => {
-    const name = window.prompt("Ingrese el nombre de la nueva cuenta/mesa:");
-    if (name && name.trim()) {
-      const newId = createCart(name);
+    setShowNewCartModal(true);
+  };
+
+  const handleCreateCartSubmit = (e) => {
+    e.preventDefault();
+    if (newCartName && newCartName.trim()) {
+      const newId = createCart(newCartName.trim());
       setExpandedId(newId);
+      setNewCartName('');
+      setShowNewCartModal(false);
     }
   };
 
@@ -295,6 +303,43 @@ const CartSidebar = ({ onCheckout, titleColorClass = "text-gradient-blue", enabl
           total={total} 
           user={user} 
         />
+      )}
+
+      {showNewCartModal && (
+        <div className="modal-overlay" style={{ zIndex: 2000 }}>
+          <div className="neu-box animate-fade-in" style={{ padding: '30px', maxWidth: '400px', width: '90%', textAlign: 'center' }}>
+            <h3 className={titleColorClass} style={{ margin: '0 0 15px 0', fontSize: '1.4rem' }}>Nueva Cuenta / Mesa</h3>
+            <form onSubmit={handleCreateCartSubmit}>
+              <input
+                type="text"
+                placeholder="Ej. Mesa 4, Cuenta Juan, Bar..."
+                className="neu-input"
+                value={newCartName}
+                onChange={(e) => setNewCartName(e.target.value)}
+                style={{ marginBottom: '20px', width: '100%', fontSize: '1rem' }}
+                autoFocus
+                required
+              />
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  className="neu-button"
+                  onClick={() => { setShowNewCartModal(false); setNewCartName(''); }}
+                  style={{ flex: 1, padding: '10px', color: 'var(--text-muted)' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="neu-button"
+                  style={{ flex: 1, padding: '10px', color: 'var(--accent-blue)', fontWeight: 'bold' }}
+                >
+                  Crear Cuenta
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
