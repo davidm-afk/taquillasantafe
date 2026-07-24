@@ -16,6 +16,29 @@ const PosTaquilla = () => {
   const [customType, setCustomType] = React.useState('entrada'); // 'entrada' o 'adicional'
   const [customSocks, setCustomSocks] = React.useState('0');
 
+  // Reloj digital (Hora y Fecha actual)
+  const [time, setTime] = React.useState(new Date());
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formattedTime = time.toLocaleTimeString('es-MX', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
+
+  const formattedDate = time.toLocaleDateString('es-MX', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short'
+  });
+
   const allTaquillaProducts = React.useMemo(() => {
     return [
       ...taquillaProducts.entradas,
@@ -77,12 +100,37 @@ const PosTaquilla = () => {
       <div style={{ flex: 1, padding: '20px 20px 20px 0', display: 'flex', flexDirection: 'column' }}>
         <h1 className="text-gradient-orange" style={{ margin: '0 0 15px 0', fontSize: '2rem' }}>Taquilla</h1>
         
-        <SearchBar 
-          products={allTaquillaProducts} 
-          onSelect={handleSelectProduct} 
-          placeholder="Buscar entrada o adicional..." 
-          accentColorClass="text-gradient-orange"
-        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+          <div style={{ flex: 1, maxWidth: '500px' }}>
+            <SearchBar 
+              products={allTaquillaProducts} 
+              onSelect={handleSelectProduct} 
+              placeholder="Buscar entrada o adicional..." 
+              accentColorClass="text-gradient-orange"
+            />
+          </div>
+          
+          <div className="neu-box" style={{ 
+            padding: '10px 20px',
+            borderRadius: '12px',
+            display: 'flex', 
+            flexDirection: 'row',
+            alignItems: 'center', 
+            justifyContent: 'center',
+            height: '50px',
+            minWidth: '220px',
+            boxShadow: 'var(--shadow-light)',
+            marginBottom: '25px',
+            gap: '12px'
+          }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+              📅 {formattedDate}
+            </span>
+            <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--accent-orange)', fontFamily: 'monospace' }}>
+              ⏱️ {formattedTime}
+            </span>
+          </div>
+        </div>
         
         <div style={{ flex: 1, overflowY: 'auto', paddingRight: '10px' }}>
           <h3 style={{ color: 'var(--text-muted)', marginBottom: '15px' }}>Entradas</h3>

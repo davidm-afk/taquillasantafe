@@ -1,5 +1,5 @@
 export const usuariosPermitidos = {
-  "Tania": { pin: "3128", rol: "Taquilla" },
+  "Tania": { pin: "2822", rol: "Taquilla" },
   "Jeshua": { pin: "1972", rol: "Cafeteria" },
   "Yunn": { pin: "2210", rol: "Admin" },
   "Sandy": { pin: "2323", rol: "Admin" },
