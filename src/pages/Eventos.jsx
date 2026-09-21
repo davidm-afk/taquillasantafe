@@ -1335,7 +1335,7 @@ const Eventos = () => {
               )}
 
               {/* Vista Previa de Costo Automático con soporte de Extras (Visible en todo momento) */}
-              {precioFormulario > 0 && (
+              {paquete !== 'Sin definir' && (
                 <div className="neu-box animate-fade-in" style={{ padding: '12px', borderLeft: '4px solid var(--accent-success)', background: 'rgba(16, 185, 129, 0.05)', fontSize: '0.85rem', marginTop: '10px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '10px' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Costo Base ({paquete}):</span>
@@ -1676,6 +1676,7 @@ const Eventos = () => {
         <EditReservacionModal 
           reservacion={editingReservacion} 
           eventosReservados={eventosReservados} // Pasar listado completo para validación anti-empalme
+          paquetesFirestore={paquetesFirestore}
           onClose={() => setEditingReservacion(null)} 
         />
       )}
@@ -1717,7 +1718,7 @@ const Eventos = () => {
 };
 
 // Componente Modal de Edición de Reservación
-const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
+const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestore, onClose }) => {
   const isEstandar = paquetesEstandar.includes(reservacion.paquete);
 
   const [cliente, setCliente] = useState(reservacion.cliente || '');
