@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { useCaja } from '../context/CajaContext';
 import { LogOut } from 'lucide-react';
 import { db } from '../config/firebase';
@@ -10,6 +11,7 @@ import CerrarCajaModal from '../components/CerrarCajaModal';
 const AdminDashboard = () => {
   const { logout } = useAuth();
   const { cajasData } = useCaja();
+  const navigate = useNavigate();
 
   const [closingCaja, setClosingCaja] = useState(null);
 
@@ -191,13 +193,22 @@ const AdminDashboard = () => {
           <h1 className="text-gradient-blue" style={{ margin: 0, fontSize: '2rem' }}>Resumen de ventas</h1>
           <p style={{ margin: 0, color: 'var(--text-muted)' }}>Panel Administrativo</p>
         </div>
-        <button
-          className="neu-button"
-          onClick={logout}
-          style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--accent-danger)' }}
-        >
-          <LogOut size={20} /> Salir
-        </button>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button
+            className="neu-button"
+            onClick={() => navigate('/admin/inventario')}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-blue)' }}
+          >
+            📦 Inventario de Artículos
+          </button>
+          <button
+            className="neu-button"
+            onClick={logout}
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--accent-danger)' }}
+          >
+            <LogOut size={20} /> Salir
+          </button>
+        </div>
       </div>
 
       {/* Cajas Abiertas / Cerradas */}

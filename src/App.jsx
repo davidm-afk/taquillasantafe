@@ -3,10 +3,12 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { CajaProvider } from './context/CajaContext';
+import { ProductosProvider } from './context/ProductosContext';
 import Login from './pages/Login';
 import PosTaquilla from './pages/PosTaquilla';
 import PosCafeteria from './pages/PosCafeteria';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminInventario from './pages/AdminInventario';
 import Eventos from './pages/Eventos';
 import Inventario from './pages/Inventario';
 import ThemeToggle from './components/ThemeToggle';
@@ -25,6 +27,7 @@ const AppRoutes = () => {
       <Route path="/taquilla" element={<ProtectedRoute allowedRoles={['Taquilla']}><PosTaquilla /></ProtectedRoute>} />
       <Route path="/cafeteria" element={<ProtectedRoute allowedRoles={['Cafeteria']}><PosCafeteria /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute allowedRoles={['Admin']}><AdminDashboard /></ProtectedRoute>} />
+      <Route path="/admin/inventario" element={<ProtectedRoute allowedRoles={['Admin']}><AdminInventario /></ProtectedRoute>} />
       <Route path="/eventos" element={<ProtectedRoute allowedRoles={['Eventos']}><Eventos /></ProtectedRoute>} />
       <Route path="/inventario" element={<ProtectedRoute allowedRoles={['Taquilla', 'Cafeteria', 'Admin']}><Inventario /></ProtectedRoute>} />
     </Routes>
@@ -35,12 +38,14 @@ const App = () => {
   return (
     <AuthProvider>
       <CajaProvider>
-        <CartProvider>
-          <Router>
-            <AppRoutes />
-            <ThemeToggle />
-          </Router>
-        </CartProvider>
+        <ProductosProvider>
+          <CartProvider>
+            <Router>
+              <AppRoutes />
+              <ThemeToggle />
+            </Router>
+          </CartProvider>
+        </ProductosProvider>
       </CajaProvider>
     </AuthProvider>
   );
