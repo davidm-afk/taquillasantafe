@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Sidebar from '../components/Sidebar';
+import AperturaCajaModal from '../components/AperturaCajaModal';
 import { db } from '../config/firebase';
 import { collection, addDoc, onSnapshot, query, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 
@@ -500,6 +501,7 @@ const Eventos = () => {
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+      <AperturaCajaModal rol="Eventos" />
       <Sidebar area="Eventos" />
       
       <div style={{ flex: 1, padding: '20px 20px 20px 0', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>

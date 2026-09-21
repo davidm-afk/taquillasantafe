@@ -234,10 +234,15 @@ const PaymentModal = ({ area, onClose }) => {
   const isProcessing = useRef(false);
 
   const numRecibido = parseFloat(recibido) || 0;
+  // Mixto sólo aplica cuando el método es Efectivo y el monto recibido es menor al total
   const isMixto = metodo === 'Efectivo' && numRecibido > 0 && numRecibido < total;
 
-  const cashPaid = isMixto ? numRecibido : (metodo === 'Efectivo' && numRecibido >= total ? total : 0);
-  const cardPaid = isMixto ? total - numRecibido : (metodo === 'Tarjeta' ? total : 0);
+  const cashPaid   = isMixto ? numRecibido : (metodo === 'Efectivo' && numRecibido >= total ? total : 0);
+  const debitoPaid = metodo === 'Debito' ? total : (isMixto ? total - numRecibido : 0);
+  const creditoPaid = metodo === 'Credito' ? total : 0;
+  const transferPaid = metodo === 'Transferencia' ? total : 0;
+  // cardPaid legacy: para mixto es la parte no pagada en efectivo
+  const cardPaid = isMixto ? total - numRecibido : (metodo !== 'Efectivo' ? total : 0);
   const cambio = isMixto ? 0 : (metodo === 'Efectivo' && numRecibido >= total ? numRecibido - total : 0);
 
   const handleConfirm = async () => {
@@ -245,6 +250,10 @@ const PaymentModal = ({ area, onClose }) => {
 
     if (metodo === 'Efectivo' && numRecibido <= 0) {
       alert("Por favor, ingresa un monto recibido en efectivo válido.");
+      return;
+    }
+    if (!['Efectivo','Debito','Credito','Transferencia'].includes(metodo)) {
+      alert("Selecciona un método de pago.");
       return;
     }
 
@@ -279,6 +288,10 @@ const PaymentModal = ({ area, onClose }) => {
       total: total,
       metodoPago: isMixto ? 'Mixto' : metodo,
       pagoEfectivo: cashPaid,
+      pagoDebito: debitoPaid,
+      pagoCredito: creditoPaid,
+      pagoTransferencia: transferPaid,
+      // pagoTarjeta mantiene compatibilidad con registros anteriores
       pagoTarjeta: cardPaid,
       fecha: new Date().toISOString(),
       timestamp: Date.now()
@@ -338,7 +351,7 @@ const PaymentModal = ({ area, onClose }) => {
 
   return (
     <div className="modal-overlay">
-      <div className="neu-box" style={{ padding: '2rem', width: '100%', maxWidth: '400px', textAlign: 'center' }}>
+      <div className="neu-box" style={{ padding: '2rem', width: '100%', maxWidth: '420px', textAlign: 'center' }}>
         
         {!success ? (
           <>
@@ -347,22 +360,42 @@ const PaymentModal = ({ area, onClose }) => {
               ${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
             </div>
 
-            <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
-              <button 
-                type="button" 
-                className={metodo === 'Efectivo' ? 'neu-button' : 'neu-box'} 
+            {/* Fila 1: Efectivo + Débito */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+              <button
+                type="button"
+                className={metodo === 'Efectivo' ? 'neu-button' : 'neu-box'}
                 onClick={() => setMetodo('Efectivo')}
-                style={{ flex: 1, padding: '15px', cursor: 'pointer', border: metodo === 'Efectivo' ? '2px solid var(--accent-success)' : 'none' }}
+                style={{ padding: '14px 10px', cursor: 'pointer', border: metodo === 'Efectivo' ? '2px solid #22c55e' : 'none', borderRadius: '10px', fontWeight: 700 }}
               >
                 💵 Efectivo
               </button>
-              <button 
-                type="button" 
-                className={metodo === 'Tarjeta' ? 'neu-button' : 'neu-box'} 
-                onClick={() => setMetodo('Tarjeta')}
-                style={{ flex: 1, padding: '15px', cursor: 'pointer', border: metodo === 'Tarjeta' ? '2px solid var(--accent-success)' : 'none' }}
+              <button
+                type="button"
+                className={metodo === 'Debito' ? 'neu-button' : 'neu-box'}
+                onClick={() => setMetodo('Debito')}
+                style={{ padding: '14px 10px', cursor: 'pointer', border: metodo === 'Debito' ? '2px solid #3b82f6' : 'none', borderRadius: '10px', fontWeight: 700 }}
               >
-                💳 Tarjeta
+                💳 Débito
+              </button>
+            </div>
+            {/* Fila 2: Crédito + Transferencia */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+              <button
+                type="button"
+                className={metodo === 'Credito' ? 'neu-button' : 'neu-box'}
+                onClick={() => setMetodo('Credito')}
+                style={{ padding: '14px 10px', cursor: 'pointer', border: metodo === 'Credito' ? '2px solid #f59e0b' : 'none', borderRadius: '10px', fontWeight: 700 }}
+              >
+                💎 Crédito
+              </button>
+              <button
+                type="button"
+                className={metodo === 'Transferencia' ? 'neu-button' : 'neu-box'}
+                onClick={() => setMetodo('Transferencia')}
+                style={{ padding: '14px 10px', cursor: 'pointer', border: metodo === 'Transferencia' ? '2px solid #a855f7' : 'none', borderRadius: '10px', fontWeight: 700 }}
+              >
+                🏦 Transferencia
               </button>
             </div>
 
@@ -448,6 +481,9 @@ const PaymentModal = ({ area, onClose }) => {
         change={cambio > 0 ? cambio : 0} 
         pagoEfectivo={cashPaid}
         pagoTarjeta={cardPaid}
+        pagoDebito={debitoPaid}
+        pagoCredito={creditoPaid}
+        pagoTransferencia={transferPaid}
       />
     </div>
   );

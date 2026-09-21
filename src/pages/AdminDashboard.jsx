@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useCaja } from '../context/CajaContext';
 import { LogOut } from 'lucide-react';
 import { db } from '../config/firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -7,6 +8,7 @@ import GuestList from '../components/GuestList';
 
 const AdminDashboard = () => {
   const { logout } = useAuth();
+  const { cajasAbiertas } = useCaja();
 
   // Format today's date as YYYY-MM-DD for the date input default
   const tzOffset = (new Date()).getTimezoneOffset() * 60000;
@@ -16,6 +18,7 @@ const AdminDashboard = () => {
   const [area, setArea] = useState('Taquilla');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
+  const [allData, setAllData] = useState([]);
   const [error, setError] = useState('');
   const [editingVenta, setEditingVenta] = useState(null);
 
@@ -35,11 +38,9 @@ const AdminDashboard = () => {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(data => data.area === area); // Local filter by area
-
-      setData(docs);
+      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setAllData(docs);
+      setData(docs.filter(d => d.area === area));
       setLoading(false);
     }, (err) => {
       console.error("Firestore Error:", err);
@@ -196,6 +197,44 @@ const AdminDashboard = () => {
         </button>
       </div>
 
+      {/* Cajas Abiertas */}
+      <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        {['Taquilla', 'Cafeteria', 'Eventos'].map(areaName => {
+          if (!cajasAbiertas[areaName]) return null;
+          let ef = 0, deb = 0, cred = 0, trans = 0;
+          allData.filter(d => d.area === areaName).forEach(v => {
+            if (v.pagoEfectivo !== undefined && (v.pagoDebito !== undefined || v.pagoTarjeta !== undefined)) {
+              ef += parseFloat(v.pagoEfectivo || 0);
+              deb += parseFloat(v.pagoDebito || v.pagoTarjeta || 0); // fallback for intermediate records
+              cred += parseFloat(v.pagoCredito || 0);
+              trans += parseFloat(v.pagoTransferencia || 0);
+            } else {
+              const ventaTotal = parseFloat(v.total || v.Total || 0);
+              const metodo = v.metodoPago || v['Método de Pago'] || '';
+              if (metodo.toLowerCase() === 'efectivo') ef += ventaTotal;
+              else deb += ventaTotal;
+            }
+          });
+          const total = ef + deb + cred + trans;
+          return (
+            <div key={areaName} className="neu-box" style={{ padding: '20px', flex: '1', minWidth: '250px' }}>
+              <h3 style={{ margin: '0 0 15px 0', color: 'var(--accent-blue)', borderBottom: '2px solid var(--bg-color)', paddingBottom: '10px' }}>
+                Caja {areaName}
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.9rem' }}>
+                <div><strong>Efectivo:</strong></div><div style={{ textAlign: 'right' }}>${ef.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+                <div><strong>Débito:</strong></div><div style={{ textAlign: 'right' }}>${deb.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+                <div><strong>Crédito:</strong></div><div style={{ textAlign: 'right' }}>${cred.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+                <div><strong>Transferencia:</strong></div><div style={{ textAlign: 'right' }}>${trans.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+                <div style={{ gridColumn: '1 / -1', borderTop: '1px solid var(--bg-color)', margin: '5px 0' }}></div>
+                <div style={{ fontSize: '1rem', color: 'var(--accent-blue)' }}><strong>Total:</strong></div>
+                <div style={{ textAlign: 'right', fontSize: '1rem', fontWeight: 'bold' }}>${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {/* Filtros */}
       <div className="neu-box" style={{ padding: '20px', marginBottom: '30px', display: 'flex', gap: '20px', alignItems: 'center' }}>
         <div>
@@ -218,6 +257,7 @@ const AdminDashboard = () => {
           >
             <option value="Taquilla">Taquilla</option>
             <option value="Cafeteria">Cafetería</option>
+            <option value="Eventos">Eventos</option>
           </select>
         </div>
       </div>
