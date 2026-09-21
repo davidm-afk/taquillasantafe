@@ -2,6 +2,7 @@ import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { CajaProvider } from './context/CajaContext';
 import Login from './pages/Login';
 import PosTaquilla from './pages/PosTaquilla';
 import PosCafeteria from './pages/PosCafeteria';
@@ -33,12 +34,14 @@ const AppRoutes = () => {
 const App = () => {
   return (
     <AuthProvider>
-      <CartProvider>
-        <Router>
-          <AppRoutes />
-          <ThemeToggle />
-        </Router>
-      </CartProvider>
+      <CajaProvider>
+        <CartProvider>
+          <Router>
+            <AppRoutes />
+            <ThemeToggle />
+          </Router>
+        </CartProvider>
+      </CajaProvider>
     </AuthProvider>
   );
 };
