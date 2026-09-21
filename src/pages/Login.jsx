@@ -64,7 +64,7 @@ const Login = () => {
                 placeholder="****"
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
-                maxLength={6}
+                maxLength={20}
                 style={{ paddingRight: '50px' }}
               />
               <button
