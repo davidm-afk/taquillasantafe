@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Sidebar from '../components/Sidebar';
 import AperturaCajaModal from '../components/AperturaCajaModal';
+import { useProductos } from '../context/ProductosContext';
 import { db } from '../config/firebase';
 import { collection, addDoc, onSnapshot, query, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 
@@ -64,7 +65,7 @@ const normalizeToArray = (val) => {
   return [val];
 };
 
-// Lista de paquetes estándar del parque
+// Lista de paquetes estándar del parque (se complementará con paquetes de Firestore)
 const paquetesEstandar = [
   'Sin definir', 'Platinum', 'VIP', 'NTP $6299', 'NTP $6100', 'Grupos', 'Evento Privado',
   'Grupos - Paquete A', 'Grupos - Paquete B', 'Grupos - Paquete C'
@@ -174,6 +175,13 @@ const calcularTotalVenta = (ev) => {
 };
 
 const Eventos = () => {
+  // Paquetes de Firestore (inventario administrable)
+  const { getActivos } = useProductos();
+  const paquetesFirestore = getActivos('Eventos') || [];
+
+  // Combinar nombres de paquetes de Firestore con los estándares para compatibilidad
+  const todosPaquetes = ['Sin definir', ...paquetesFirestore.map(p => p.nombre), 'Otro (Elegir manualmente)'];
+
   // Tab activa dentro del formulario de creación
   const [formTab, setFormTab] = useState('cliente');
   
@@ -759,12 +767,9 @@ const Eventos = () => {
                         style={{ marginTop: '5px' }}
                       >
                         <option value="Sin definir">Sin definir</option>
-                        <option value="Platinum">Plan Platinum</option>
-                        <option value="VIP">Plan VIP</option>
-                        <option value="NTP $6299">Plan NTP $6299</option>
-                        <option value="NTP $6100">Plan NTP $6100</option>
-                        <option value="Grupos">Plan Grupos</option>
-                        <option value="Evento Privado">Plan Evento Privado</option>
+                        {paquetesFirestore.map(p => (
+                          <option key={p.id} value={p.nombre}>{p.nombre}{p.subtitle ? ` — ${p.subtitle}` : ''}</option>
+                        ))}
                         <option value="Otro (Elegir manualmente)">Nombre a elegir manualmente</option>
                       </select>
                     </div>
@@ -2026,12 +2031,9 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
                   style={{ marginTop: '5px' }}
                 >
                   <option value="Sin definir">Sin definir</option>
-                  <option value="Platinum">Plan Platinum</option>
-                  <option value="VIP">Plan VIP</option>
-                  <option value="NTP $6299">Plan NTP $6299</option>
-                  <option value="NTP $6100">Plan NTP $6100</option>
-                  <option value="Grupos">Plan Grupos</option>
-                  <option value="Evento Privado">Plan Evento Privado</option>
+                  {paquetesFirestore.map(p => (
+                    <option key={p.id} value={p.nombre}>{p.nombre}{p.subtitle ? ` — ${p.subtitle}` : ''}</option>
+                  ))}
                   <option value="Otro (Elegir manualmente)">Nombre a elegir manualmente</option>
                 </select>
               </div>
