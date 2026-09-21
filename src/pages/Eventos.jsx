@@ -1684,6 +1684,7 @@ const Eventos = () => {
       {abonosReservacion && (
         <AbonarLiquidarModal 
           reservacion={abonosReservacion} 
+          user={user}
           onClose={() => setAbonosReservacion(null)} 
         />
       )}
@@ -2600,7 +2601,7 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
 };
 
 // Componente Modal de Gestión de Anticipos (Abonar/Liquidar)
-const AbonarLiquidarModal = ({ reservacion, onClose }) => {
+const AbonarLiquidarModal = ({ reservacion, onClose, user }) => {
   const [abonos, setAbonos] = useState(reservacion.abonos || []);
   const [fechaAbono, setFechaAbono] = useState(() => {
     const today = new Date();
