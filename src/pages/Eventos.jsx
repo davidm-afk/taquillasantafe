@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import Sidebar from '../components/Sidebar';
 import AperturaCajaModal from '../components/AperturaCajaModal';
 import { useProductos } from '../context/ProductosContext';
+import { useAuth } from '../context/AuthContext';
 import { db } from '../config/firebase';
 import { collection, addDoc, onSnapshot, query, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 
@@ -77,75 +78,21 @@ const staffVendedores = [
 
 
 
-// Función de cálculo de precios automática oficial
-const calcularPrecioPaquete = (paquete, saltadoresCount, fechaStr) => {
-  const saltadores = parseInt(saltadoresCount) || 0;
-  if (saltadores <= 0) return 0;
 
-  // Cálculos para sub-planes de Grupos (mínimo 5 personas)
-  if (paquete === 'Grupos - Paquete A') {
-    return Math.max(5, saltadores) * 280;
-  }
-  if (paquete === 'Grupos - Paquete B') {
-    return Math.max(5, saltadores) * 380;
-  }
-  if (paquete === 'Grupos - Paquete C') {
-    return Math.max(5, saltadores) * 460;
-  }
-
-  if (paquete !== 'VIP' && paquete !== 'Platinum' && paquete !== 'NTP $6299' && paquete !== 'NTP $6100') return 0;
-
-  // Regla para NTP $6299: Mínimo 15 niños cobrando base de $6,299, extras a $420 c/u
-  if (paquete === 'NTP $6299') {
-    const basePrice = 6299;
-    const baseJumpers = 15;
-    if (saltadores <= baseJumpers) {
-      return basePrice;
-    } else {
-      const extraJumpers = saltadores - baseJumpers;
-      return basePrice + (extraJumpers * 420);
-    }
-  }
-
-  // Regla para NTP $6100: Mínimo 15 niños cobrando base de $6,100, extras a $420 c/u
-  if (paquete === 'NTP $6100') {
-    const basePrice = 6100;
-    const baseJumpers = 15;
-    if (saltadores <= baseJumpers) {
-      return basePrice;
-    } else {
-      const extraJumpers = saltadores - baseJumpers;
-      return basePrice + (extraJumpers * 420);
-    }
-  }
-
-  const dateObj = parseDateString(fechaStr);
-  if (!dateObj) return 0;
-
-  const dayOfWeek = dateObj.getDay(); // 0 is Sunday, 1 is Monday, ..., 6 is Saturday
-
-  // Lunes a Jueves = [1, 2, 3, 4]
-  // Viernes a Domingo = [5, 6, 0]
-  const esFinDeSemana = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;
-
-  if (paquete === 'VIP') {
-    return esFinDeSemana ? saltadores * 999 : saltadores * 899;
-  } else if (paquete === 'Platinum') {
-    return esFinDeSemana ? saltadores * 1099 : saltadores * 999;
-  }
-  return 0;
-};
 
 // Estimación de recaudación contable (incluyendo extras, decoración y precio base manual)
-const calcularTotalVenta = (ev) => {
+const calcularTotalVenta = (ev, paquetesFirestore = []) => {
   let totalBase = 0;
   if (ev.precioBaseManual !== undefined && ev.precioBaseManual !== null && ev.precioBaseManual !== '') {
     totalBase = parseFloat(ev.precioBaseManual) || 0;
-  } else if (ev.paquete === 'VIP' || ev.paquete === 'Platinum' || ev.paquete === 'NTP $6299' || ev.paquete === 'NTP $6100' || (ev.paquete && ev.paquete.startsWith('Grupos'))) {
-    totalBase = calcularPrecioPaquete(ev.paquete, ev.saltadores, ev.fecha);
   } else {
-    // Valor de estimación estándar para otros paquetes: $350 por saltador
-    totalBase = (parseInt(ev.saltadores) || 0) * 350;
+    const paqueteDb = paquetesFirestore.find(p => p.nombre === ev.paquete);
+    const basePrice = paqueteDb ? (Number(paqueteDb.precio) || 0) : 0;
+    const saltadoresTotales = parseInt(ev.saltadores) || 0;
+    const saltadoresBase = parseInt(ev.saltadoresBase) || 0;
+    const precioExtra = parseFloat(ev.precioSaltadorExtra) || 0;
+    const extraCount = Math.max(0, saltadoresTotales - saltadoresBase);
+    totalBase = basePrice + (extraCount * precioExtra);
   }
 
   const totalExtras = ev.extras ? ev.extras.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0) : 0;
@@ -175,6 +122,8 @@ const calcularTotalVenta = (ev) => {
 };
 
 const Eventos = () => {
+  const { user } = useAuth();
+  
   // Paquetes de Firestore (inventario administrable)
   const { getActivos } = useProductos();
   const paquetesFirestore = getActivos('Eventos') || [];
@@ -230,9 +179,11 @@ const Eventos = () => {
   const [notasExtra, setNotasExtra] = useState([]);
   const [nuevaNota, setNuevaNota] = useState('');
   
-  // Estados para precio base manual
+  // Estados para precio base manual y extras
   const [isManualPrecioBase, setIsManualPrecioBase] = useState(false);
   const [manualPrecioBase, setManualPrecioBase] = useState('');
+  const [saltadoresBase, setSaltadoresBase] = useState('15');
+  const [precioSaltadorExtra, setPrecioSaltadorExtra] = useState('');
 
   // Listado de reservaciones y estado de carga
   const [eventosReservados, setEventosReservados] = useState([]);
@@ -358,6 +309,8 @@ const Eventos = () => {
       tamañoPastel: tamañoPastel,
       notasExtra: notasExtra,
       precioBaseManual: isManualPrecioBase && manualPrecioBase !== '' ? (parseFloat(manualPrecioBase) || 0) : null,
+      saltadoresBase: parseInt(saltadoresBase) || 0,
+      precioSaltadorExtra: parseFloat(precioSaltadorExtra) || 0,
       timestamp: Date.now()
     };
 
@@ -422,10 +375,13 @@ const Eventos = () => {
   };
 
   // Precio dinámico en el formulario de creación (base + extras + decoración + base manual)
-  const precioFormularioBase = (paquete === 'VIP' || paquete === 'Platinum' || paquete === 'NTP $6299' || paquete === 'NTP $6100' || paquete.startsWith('Grupos')) 
-    ? calcularPrecioPaquete(paquete, saltadores, getFechaCalculo()) 
-    : (parseInt(saltadores) || 0) * 350; // Estimación estándar de $350 para otros paquetes
-
+  let precioFormularioBase = 0;
+  const paqueteDbForm = paquetesFirestore.find(p => p.nombre === paquete);
+  const basePriceForm = paqueteDbForm ? (Number(paqueteDbForm.precio) || 0) : 0;
+  const saltadoresTotales = parseInt(saltadores) || 0;
+  const numSaltadoresBase = parseInt(saltadoresBase) || 0;
+  const extraJumpersForm = Math.max(0, saltadoresTotales - numSaltadoresBase);
+  precioFormularioBase = basePriceForm + (extraJumpersForm * (parseFloat(precioSaltadorExtra) || 0));
   const totalExtrasForm = extrasForm.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0);
   const totalDecoracionForm = (decoracionTipo === 'Personalizada') ? (parseFloat(decoracionMonto) || 0) : 0;
   const finalBaseForm = (isManualPrecioBase && manualPrecioBase !== '') ? (parseFloat(manualPrecioBase) || 0) : precioFormularioBase;
@@ -851,13 +807,37 @@ const Eventos = () => {
                       />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🧒 SALTADORES</label>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🧒 SALTADORES TOTALES</label>
                       <input 
                         type="number" 
                         placeholder="Ej. 15 (opcional)" 
                         className="neu-input" 
                         value={saltadores}
                         onChange={(e) => setSaltadores(e.target.value)}
+                        style={{ marginTop: '5px' }}
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>BASE INCLUIDOS</label>
+                      <input 
+                        type="number" 
+                        className="neu-input" 
+                        value={saltadoresBase}
+                        onChange={(e) => setSaltadoresBase(e.target.value)}
+                        style={{ marginTop: '5px' }}
+                        min="0"
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>PRECIO X EXTRA ($)</label>
+                      <input 
+                        type="number" 
+                        className="neu-input" 
+                        value={precioSaltadorExtra}
+                        onChange={(e) => setPrecioSaltadorExtra(e.target.value)}
                         style={{ marginTop: '5px' }}
                         min="0"
                       />
@@ -1756,6 +1736,8 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
   const [festejado, setFestejado] = useState(reservacion.festejado || '');
   const [adultos, setAdultos] = useState(reservacion.adultos || '');
   const [saltadores, setSaltadores] = useState(reservacion.saltadores || '');
+  const [saltadoresBase, setSaltadoresBase] = useState(reservacion.saltadoresBase || '15');
+  const [precioSaltadorExtra, setPrecioSaltadorExtra] = useState(reservacion.precioSaltadorExtra || '');
   const [paquete, setPaquete] = useState(isEstandar ? (reservacion.paquete || 'Sin definir') : 'Otro (Elegir manualmente)');
   const [customPaquete, setCustomPaquete] = useState(isEstandar ? '' : (reservacion.paquete || ''));
   const [espacio, setEspacio] = useState(reservacion.espacio || 'Sin definir'); // Nuevo campo en edición
@@ -1865,9 +1847,10 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
         adultosPaquete3Qty: adultosPaquete3 !== 'Sin definir' ? (parseInt(adultosPaquete3Qty) || 1) : 0,
         tamañoPastel: tamañoPastel,
         notasExtra: notasExtra,
-        precioBaseManual: isManualPrecioBase && manualPrecioBase !== '' ? (parseFloat(manualPrecioBase) || 0) : null
+        precioBaseManual: isManualPrecioBase && manualPrecioBase !== '' ? (parseFloat(manualPrecioBase) || 0) : null,
+        saltadoresBase: parseInt(saltadoresBase) || 0,
+        precioSaltadorExtra: parseFloat(precioSaltadorExtra) || 0
       };
-
       await updateDoc(doc(db, 'reservaciones', reservacion.id), updateData);
       alert("¡Reservación actualizada correctamente en la base de datos!");
       onClose();
@@ -2004,8 +1987,18 @@ const EditReservacionModal = ({ reservacion, eventosReservados, onClose }) => {
                   <input type="number" className="neu-input" value={adultos} onChange={(e) => setAdultos(e.target.value)} style={{ marginTop: '5px' }} min="0" />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Saltadores</label>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Saltadores Totales</label>
                   <input type="number" className="neu-input" value={saltadores} onChange={(e) => setSaltadores(e.target.value)} style={{ marginTop: '5px' }} min="0" />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Base Incluidos</label>
+                  <input type="number" className="neu-input" value={saltadoresBase} onChange={(e) => setSaltadoresBase(e.target.value)} style={{ marginTop: '5px' }} min="0" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Precio x Extra ($)</label>
+                  <input type="number" className="neu-input" value={precioSaltadorExtra} onChange={(e) => setPrecioSaltadorExtra(e.target.value)} style={{ marginTop: '5px' }} min="0" />
                 </div>
               </div>
               <div>
@@ -2675,6 +2668,22 @@ const AbonarLiquidarModal = ({ reservacion, onClose }) => {
       await updateDoc(doc(db, 'reservaciones', reservacion.id), {
         abonos: nuevosAbonos
       });
+      
+      // Registrar en la colección 'ventas' para que aparezca en el Dashboard
+      await addDoc(collection(db, 'ventas'), {
+        area: 'Eventos',
+        cajero: user?.nombre || 'Admin',
+        total: monto,
+        metodoPago,
+        pagoEfectivo: metodoPago === 'Efectivo' ? monto : 0,
+        pagoDebito: metodoPago === 'Debito' ? monto : 0,
+        pagoCredito: metodoPago === 'Credito' ? monto : 0,
+        pagoTransferencia: metodoPago === 'Transferencia' ? monto : 0,
+        fecha: new Date().toISOString(),
+        timestamp: Date.now(),
+        productos: `Anticipo/Abono - Folio ${folio}`
+      });
+
       setAbonos(nuevosAbonos);
       setMontoAbono('');
       alert(`¡Anticipo registrado correctamente!\nFolio generado: ${folio}`);
