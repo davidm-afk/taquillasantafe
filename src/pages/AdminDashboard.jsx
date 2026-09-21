@@ -5,10 +5,13 @@ import { LogOut } from 'lucide-react';
 import { db } from '../config/firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import GuestList from '../components/GuestList';
+import CerrarCajaModal from '../components/CerrarCajaModal';
 
 const AdminDashboard = () => {
   const { logout } = useAuth();
-  const { cajasAbiertas } = useCaja();
+  const { cajasData } = useCaja();
+
+  const [closingCaja, setClosingCaja] = useState(null);
 
   // Format today's date as YYYY-MM-DD for the date input default
   const tzOffset = (new Date()).getTimezoneOffset() * 60000;
@@ -197,15 +200,20 @@ const AdminDashboard = () => {
         </button>
       </div>
 
-      {/* Cajas Abiertas */}
+      {/* Cajas Abiertas / Cerradas */}
       <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap' }}>
         {['Taquilla', 'Cafeteria', 'Eventos'].map(areaName => {
-          if (!cajasAbiertas[areaName]) return null;
+          const cajaInfo = cajasData[areaName];
+          if (!cajaInfo) return null; // No abierta hoy
+          
+          const isAbierta = cajaInfo.abierta === true;
           let ef = 0, deb = 0, cred = 0, trans = 0;
-          allData.filter(d => d.area === areaName).forEach(v => {
+          
+          const ventasArea = allData.filter(d => d.area === areaName);
+          ventasArea.forEach(v => {
             if (v.pagoEfectivo !== undefined && (v.pagoDebito !== undefined || v.pagoTarjeta !== undefined)) {
               ef += parseFloat(v.pagoEfectivo || 0);
-              deb += parseFloat(v.pagoDebito || v.pagoTarjeta || 0); // fallback for intermediate records
+              deb += parseFloat(v.pagoDebito || v.pagoTarjeta || 0);
               cred += parseFloat(v.pagoCredito || 0);
               trans += parseFloat(v.pagoTransferencia || 0);
             } else {
@@ -216,24 +224,49 @@ const AdminDashboard = () => {
             }
           });
           const total = ef + deb + cred + trans;
+          const totalesObj = { ef, deb, cred, trans, totalGeneral: total };
+
           return (
-            <div key={areaName} className="neu-box" style={{ padding: '20px', flex: '1', minWidth: '250px' }}>
-              <h3 style={{ margin: '0 0 15px 0', color: 'var(--accent-blue)', borderBottom: '2px solid var(--bg-color)', paddingBottom: '10px' }}>
-                Caja {areaName}
+            <div key={areaName} className="neu-box" style={{ padding: '20px', flex: '1', minWidth: '250px', position: 'relative' }}>
+              <h3 style={{ margin: '0 0 15px 0', color: isAbierta ? 'var(--accent-blue)' : 'var(--text-muted)', borderBottom: '2px solid var(--bg-color)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                <span>Caja {areaName}</span>
+                <span style={{ fontSize: '0.8rem', backgroundColor: isAbierta ? 'rgba(0,82,204,0.1)' : 'rgba(0,0,0,0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                  {isAbierta ? 'Abierta' : 'Cerrada'}
+                </span>
               </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.9rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.9rem', opacity: isAbierta ? 1 : 0.6 }}>
                 <div><strong>Efectivo:</strong></div><div style={{ textAlign: 'right' }}>${ef.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
                 <div><strong>Débito:</strong></div><div style={{ textAlign: 'right' }}>${deb.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
                 <div><strong>Crédito:</strong></div><div style={{ textAlign: 'right' }}>${cred.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
                 <div><strong>Transferencia:</strong></div><div style={{ textAlign: 'right' }}>${trans.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
                 <div style={{ gridColumn: '1 / -1', borderTop: '1px solid var(--bg-color)', margin: '5px 0' }}></div>
-                <div style={{ fontSize: '1rem', color: 'var(--accent-blue)' }}><strong>Total:</strong></div>
+                <div style={{ fontSize: '1rem', color: isAbierta ? 'var(--accent-blue)' : 'inherit' }}><strong>Total:</strong></div>
                 <div style={{ textAlign: 'right', fontSize: '1rem', fontWeight: 'bold' }}>${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
               </div>
+              
+              {isAbierta && (
+                <button 
+                  className="neu-button" 
+                  style={{ width: '100%', marginTop: '15px', color: 'var(--accent-danger)' }}
+                  onClick={() => setClosingCaja({ area: areaName, totales: totalesObj, ventas: ventasArea })}
+                >
+                  Cerrar Caja
+                </button>
+              )}
             </div>
           );
         })}
       </div>
+
+      {closingCaja && (
+        <CerrarCajaModal 
+          area={closingCaja.area} 
+          totalesSistema={closingCaja.totales}
+          ventasData={closingCaja.ventas}
+          onClose={() => setClosingCaja(null)}
+          onSuccess={() => {}}
+        />
+      )}
 
       {/* Filtros */}
       <div className="neu-box" style={{ padding: '20px', marginBottom: '30px', display: 'flex', gap: '20px', alignItems: 'center' }}>

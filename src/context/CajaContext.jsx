@@ -10,11 +10,11 @@ const getTodayStr = () => {
 };
 
 export const CajaProvider = ({ children }) => {
-  // cajas: { Taquilla: true/false, Cafeteria: true/false, Eventos: true/false }
-  const [cajasAbiertas, setCajasAbiertas] = useState({
-    Taquilla: false,
-    Cafeteria: false,
-    Eventos: false,
+  // cajas: { Taquilla: { abierta: true }, Cafeteria: null, Eventos: null }
+  const [cajasData, setCajasData] = useState({
+    Taquilla: null,
+    Cafeteria: null,
+    Eventos: null,
   });
 
   // Escucha en tiempo real las 3 cajas del día de hoy
@@ -25,9 +25,9 @@ export const CajaProvider = ({ children }) => {
     const unsubs = roles.map((rol) => {
       const ref = doc(db, 'cajas', `${rol}_${today}`);
       return onSnapshot(ref, (snap) => {
-        setCajasAbiertas((prev) => ({
+        setCajasData((prev) => ({
           ...prev,
-          [rol]: snap.exists() && snap.data().abierta === true,
+          [rol]: snap.exists() ? snap.data() : null,
         }));
       });
     });
@@ -45,14 +45,22 @@ export const CajaProvider = ({ children }) => {
       abierta: true,
     });
   }, []);
-
+  const cerrarCaja = useCallback(async (rol, resumenCierre) => {
+    const today = getTodayStr();
+    const ref = doc(db, 'cajas', `${rol}_${today}`);
+    await setDoc(ref, {
+      cierre: Date.now(),
+      abierta: false,
+      resumenCierre
+    }, { merge: true });
+  }, []);
   const isCajaAbierta = useCallback(
-    (rol) => cajasAbiertas[rol] === true,
-    [cajasAbiertas]
+    (rol) => cajasData[rol] && cajasData[rol].abierta === true,
+    [cajasData]
   );
 
   return (
-    <CajaContext.Provider value={{ cajasAbiertas, abrirCaja, isCajaAbierta }}>
+    <CajaContext.Provider value={{ cajasData, abrirCaja, cerrarCaja, isCajaAbierta }}>
       {children}
     </CajaContext.Provider>
   );
