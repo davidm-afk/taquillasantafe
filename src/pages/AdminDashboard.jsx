@@ -305,35 +305,17 @@ const AdminDashboard = () => {
         </div>
       ) : data ? (
         <>
-          {/* Tarjetas Principales */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-            <div className="neu-box" style={{ padding: '20px', textAlign: 'center' }}>
-              <p style={{ margin: '0 0 10px 0', color: 'var(--text-muted)', fontWeight: 'bold' }}>TOTAL GLOBAL</p>
-              <h2 className="text-gradient-blue" style={{ margin: 0, fontSize: '2.5rem' }}>
-                ${(totalEfectivo + totalTarjeta).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-              </h2>
-            </div>
-            <div className="neu-box" style={{ padding: '20px', textAlign: 'center' }}>
-              <p style={{ margin: '0 0 10px 0', color: 'var(--text-muted)', fontWeight: 'bold' }}>EFECTIVO</p>
-              <h2 style={{ margin: 0, fontSize: '2rem', color: 'var(--accent-success)' }}>
-                ${totalEfectivo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-              </h2>
-            </div>
-            <div className="neu-box" style={{ padding: '20px', textAlign: 'center' }}>
-              <p style={{ margin: '0 0 10px 0', color: 'var(--text-muted)', fontWeight: 'bold' }}>TARJETA</p>
-              <h2 style={{ margin: 0, fontSize: '2rem', color: 'var(--accent-warning)' }}>
-                ${totalTarjeta.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-              </h2>
-            </div>
-            {area === 'Taquilla' && (
+          {/* Solo mostrar calcetas si es Taquilla */}
+          {area === 'Taquilla' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
               <div className="neu-box" style={{ padding: '20px', textAlign: 'center' }}>
                 <p style={{ margin: '0 0 10px 0', color: 'var(--text-muted)', fontWeight: 'bold' }}>CALCETAS VENDIDAS</p>
                 <h2 style={{ margin: 0, fontSize: '2rem', color: 'var(--accent-blue)' }}>
                   {totalCalcetas}
                 </h2>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Desglose Específico */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
