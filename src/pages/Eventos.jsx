@@ -2800,21 +2800,21 @@ const AbonarLiquidarModal = ({ reservacion, onClose, user }) => {
                           borderRadius: '8px', 
                           background: ab.metodoPago === 'Efectivo' 
                             ? 'rgba(16, 185, 129, 0.1)' 
-                            : ab.metodoPago === 'Tarjeta' 
+                            : ab.metodoPago === 'Debito' 
                               ? 'rgba(245, 158, 11, 0.1)' 
-                              : ab.metodoPago === 'Transferencia'
-                                ? 'rgba(139, 92, 246, 0.1)'
-                                : ab.metodoPago === 'Link de Pago'
-                                  ? 'rgba(6, 182, 212, 0.1)'
+                              : ab.metodoPago === 'Credito'
+                                ? 'rgba(236, 72, 153, 0.1)'
+                                : ab.metodoPago === 'Transferencia'
+                                  ? 'rgba(139, 92, 246, 0.1)'
                                   : 'rgba(59, 130, 246, 0.1)',
                           color: ab.metodoPago === 'Efectivo' 
                             ? 'var(--accent-success)' 
-                            : ab.metodoPago === 'Tarjeta' 
+                            : ab.metodoPago === 'Debito' 
                               ? 'var(--accent-warning)' 
-                              : ab.metodoPago === 'Transferencia'
-                                ? '#8b5cf6'
-                                : ab.metodoPago === 'Link de Pago'
-                                  ? '#06b6d4'
+                              : ab.metodoPago === 'Credito'
+                                ? '#ec4899'
+                                : ab.metodoPago === 'Transferencia'
+                                  ? '#8b5cf6'
                                   : 'var(--accent-blue)',
                           fontWeight: 'bold'
                         }}>
@@ -2870,10 +2870,9 @@ const AbonarLiquidarModal = ({ reservacion, onClose, user }) => {
                     style={{ marginTop: '5px' }}
                   >
                     <option value="Efectivo">Efectivo</option>
-                    <option value="Tarjeta">Tarjeta</option>
+                    <option value="Debito">Débito</option>
+                    <option value="Credito">Crédito</option>
                     <option value="Transferencia">Transferencia</option>
-                    <option value="Link de Pago">Link de Pago</option>
-                    <option value="Mixto">Mixto</option>
                   </select>
                 </div>
               </div>
