@@ -27,19 +27,20 @@ const AperturaCajaModal = ({ rol }) => {
 
   useEffect(() => {
     if (!rol) return;
-    // Solo mostrar si la caja no está ya abierta y no se ha preguntado hoy
-    const key = getStorageKey(rol);
-    const yaPreguntada = localStorage.getItem(key);
-    if (!yaPreguntada && !isCajaAbierta(rol)) {
-      setVisible(true);
-    }
+    // Mostrar si la caja NO está abierta actualmente (ya sea porque nunca se abrió hoy
+    // o porque ya fue cerrada). Se verifica después de que Firestore haya respondido.
+    const timer = setTimeout(() => {
+      if (!isCajaAbierta(rol)) {
+        setVisible(true);
+      }
+    }, 500); // pequeño delay para esperar la respuesta inicial de Firestore
+    return () => clearTimeout(timer);
   }, [rol, isCajaAbierta]);
 
   const handleAbrir = async () => {
     setAbriendo(true);
     try {
       await abrirCaja(rol);
-      localStorage.setItem(getStorageKey(rol), 'si');
     } catch (e) {
       console.error('Error al abrir caja:', e);
     }
@@ -48,7 +49,6 @@ const AperturaCajaModal = ({ rol }) => {
   };
 
   const handleNoAbrir = () => {
-    localStorage.setItem(getStorageKey(rol), 'no');
     setVisible(false);
   };
 

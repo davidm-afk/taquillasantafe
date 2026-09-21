@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 /**
  * Genera un reporte PDF detallado para el cierre de caja.
@@ -110,7 +110,7 @@ export const generarReporteCierre = (areaName, ventas, totales, resumenCierre) =
     ];
   });
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: 95,
     head: [['#', 'Hora', 'Cajero', 'Métodos de Pago', 'Total']],
     body: tableData,
