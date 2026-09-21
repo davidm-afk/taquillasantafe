@@ -5,12 +5,13 @@ import ProductCard from '../components/ProductCard';
 import PaymentModal from '../components/PaymentModal';
 import SearchBar from '../components/SearchBar';
 import AperturaCajaModal from '../components/AperturaCajaModal';
-import { taquillaProducts } from '../data/products';
+import { useProductos } from '../context/ProductosContext';
 import { useCart } from '../context/CartContext';
 
 const PosTaquilla = () => {
   const [showPayment, setShowPayment] = React.useState(false);
   const { addItem } = useCart();
+  const { getActivos } = useProductos();
 
   const [customName, setCustomName] = React.useState('');
   const [customPrice, setCustomPrice] = React.useState('');
@@ -40,12 +41,10 @@ const PosTaquilla = () => {
     month: 'short'
   });
 
-  const allTaquillaProducts = React.useMemo(() => {
-    return [
-      ...taquillaProducts.entradas,
-      ...taquillaProducts.adicionales
-    ];
-  }, []);
+  // Productos en tiempo real desde Firestore
+  const entradas = getActivos('Taquilla').filter(p => p.categoria === 'Entradas');
+  const adicionales = getActivos('Taquilla').filter(p => p.categoria === 'Adicionales');
+  const allTaquillaProducts = [...entradas, ...adicionales];
 
   const handleSelectProduct = (product) => {
     if (product.precioAbierto) {

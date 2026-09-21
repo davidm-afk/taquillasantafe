@@ -5,27 +5,24 @@ import ProductCard from '../components/ProductCard';
 import PaymentModal from '../components/PaymentModal';
 import SearchBar from '../components/SearchBar';
 import AperturaCajaModal from '../components/AperturaCajaModal';
-import { cafeteriaProducts } from '../data/products';
+import { useProductos } from '../context/ProductosContext';
 import { useCart } from '../context/CartContext';
 
 const PosCafeteria = () => {
   const [showPayment, setShowPayment] = React.useState(false);
   const { addItem } = useCart();
+  const { getActivos } = useProductos();
 
   const [customName, setCustomName] = React.useState('');
   const [customPrice, setCustomPrice] = React.useState('');
 
-  const allCafeteriaProducts = React.useMemo(() => {
-    return [
-      ...cafeteriaProducts.bebidas,
-      ...cafeteriaProducts.comida,
-      ...cafeteriaProducts.combos
-    ];
-  }, []);
+  // Productos en tiempo real desde Firestore
+  const allCafeteriaProducts = getActivos('Cafeteria');
 
   const handleSelectProduct = (product) => {
     if (product.nombre === "Combo Hamburguesa") {
-      const drinks = cafeteriaProducts.bebidas.filter(b => !b.nombre.includes("Garrafon") && !b.nombre.includes("hielo") && !b.nombre.includes("sabor"));
+      const bebidasFirestore = getActivos('Cafeteria').filter(p => p.categoria === 'Bebidas');
+      const drinks = bebidasFirestore.filter(b => !b.nombre.includes("Garrafon") && !b.nombre.includes("hielo") && !b.nombre.includes("sabor"));
       const drinkNames = drinks.map(d => d.nombre).join(", ");
       const selectedDrink = window.prompt(`Seleccione la bebida para el combo:\n${drinkNames}`, "Coca cola");
       if (selectedDrink === null) return; // Cancelado
