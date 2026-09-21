@@ -27,6 +27,8 @@ jobs:
 
       - name: Build project
         run: npm run build
+        env:
+          VITE_BASE_URL: /taquillasantafe/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
