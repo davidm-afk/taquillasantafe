@@ -141,7 +141,7 @@ const PosTaquilla = () => {
             gap: '20px',
             marginBottom: '30px'
           }}>
-            {taquillaProducts.entradas.map((product, idx) => (
+            {entradas.map((product, idx) => (
               <ProductCard key={`ent-${idx}`} product={product} colorClass="text-gradient-orange" />
             ))}
           </div>
@@ -153,7 +153,7 @@ const PosTaquilla = () => {
             gap: '20px',
             marginBottom: '35px'
           }}>
-            {taquillaProducts.adicionales.map((product, idx) => (
+            {adicionales.map((product, idx) => (
               <ProductCard key={`adi-${idx}`} product={product} colorClass="text-gradient-orange" />
             ))}
           </div>

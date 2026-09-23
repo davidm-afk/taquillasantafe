@@ -18,6 +18,9 @@ const PosCafeteria = () => {
 
   // Productos en tiempo real desde Firestore
   const allCafeteriaProducts = getActivos('Cafeteria');
+  const bebidas = allCafeteriaProducts.filter(p => p.categoria === 'Bebidas');
+  const comida = allCafeteriaProducts.filter(p => p.categoria === 'Comida');
+  const combos = allCafeteriaProducts.filter(p => p.categoria === 'Combos');
 
   const handleSelectProduct = (product) => {
     if (product.nombre === "Combo Hamburguesa") {
@@ -100,7 +103,7 @@ const PosCafeteria = () => {
             gap: '20px',
             marginBottom: '30px'
           }}>
-            {cafeteriaProducts.bebidas.map((product, idx) => (
+            {bebidas.map((product, idx) => (
               <ProductCard key={`beb-${idx}`} product={product} colorClass="text-gradient-blue" />
             ))}
           </div>
@@ -112,7 +115,7 @@ const PosCafeteria = () => {
             gap: '20px',
             marginBottom: '30px'
           }}>
-            {cafeteriaProducts.comida.map((product, idx) => (
+            {comida.map((product, idx) => (
               <ProductCard key={`com-${idx}`} product={product} colorClass="text-gradient-blue" />
             ))}
           </div>
@@ -124,7 +127,7 @@ const PosCafeteria = () => {
             gap: '20px',
             marginBottom: '30px'
           }}>
-            {cafeteriaProducts.combos.map((product, idx) => (
+            {combos.map((product, idx) => (
               <ProductCard key={`combo-${idx}`} product={product} colorClass="text-gradient-blue" />
             ))}
           </div>
