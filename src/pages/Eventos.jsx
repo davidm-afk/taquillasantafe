@@ -89,10 +89,14 @@ const calcularTotalVenta = (ev, paquetesFirestore = []) => {
     const paqueteDb = paquetesFirestore.find(p => p.nombre === ev.paquete);
     const basePrice = paqueteDb ? (Number(paqueteDb.precio) || 0) : 0;
     const saltadoresTotales = parseInt(ev.saltadores) || 0;
-    const saltadoresBase = parseInt(ev.saltadoresBase) || 0;
-    const precioExtra = parseFloat(ev.precioSaltadorExtra) || 0;
-    const extraCount = Math.max(0, saltadoresTotales - saltadoresBase);
-    totalBase = basePrice + (extraCount * precioExtra);
+    
+    if (paqueteDb && paqueteDb.tipoCobro === 'por_saltador') {
+      totalBase = saltadoresTotales * basePrice;
+    } else {
+      const extraCount = parseInt(ev.saltadoresExtra) || 0;
+      const precioExtra = parseFloat(ev.precioSaltadorExtra) || 0;
+      totalBase = basePrice + (extraCount * precioExtra);
+    }
   }
 
   const totalExtras = ev.extras ? ev.extras.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0) : 0;
@@ -101,7 +105,8 @@ const calcularTotalVenta = (ev, paquetesFirestore = []) => {
   // Calcular precio del pastel
   let totalPastel = 0;
   if (ev.pastel && ev.pastel !== 'Sin definir') {
-    const pastelGratis = ev.paquete === 'VIP' || ev.paquete === 'Platinum' || ev.paquete === 'Evento Privado';
+    const paqueteDb = paquetesFirestore.find(p => p.nombre === ev.paquete);
+    const pastelGratis = paqueteDb ? paqueteDb.incluyePastel : (ev.paquete === 'VIP' || ev.paquete === 'Platinum' || ev.paquete === 'Evento Privado');
     if (!pastelGratis) {
       if (ev.tamañoPastel === 'Chico') totalPastel = 699;
       else if (ev.tamañoPastel === 'Grande') totalPastel = 799;
@@ -182,7 +187,7 @@ const Eventos = () => {
   // Estados para precio base manual y extras
   const [isManualPrecioBase, setIsManualPrecioBase] = useState(false);
   const [manualPrecioBase, setManualPrecioBase] = useState('');
-  const [saltadoresBase, setSaltadoresBase] = useState('15');
+  const [saltadoresExtra, setSaltadoresExtra] = useState('');
   const [precioSaltadorExtra, setPrecioSaltadorExtra] = useState('');
 
   // Listado de reservaciones y estado de carga
@@ -312,7 +317,7 @@ const Eventos = () => {
       tamañoPastel: tamañoPastel,
       notasExtra: notasExtra,
       precioBaseManual: isManualPrecioBase && manualPrecioBase !== '' ? (parseFloat(manualPrecioBase) || 0) : null,
-      saltadoresBase: parseInt(saltadoresBase) || 0,
+      saltadoresExtra: parseInt(saltadoresExtra) || 0,
       precioSaltadorExtra: parseFloat(precioSaltadorExtra) || 0,
       timestamp: Date.now()
     };
@@ -382,8 +387,8 @@ const Eventos = () => {
   const paqueteDbForm = paquetesFirestore.find(p => p.nombre === paquete);
   const basePriceForm = paqueteDbForm ? (Number(paqueteDbForm.precio) || 0) : 0;
   const saltadoresTotales = parseInt(saltadores) || 0;
-  const numSaltadoresBase = parseInt(saltadoresBase) || 0;
-  const extraJumpersForm = Math.max(0, saltadoresTotales - numSaltadoresBase);
+  const numSaltadoresExtra = parseInt(saltadoresExtra) || 0;
+  const extraJumpersForm = numSaltadoresExtra;
   precioFormularioBase = basePriceForm + (extraJumpersForm * (parseFloat(precioSaltadorExtra) || 0));
   const totalExtrasForm = extrasForm.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0);
   const totalDecoracionForm = (decoracionTipo === 'Personalizada') ? (parseFloat(decoracionMonto) || 0) : 0;
@@ -392,7 +397,8 @@ const Eventos = () => {
   // Calcular precio del pastel en el formulario
   let totalPastelForm = 0;
   if (pastel && pastel !== 'Sin definir') {
-    const pastelGratis = paquete === 'VIP' || paquete === 'Platinum' || paquete === 'Evento Privado';
+    const paqueteDb = paquetesFirestore.find(p => p.nombre === paquete);
+    const pastelGratis = paqueteDb ? paqueteDb.incluyePastel : (paquete === 'VIP' || paquete === 'Platinum' || paquete === 'Evento Privado');
     if (!pastelGratis) {
       if (tamañoPastel === 'Chico') totalPastelForm = 699;
       else if (tamañoPastel === 'Grande') totalPastelForm = 799;
@@ -822,33 +828,45 @@ const Eventos = () => {
                       />
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>BASE INCLUIDOS</label>
-                      <input 
-                        type="number" 
-                        className="neu-input" 
-                        value={saltadoresBase}
-                        onChange={(e) => setSaltadoresBase(e.target.value)}
-                        style={{ marginTop: '5px' }}
-                        min="0"
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>PRECIO X EXTRA ($)</label>
-                      <input 
-                        type="number" 
-                        className="neu-input" 
-                        value={precioSaltadorExtra}
-                        onChange={(e) => setPrecioSaltadorExtra(e.target.value)}
-                        style={{ marginTop: '5px' }}
-                        min="0"
-                      />
-                    </div>
-                  </div>
+                  {(() => {
+                    const paqueteSel = todosLosPaquetes.find(p => p.nombre === paquete);
+                    if (paqueteSel && paqueteSel.tipoCobro === 'por_saltador') return null;
+                    return (
+                      <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>SALTADORES EXTRA</label>
+                          <input 
+                            type="number" 
+                            className="neu-input" 
+                            value={saltadoresExtra}
+                            onChange={(e) => setSaltadoresExtra(e.target.value)}
+                            style={{ marginTop: '5px' }}
+                            min="0"
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>PRECIO X EXTRA ($)</label>
+                          <input 
+                            type="number" 
+                            className="neu-input" 
+                            value={precioSaltadorExtra}
+                            onChange={(e) => setPrecioSaltadorExtra(e.target.value)}
+                            style={{ marginTop: '5px' }}
+                            min="0"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <div>
-                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🎈 DECORACIÓN</label>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>
+                      🎈 DECORACIÓN
+                      {(() => {
+                        const pDb = todosLosPaquetes.find(p => p.nombre === paquete);
+                        return (pDb && pDb.incluyeDecoracion) ? ' (Incluida en el Paquete)' : '';
+                      })()}
+                    </label>
                     <select 
                       className="neu-input"
                       value={decoracionTipo}
@@ -1758,7 +1776,7 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
   const [festejado, setFestejado] = useState(reservacion.festejado || '');
   const [adultos, setAdultos] = useState(reservacion.adultos || '');
   const [saltadores, setSaltadores] = useState(reservacion.saltadores || '');
-  const [saltadoresBase, setSaltadoresBase] = useState(reservacion.saltadoresBase || '15');
+  const [saltadoresExtra, setSaltadoresExtra] = useState(reservacion.saltadoresExtra || '');
   const [precioSaltadorExtra, setPrecioSaltadorExtra] = useState(reservacion.precioSaltadorExtra || '');
   const [paquete, setPaquete] = useState(isEstandar ? (reservacion.paquete || 'Sin definir') : 'Otro (Elegir manualmente)');
   const [customPaquete, setCustomPaquete] = useState(isEstandar ? '' : (reservacion.paquete || ''));
@@ -1870,7 +1888,7 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
         tamañoPastel: tamañoPastel,
         notasExtra: notasExtra,
         precioBaseManual: isManualPrecioBase && manualPrecioBase !== '' ? (parseFloat(manualPrecioBase) || 0) : null,
-        saltadoresBase: parseInt(saltadoresBase) || 0,
+        saltadoresExtra: parseInt(saltadoresExtra) || 0,
         precioSaltadorExtra: parseFloat(precioSaltadorExtra) || 0
       };
       await updateDoc(doc(db, 'reservaciones', reservacion.id), updateData);
@@ -1916,7 +1934,8 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
   // Calcular precio del pastel en el modal
   let totalPastelModal = 0;
   if (pastel && pastel !== 'Sin definir') {
-    const pastelGratis = paquete === 'VIP' || paquete === 'Platinum' || paquete === 'Evento Privado';
+    const paqueteDb = (window.PRODUCTOS_GLOBALES || []).find(p => p.nombre === paquete);
+    const pastelGratis = paqueteDb ? paqueteDb.incluyePastel : (paquete === 'VIP' || paquete === 'Platinum' || paquete === 'Evento Privado');
     if (!pastelGratis) {
       if (tamañoPastel === 'Chico') totalPastelModal = 699;
       else if (tamañoPastel === 'Grande') totalPastelModal = 799;
@@ -2013,16 +2032,22 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
                   <input type="number" className="neu-input" value={saltadores} onChange={(e) => setSaltadores(e.target.value)} style={{ marginTop: '5px' }} min="0" />
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Base Incluidos</label>
-                  <input type="number" className="neu-input" value={saltadoresBase} onChange={(e) => setSaltadoresBase(e.target.value)} style={{ marginTop: '5px' }} min="0" />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Precio x Extra ($)</label>
-                  <input type="number" className="neu-input" value={precioSaltadorExtra} onChange={(e) => setPrecioSaltadorExtra(e.target.value)} style={{ marginTop: '5px' }} min="0" />
-                </div>
-              </div>
+              {(() => {
+                const paqueteDb = (window.PRODUCTOS_GLOBALES || []).find(p => p.nombre === paquete);
+                if (paqueteDb && paqueteDb.tipoCobro === 'por_saltador') return null;
+                return (
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Saltadores Extra</label>
+                      <input type="number" className="neu-input" value={saltadoresExtra} onChange={(e) => setSaltadoresExtra(e.target.value)} style={{ marginTop: '5px' }} min="0" />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Precio x Extra ($)</label>
+                      <input type="number" className="neu-input" value={precioSaltadorExtra} onChange={(e) => setPrecioSaltadorExtra(e.target.value)} style={{ marginTop: '5px' }} min="0" />
+                    </div>
+                  </div>
+                );
+              })()}
               <div>
                 <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Paquete de Fiesta</label>
                 <select 
@@ -2084,7 +2109,13 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
               </div>
 
               <div>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🎈 Decoración</label>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>
+                  🎈 Decoración
+                  {(() => {
+                    const pDb = (window.PRODUCTOS_GLOBALES || []).find(p => p.nombre === paquete);
+                    return (pDb && pDb.incluyeDecoracion) ? ' (Incluida en el Paquete)' : '';
+                  })()}
+                </label>
                 <select 
                   className="neu-input" 
                   value={decoracionTipo} 
@@ -2684,6 +2715,12 @@ const AbonarLiquidarModal = ({ reservacion, onClose, user }) => {
       monto
     };
 
+    // Crear timestamp a partir de la fecha introducida (12:00 PM para evitar problemas de zona horaria)
+    const [dd, mm, yyyy] = fechaAbono.trim().split('/');
+    const abonoDateObj = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd), 12, 0, 0);
+    const abonoIsoString = abonoDateObj.toISOString();
+    const abonoTimestamp = abonoDateObj.getTime();
+
     const nuevosAbonos = [...abonos, nuevoAbono];
 
     try {
@@ -2701,8 +2738,8 @@ const AbonarLiquidarModal = ({ reservacion, onClose, user }) => {
         pagoDebito: metodoPago === 'Debito' ? monto : 0,
         pagoCredito: metodoPago === 'Credito' ? monto : 0,
         pagoTransferencia: metodoPago === 'Transferencia' ? monto : 0,
-        fecha: new Date().toISOString(),
-        timestamp: Date.now(),
+        fecha: abonoIsoString,
+        timestamp: abonoTimestamp,
         productos: `Anticipo/Abono - Folio ${folio}`
       });
 
@@ -3797,7 +3834,8 @@ const PDFReservacionPrint = ({ event }) => {
               )}
               {event.pastel && event.pastel !== 'Sin definir' && (() => {
                 let precioPastel = 0;
-                const pastelGratis = event.paquete === 'VIP' || event.paquete === 'Platinum' || event.paquete === 'Evento Privado';
+                const paqueteDb = (window.PRODUCTOS_GLOBALES || []).find(p => p.nombre === event.paquete);
+                const pastelGratis = paqueteDb ? paqueteDb.incluyePastel : (event.paquete === 'VIP' || event.paquete === 'Platinum' || event.paquete === 'Evento Privado');
                 if (!pastelGratis) {
                   if (event.tamañoPastel === 'Chico') precioPastel = 699;
                   else if (event.tamañoPastel === 'Grande') precioPastel = 799;

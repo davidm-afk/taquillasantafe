@@ -22,6 +22,9 @@ const ProductoModal = ({ area, onClose, productoEdit = null, onSave }) => {
   const [emoji, setEmoji] = useState(productoEdit?.emoji || EMOJIS_DEFAULT[cats[0]] || '📦');
   const [subtitle, setSubtitle] = useState(productoEdit?.subtitle || '');
   const [precioAbierto, setPrecioAbierto] = useState(productoEdit?.precioAbierto || false);
+  const [tipoCobro, setTipoCobro] = useState(productoEdit?.tipoCobro || 'total');
+  const [incluyePastel, setIncluyePastel] = useState(productoEdit?.incluyePastel || false);
+  const [incluyeDecoracion, setIncluyeDecoracion] = useState(productoEdit?.incluyeDecoracion || false);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -30,6 +33,7 @@ const ProductoModal = ({ area, onClose, productoEdit = null, onSave }) => {
     await onSave({
       area, nombre: nombre.trim(), precio: parseFloat(precio) || 0,
       categoria, emoji, subtitle, precioAbierto,
+      tipoCobro, incluyePastel, incluyeDecoracion
     });
     onClose();
   };
@@ -66,6 +70,27 @@ const ProductoModal = ({ area, onClose, productoEdit = null, onSave }) => {
             <input type="checkbox" checked={precioAbierto} onChange={e => setPrecioAbierto(e.target.checked)} />
             Precio abierto (el cajero ingresa el monto manualmente)
           </label>
+        )}
+
+        {(area === 'Eventos') && (
+          <div className="neu-box" style={{ padding: '15px', marginBottom: '14px', background: 'var(--bg-color)' }}>
+            <label style={{ fontSize:'0.8rem', fontWeight:'bold', display:'block', marginBottom:8, color: 'var(--accent-blue)' }}>⚙️ CONFIGURACIÓN DE EVENTO</label>
+            <div style={{ marginBottom: 10 }}>
+              <label style={{ fontSize:'0.8rem', fontWeight:'bold', display:'block', marginBottom:4 }}>TIPO DE COBRO</label>
+              <select className="neu-input" value={tipoCobro} onChange={e => setTipoCobro(e.target.value)} style={{ width:'100%' }}>
+                <option value="total">Por Paquete Completo (Precio Cerrado)</option>
+                <option value="por_saltador">Por Saltador (Multiplica por asistentes)</option>
+              </select>
+            </div>
+            <label style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, cursor:'pointer', fontSize:'0.9rem' }}>
+              <input type="checkbox" checked={incluyePastel} onChange={e => setIncluyePastel(e.target.checked)} />
+              Incluye Pastel (Cortesía)
+            </label>
+            <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:'0.9rem' }}>
+              <input type="checkbox" checked={incluyeDecoracion} onChange={e => setIncluyeDecoracion(e.target.checked)} />
+              Incluye Decoración
+            </label>
+          </div>
         )}
 
         <div style={{ display:'flex', justifyContent:'space-between', marginTop:10 }}>
