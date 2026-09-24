@@ -82,11 +82,18 @@ const staffVendedores = [
 
 // Estimación de recaudación contable (incluyendo extras, decoración y precio base manual)
 const calcularTotalVenta = (ev, paquetesFirestore = []) => {
+  if (!ev) return 0;
   let totalBase = 0;
   if (ev.precioBaseManual !== undefined && ev.precioBaseManual !== null && ev.precioBaseManual !== '') {
     totalBase = parseFloat(ev.precioBaseManual) || 0;
   } else {
-    const paqueteDb = paquetesFirestore.find(p => p.nombre === ev.paquete);
+    const list = (paquetesFirestore && paquetesFirestore.length > 0)
+      ? paquetesFirestore
+      : ((window.PRODUCTOS_GLOBALES || []).filter(p => p.area === 'Eventos' || p.categoria === 'Paquetes'));
+    let paqueteDb = list.find(p => p.nombre === ev.paquete);
+    if (!paqueteDb && ev.paquete) {
+      paqueteDb = list.find(p => p.nombre?.toLowerCase() === ev.paquete?.toLowerCase());
+    }
     const basePrice = paqueteDb ? (Number(paqueteDb.precio) || 0) : 0;
     const saltadoresTotales = parseInt(ev.saltadores) || 0;
     
@@ -105,7 +112,13 @@ const calcularTotalVenta = (ev, paquetesFirestore = []) => {
   // Calcular precio del pastel
   let totalPastel = 0;
   if (ev.pastel && ev.pastel !== 'Sin definir') {
-    const paqueteDb = paquetesFirestore.find(p => p.nombre === ev.paquete);
+    const list = (paquetesFirestore && paquetesFirestore.length > 0)
+      ? paquetesFirestore
+      : ((window.PRODUCTOS_GLOBALES || []).filter(p => p.area === 'Eventos' || p.categoria === 'Paquetes'));
+    let paqueteDb = list.find(p => p.nombre === ev.paquete);
+    if (!paqueteDb && ev.paquete) {
+      paqueteDb = list.find(p => p.nombre?.toLowerCase() === ev.paquete?.toLowerCase());
+    }
     const pastelGratis = paqueteDb ? paqueteDb.incluyePastel : (ev.paquete === 'VIP' || ev.paquete === 'Platinum' || ev.paquete === 'Evento Privado');
     if (!pastelGratis) {
       if (ev.tamañoPastel === 'Chico') totalPastel = 699;
@@ -132,6 +145,18 @@ const Eventos = () => {
   // Paquetes de Firestore (inventario administrable)
   const { getActivos } = useProductos();
   const paquetesFirestore = getActivos('Eventos') || [];
+
+  // Mantener window.PRODUCTOS_GLOBALES actualizado para cálculos síncronos
+  useEffect(() => {
+    if (paquetesFirestore.length > 0) {
+      window.PRODUCTOS_GLOBALES = window.PRODUCTOS_GLOBALES || [];
+      paquetesFirestore.forEach(p => {
+        const idx = window.PRODUCTOS_GLOBALES.findIndex(x => x.id === p.id);
+        if (idx >= 0) window.PRODUCTOS_GLOBALES[idx] = p;
+        else window.PRODUCTOS_GLOBALES.push(p);
+      });
+    }
+  }, [paquetesFirestore]);
 
   // Combinar nombres de paquetes de Firestore con los estándares para compatibilidad
   const todosPaquetes = ['Sin definir', ...paquetesFirestore.map(p => p.nombre), 'Otro (Elegir manualmente)'];
@@ -185,8 +210,9 @@ const Eventos = () => {
   const [nuevaNota, setNuevaNota] = useState('');
   
   // Estados para precio base manual y extras
-  const [isManualPrecioBase, setIsManualPrecioBase] = useState(false);
+  const [isEditingPrecioBase, setIsEditingPrecioBase] = useState(false);
   const [manualPrecioBase, setManualPrecioBase] = useState('');
+  const [tempPrecioBase, setTempPrecioBase] = useState('');
   const [saltadoresExtra, setSaltadoresExtra] = useState('');
   const [precioSaltadorExtra, setPrecioSaltadorExtra] = useState('');
 
@@ -316,11 +342,14 @@ const Eventos = () => {
       adultosPaquete3Qty: adultosPaquete3 !== 'Sin definir' ? (parseInt(adultosPaquete3Qty) || 1) : 0,
       tamañoPastel: tamañoPastel,
       notasExtra: notasExtra,
-      precioBaseManual: isManualPrecioBase && manualPrecioBase !== '' ? (parseFloat(manualPrecioBase) || 0) : null,
+      precioBaseManual: manualPrecioBase !== '' ? (parseFloat(manualPrecioBase) || 0) : null,
       saltadoresExtra: parseInt(saltadoresExtra) || 0,
       precioSaltadorExtra: parseFloat(precioSaltadorExtra) || 0,
       timestamp: Date.now()
     };
+
+    // Asignar costo total calculado a la reservación
+    reservacionData.costoTotal = calcularTotalVenta(reservacionData, paquetesFirestore);
 
     try {
       await addDoc(collection(db, 'reservaciones'), reservacionData);
@@ -359,8 +388,11 @@ const Eventos = () => {
       setTamañoPastel('');
       setNotasExtra([]);
       setNuevaNota('');
-      setIsManualPrecioBase(false);
+      setIsEditingPrecioBase(false);
       setManualPrecioBase('');
+      setTempPrecioBase('');
+      setSaltadoresExtra('');
+      setPrecioSaltadorExtra('');
       setExtrasForm([]); // Limpiar extras
       setNuevoExtraConceptoForm('');
       setNuevoExtraMontoForm('');
@@ -389,10 +421,14 @@ const Eventos = () => {
   const saltadoresTotales = parseInt(saltadores) || 0;
   const numSaltadoresExtra = parseInt(saltadoresExtra) || 0;
   const extraJumpersForm = numSaltadoresExtra;
-  precioFormularioBase = basePriceForm + (extraJumpersForm * (parseFloat(precioSaltadorExtra) || 0));
+  if (paqueteDbForm && paqueteDbForm.tipoCobro === 'por_saltador') {
+    precioFormularioBase = saltadoresTotales * basePriceForm;
+  } else {
+    precioFormularioBase = basePriceForm + (extraJumpersForm * (parseFloat(precioSaltadorExtra) || 0));
+  }
   const totalExtrasForm = extrasForm.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0);
   const totalDecoracionForm = (decoracionTipo === 'Personalizada') ? (parseFloat(decoracionMonto) || 0) : 0;
-  const finalBaseForm = (isManualPrecioBase && manualPrecioBase !== '') ? (parseFloat(manualPrecioBase) || 0) : precioFormularioBase;
+  const finalBaseForm = (manualPrecioBase !== '' && manualPrecioBase !== null && manualPrecioBase !== undefined) ? (parseFloat(manualPrecioBase) || 0) : precioFormularioBase;
 
   // Calcular precio del pastel en el formulario
   let totalPastelForm = 0;
@@ -590,7 +626,7 @@ const Eventos = () => {
           <div className="neu-box" style={{ padding: '20px', textAlign: 'center' }}>
             <p style={{ margin: '0 0 8px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.8rem' }}>RECAUDACIÓN ESTIMADA</p>
             <h2 className="text-gradient-blue" style={{ margin: 0, fontSize: '2.2rem' }}>
-              ${metricEvents.reduce((acc, curr) => acc + calcularTotalVenta(curr), 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+              ${metricEvents.reduce((acc, curr) => acc + calcularTotalVenta(curr, paquetesFirestore), 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
             </h2>
           </div>
         </div>
@@ -829,7 +865,7 @@ const Eventos = () => {
                     </div>
                   </div>
                   {(() => {
-                    const paqueteSel = todosLosPaquetes.find(p => p.nombre === paquete);
+                    const paqueteSel = (paquetesFirestore || []).find(p => p.nombre === paquete);
                     if (paqueteSel && paqueteSel.tipoCobro === 'por_saltador') return null;
                     return (
                       <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
@@ -863,7 +899,7 @@ const Eventos = () => {
                     <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>
                       🎈 DECORACIÓN
                       {(() => {
-                        const pDb = todosLosPaquetes.find(p => p.nombre === paquete);
+                        const pDb = (paquetesFirestore || []).find(p => p.nombre === paquete);
                         return (pDb && pDb.incluyeDecoracion) ? ' (Incluida en el Paquete)' : '';
                       })()}
                     </label>
@@ -1361,34 +1397,84 @@ const Eventos = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '10px' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Costo Base ({paquete}):</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {isManualPrecioBase ? (
-                        <input 
-                          type="number" 
-                          className="neu-input" 
-                          style={{ width: '90px', padding: '3px 8px', height: '24px', fontSize: '0.8rem', textAlign: 'right' }}
-                          value={manualPrecioBase}
-                          onChange={(e) => setManualPrecioBase(e.target.value)}
-                          placeholder="Monto"
-                          min="0"
-                        />
+                      {isEditingPrecioBase ? (
+                        <>
+                          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                            <span style={{ position: 'absolute', left: '8px', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 'bold' }}>$</span>
+                            <input 
+                              type="number" 
+                              className="neu-input" 
+                              style={{ width: '110px', padding: '3px 8px 3px 20px', height: '26px', fontSize: '0.85rem', textAlign: 'right', fontWeight: 'bold' }}
+                              value={tempPrecioBase}
+                              onChange={(e) => setTempPrecioBase(e.target.value)}
+                              placeholder="0.00"
+                              min="0"
+                              step="any"
+                              autoFocus
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            className="neu-button"
+                            style={{ padding: '3px 10px', fontSize: '0.7rem', color: 'var(--accent-success)', height: '26px', display: 'flex', alignItems: 'center', fontWeight: 'bold' }}
+                            onClick={() => {
+                              const val = parseFloat(tempPrecioBase);
+                              if (tempPrecioBase.trim() === '' || isNaN(val) || val < 0) {
+                                alert("Por favor ingresa un precio manual válido mayor o igual a 0.");
+                                return;
+                              }
+                              setManualPrecioBase(tempPrecioBase.trim());
+                              setIsEditingPrecioBase(false);
+                            }}
+                          >
+                            💾 Guardar Precio
+                          </button>
+                          <button
+                            type="button"
+                            className="neu-button"
+                            style={{ padding: '3px 8px', fontSize: '0.7rem', color: 'var(--text-muted)', height: '26px', display: 'flex', alignItems: 'center' }}
+                            onClick={() => setIsEditingPrecioBase(false)}
+                          >
+                            ✕ Cancelar
+                          </button>
+                        </>
                       ) : (
-                        <strong style={{ color: 'var(--text-main)' }}>
-                          ${precioFormularioBase.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                        </strong>
+                        <>
+                          <strong style={{ color: manualPrecioBase !== '' ? 'var(--accent-blue)' : 'var(--text-main)', fontSize: '1rem' }}>
+                            ${((manualPrecioBase !== '') ? parseFloat(manualPrecioBase) || 0 : precioFormularioBase).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                          </strong>
+                          {manualPrecioBase !== '' && (
+                            <span style={{ fontSize: '0.65rem', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-blue)', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                              MANUAL
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            className="neu-button"
+                            style={{ padding: '3px 8px', fontSize: '0.7rem', color: 'var(--accent-blue)', height: '24px', display: 'flex', alignItems: 'center', fontWeight: 'bold' }}
+                            onClick={() => {
+                              setTempPrecioBase(manualPrecioBase !== '' ? manualPrecioBase : String(precioFormularioBase));
+                              setIsEditingPrecioBase(true);
+                            }}
+                          >
+                            {manualPrecioBase !== '' ? '✏️ Modificar' : '✏️ Precio Manual'}
+                          </button>
+                          {manualPrecioBase !== '' && (
+                            <button
+                              type="button"
+                              className="neu-button"
+                              style={{ padding: '3px 8px', fontSize: '0.7rem', color: 'var(--accent-danger)', height: '24px', display: 'flex', alignItems: 'center', fontWeight: 'bold' }}
+                              onClick={() => {
+                                setManualPrecioBase('');
+                                setIsEditingPrecioBase(false);
+                              }}
+                              title="Restaurar al precio calculado según catálogo"
+                            >
+                              ↺ Restaurar
+                            </button>
+                          )}
+                        </>
                       )}
-                      <button
-                        type="button"
-                        className="neu-button"
-                        style={{ padding: '2px 8px', fontSize: '0.65rem', color: 'var(--accent-blue)', height: '22px', display: 'flex', alignItems: 'center', fontWeight: 'bold' }}
-                        onClick={() => {
-                          if (!isManualPrecioBase) {
-                            setManualPrecioBase(precioFormularioBase);
-                          }
-                          setIsManualPrecioBase(!isManualPrecioBase);
-                        }}
-                      >
-                        {isManualPrecioBase ? 'Aceptar' : 'Editar cantidad'}
-                      </button>
                     </div>
                   </div>
                   
@@ -1506,7 +1592,7 @@ const Eventos = () => {
                         </h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                           {eventosDia.map((ev) => {
-                            const totalEvento = calcularTotalVenta(ev);
+                            const totalEvento = calcularTotalVenta(ev, paquetesFirestore);
                             const totalAbonado = ev.abonos ? ev.abonos.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0) : 0;
                             const saldoRestante = Math.max(0, totalEvento - totalAbonado);
 
@@ -1723,6 +1809,7 @@ const Eventos = () => {
       {abonosReservacion && (
         <AbonarLiquidarModal 
           reservacion={abonosReservacion} 
+          paquetesFirestore={paquetesFirestore}
           user={user}
           onClose={() => setAbonosReservacion(null)} 
         />
@@ -1809,8 +1896,47 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
   const [nuevaNota, setNuevaNota] = useState('');
   
   // Estados para precio base manual
-  const [isManualPrecioBase, setIsManualPrecioBase] = useState(reservacion.precioBaseManual !== undefined && reservacion.precioBaseManual !== null && reservacion.precioBaseManual !== '');
-  const [manualPrecioBase, setManualPrecioBase] = useState(reservacion.precioBaseManual || '');
+  const [manualPrecioBase, setManualPrecioBase] = useState(
+    reservacion.precioBaseManual !== undefined && reservacion.precioBaseManual !== null ? String(reservacion.precioBaseManual) : ''
+  );
+  const [isEditingPrecioBase, setIsEditingPrecioBase] = useState(false);
+  const [tempPrecioBase, setTempPrecioBase] = useState('');
+  const [guardandoPrecioManual, setGuardandoPrecioManual] = useState(false);
+
+  const handleGuardarPrecioManualModal = async () => {
+    const val = parseFloat(tempPrecioBase);
+    if (tempPrecioBase.trim() === '' || isNaN(val) || val < 0) {
+      alert("Por favor ingresa un precio manual válido mayor o igual a 0.");
+      return;
+    }
+    const nuevoPrecioStr = tempPrecioBase.trim();
+    setManualPrecioBase(nuevoPrecioStr);
+    setIsEditingPrecioBase(false);
+    try {
+      setGuardandoPrecioManual(true);
+      await updateDoc(doc(db, 'reservaciones', reservacion.id), {
+        precioBaseManual: val
+      });
+      reservacion.precioBaseManual = val;
+    } catch (err) {
+      console.error("Error al guardar precio manual:", err);
+    } finally {
+      setGuardandoPrecioManual(false);
+    }
+  };
+
+  const handleRestaurarPrecioAutomaticoModal = async () => {
+    setManualPrecioBase('');
+    setIsEditingPrecioBase(false);
+    try {
+      await updateDoc(doc(db, 'reservaciones', reservacion.id), {
+        precioBaseManual: null
+      });
+      reservacion.precioBaseManual = null;
+    } catch (err) {
+      console.error("Error al restaurar precio automático:", err);
+    }
+  };
   
   const [estado, setEstado] = useState(reservacion.estado || 'Pendiente');
   const [submitting, setSubmitting] = useState(false);
@@ -1887,9 +2013,10 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
         adultosPaquete3Qty: adultosPaquete3 !== 'Sin definir' ? (parseInt(adultosPaquete3Qty) || 1) : 0,
         tamañoPastel: tamañoPastel,
         notasExtra: notasExtra,
-        precioBaseManual: isManualPrecioBase && manualPrecioBase !== '' ? (parseFloat(manualPrecioBase) || 0) : null,
+        precioBaseManual: (manualPrecioBase !== '' && manualPrecioBase !== null && manualPrecioBase !== undefined) ? (parseFloat(manualPrecioBase) || 0) : null,
         saltadoresExtra: parseInt(saltadoresExtra) || 0,
-        precioSaltadorExtra: parseFloat(precioSaltadorExtra) || 0
+        precioSaltadorExtra: parseFloat(precioSaltadorExtra) || 0,
+        costoTotal: totalEventoModal
       };
       await updateDoc(doc(db, 'reservaciones', reservacion.id), updateData);
       alert("¡Reservación actualizada correctamente en la base de datos!");
@@ -1923,13 +2050,30 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
     return `${parts[2]}-${parts[1]}-${parts[0]}`;
   };
 
-  const precioCalculadoModal = (paquete === 'VIP' || paquete === 'Platinum' || paquete === 'NTP $6299' || paquete === 'NTP $6100' || (paquete && paquete.startsWith('Grupos')))
-    ? calcularPrecioPaquete(paquete, saltadores, getFechaCalculoModal())
-    : (parseInt(saltadores) || 0) * 350; // Tarifa estándar de $350 para otros paquetes
+  const listaPaquetesModal = (paquetesFirestore && paquetesFirestore.length > 0)
+    ? paquetesFirestore
+    : ((window.PRODUCTOS_GLOBALES || []).filter(p => p.area === 'Eventos' || p.categoria === 'Paquetes'));
+  let paqueteDbModal = listaPaquetesModal.find(p => p.nombre === paquete);
+  if (!paqueteDbModal && paquete) {
+    paqueteDbModal = listaPaquetesModal.find(p => p.nombre?.toLowerCase() === paquete?.toLowerCase());
+  }
+  let precioCalculadoModal = 0;
+  if (paqueteDbModal) {
+    const baseP = Number(paqueteDbModal.precio) || 0;
+    if (paqueteDbModal.tipoCobro === 'por_saltador') {
+      precioCalculadoModal = (parseInt(saltadores) || 0) * baseP;
+    } else {
+      const extraCount = parseInt(saltadoresExtra) || 0;
+      const precioExtra = parseFloat(precioSaltadorExtra) || 0;
+      precioCalculadoModal = baseP + (extraCount * precioExtra);
+    }
+  } else {
+    precioCalculadoModal = (parseInt(saltadores) || 0) * 350;
+  }
 
   const totalExtrasModal = extras.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0);
   const totalDecoracionModal = (decoracionTipo === 'Personalizada') ? (parseFloat(decoracionMonto) || 0) : 0;
-  const finalBaseModal = (isManualPrecioBase && manualPrecioBase !== '') ? (parseFloat(manualPrecioBase) || 0) : precioCalculadoModal;
+  const finalBaseModal = (manualPrecioBase !== '' && manualPrecioBase !== null && manualPrecioBase !== undefined) ? (parseFloat(manualPrecioBase) || 0) : precioCalculadoModal;
 
   // Calcular precio del pastel en el modal
   let totalPastelModal = 0;
@@ -2189,34 +2333,74 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '10px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Costo Base ({paquete}):</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {isManualPrecioBase ? (
-                    <input
-                      type="number"
-                      className="neu-input"
-                      style={{ width: '100px', padding: '3px 8px', height: '26px', fontSize: '0.8rem', textAlign: 'right' }}
-                      value={manualPrecioBase}
-                      onChange={(e) => setManualPrecioBase(e.target.value)}
-                      placeholder="Monto"
-                      min="0"
-                    />
+                  {isEditingPrecioBase ? (
+                    <>
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <span style={{ position: 'absolute', left: '8px', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 'bold' }}>$</span>
+                        <input
+                          type="number"
+                          className="neu-input"
+                          style={{ width: '110px', padding: '3px 8px 3px 20px', height: '26px', fontSize: '0.85rem', textAlign: 'right', fontWeight: 'bold' }}
+                          value={tempPrecioBase}
+                          onChange={(e) => setTempPrecioBase(e.target.value)}
+                          placeholder="0.00"
+                          min="0"
+                          step="any"
+                          autoFocus
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="neu-button"
+                        style={{ padding: '3px 10px', fontSize: '0.7rem', color: 'var(--accent-success)', height: '26px', display: 'flex', alignItems: 'center', fontWeight: 'bold' }}
+                        onClick={handleGuardarPrecioManualModal}
+                        disabled={guardandoPrecioManual}
+                      >
+                        {guardandoPrecioManual ? 'Guardando...' : '💾 Guardar Precio'}
+                      </button>
+                      <button
+                        type="button"
+                        className="neu-button"
+                        style={{ padding: '3px 8px', fontSize: '0.7rem', color: 'var(--text-muted)', height: '26px', display: 'flex', alignItems: 'center' }}
+                        onClick={() => setIsEditingPrecioBase(false)}
+                      >
+                        ✕ Cancelar
+                      </button>
+                    </>
                   ) : (
-                    <strong style={{ color: 'var(--text-main)' }}>
-                      ${precioCalculadoModal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                    </strong>
+                    <>
+                      <strong style={{ color: manualPrecioBase !== '' ? 'var(--accent-blue)' : 'var(--text-main)', fontSize: '1rem' }}>
+                        ${((manualPrecioBase !== '') ? parseFloat(manualPrecioBase) || 0 : precioCalculadoModal).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                      </strong>
+                      {manualPrecioBase !== '' && (
+                        <span style={{ fontSize: '0.65rem', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-blue)', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                          MANUAL
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        className="neu-button"
+                        style={{ padding: '3px 8px', fontSize: '0.7rem', color: 'var(--accent-blue)', height: '24px', display: 'flex', alignItems: 'center', fontWeight: 'bold', whiteSpace: 'nowrap' }}
+                        onClick={() => {
+                          setTempPrecioBase(manualPrecioBase !== '' ? manualPrecioBase : (precioCalculadoModal > 0 ? String(precioCalculadoModal) : ''));
+                          setIsEditingPrecioBase(true);
+                        }}
+                      >
+                        {manualPrecioBase !== '' ? '✏️ Modificar' : '✏️ Precio Manual'}
+                      </button>
+                      {manualPrecioBase !== '' && (
+                        <button
+                          type="button"
+                          className="neu-button"
+                          style={{ padding: '3px 8px', fontSize: '0.7rem', color: 'var(--accent-danger)', height: '24px', display: 'flex', alignItems: 'center', fontWeight: 'bold', whiteSpace: 'nowrap' }}
+                          onClick={handleRestaurarPrecioAutomaticoModal}
+                          title="Restaurar al precio calculado según catálogo"
+                        >
+                          ↺ Restaurar
+                        </button>
+                      )}
+                    </>
                   )}
-                  <button
-                    type="button"
-                    className="neu-button"
-                    style={{ padding: '2px 8px', fontSize: '0.65rem', color: 'var(--accent-blue)', height: '22px', display: 'flex', alignItems: 'center', fontWeight: 'bold', whiteSpace: 'nowrap' }}
-                    onClick={() => {
-                      if (!isManualPrecioBase) {
-                        setManualPrecioBase(precioCalculadoModal);
-                      }
-                      setIsManualPrecioBase(!isManualPrecioBase);
-                    }}
-                  >
-                    {isManualPrecioBase ? 'Aceptar' : 'Editar cantidad'}
-                  </button>
                 </div>
               </div>
 
@@ -2653,7 +2837,7 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
 };
 
 // Componente Modal de Gestión de Anticipos (Abonar/Liquidar)
-const AbonarLiquidarModal = ({ reservacion, onClose, user }) => {
+const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, user }) => {
   const [abonos, setAbonos] = useState(reservacion.abonos || []);
   const [fechaAbono, setFechaAbono] = useState(() => {
     const today = new Date();
@@ -2666,7 +2850,7 @@ const AbonarLiquidarModal = ({ reservacion, onClose, user }) => {
   const [montoAbono, setMontoAbono] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const totalEvento = calcularTotalVenta(reservacion);
+  const totalEvento = calcularTotalVenta(reservacion, paquetesFirestore);
   const totalAbonado = abonos.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0);
   const saldoRestante = Math.max(0, totalEvento - totalAbonado);
 
@@ -2695,7 +2879,7 @@ const AbonarLiquidarModal = ({ reservacion, onClose, user }) => {
       alert("Por favor ingresa un monto válido mayor a $0.00.");
       return;
     }
-    if (monto > saldoRestante) {
+    if (totalEvento > 0 && monto > saldoRestante) {
       alert(`El monto ingresado ($${monto.toLocaleString('es-MX', { minimumFractionDigits: 2 })}) supera al saldo restante del evento ($${saldoRestante.toLocaleString('es-MX', { minimumFractionDigits: 2 })}).`);
       return;
     }
@@ -2816,10 +3000,20 @@ const AbonarLiquidarModal = ({ reservacion, onClose, user }) => {
         </div>
 
         {/* Insignia de Liquidación */}
-        {saldoRestante === 0 && (
+        {totalEvento > 0 && totalAbonado > 0 && saldoRestante === 0 && (
           <div className="neu-box animate-fade-in" style={{ padding: '15px', textAlign: 'center', background: 'rgba(16, 185, 129, 0.08)', border: '2px solid var(--accent-success)', borderRadius: '12px', marginBottom: '25px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <h3 style={{ margin: 0, color: 'var(--accent-success)', fontSize: '1.2rem', fontWeight: 'bold' }}>🎉 EVENTO TOTALMENTE LIQUIDADO</h3>
             <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>No se requieren abonos adicionales para esta reservación.</p>
+          </div>
+        )}
+
+        {/* Advertencia si el evento tiene costo $0 */}
+        {totalEvento === 0 && (
+          <div className="neu-box animate-fade-in" style={{ padding: '14px', textAlign: 'center', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid var(--accent-danger)', borderRadius: '12px', marginBottom: '25px' }}>
+            <h4 style={{ margin: '0 0 4px 0', color: 'var(--accent-danger)', fontSize: '0.95rem' }}>⚠️ Costo del evento no configurado ($0.00)</h4>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              El paquete asignado ({reservacion.paquete}) no tiene costo en el catálogo o la reservación no tiene precio definido. Puedes editar la reservación para asignarle un precio manual.
+            </p>
           </div>
         )}
 
@@ -3511,9 +3705,23 @@ const PDFReservacionPrint = ({ event }) => {
 
   const totalBase = (event.precioBaseManual !== undefined && event.precioBaseManual !== null && event.precioBaseManual !== '')
     ? (parseFloat(event.precioBaseManual) || 0)
-    : (event.paquete === 'VIP' || event.paquete === 'Platinum' || event.paquete === 'NTP $6299' || event.paquete === 'NTP $6100')
-      ? calcularPrecioPaquete(event.paquete, event.saltadores, event.fecha)
-      : (parseInt(event.saltadores) || 0) * 350;
+    : (() => {
+        const list = (window.PRODUCTOS_GLOBALES || []).filter(p => p.area === 'Eventos' || p.categoria === 'Paquetes');
+        let pDb = list.find(p => p.nombre === event.paquete);
+        if (!pDb && event.paquete) {
+          pDb = list.find(p => p.nombre?.toLowerCase() === event.paquete?.toLowerCase());
+        }
+        if (pDb) {
+          if (pDb.tipoCobro === 'por_saltador') {
+            return (parseInt(event.saltadores) || 0) * (Number(pDb.precio) || 0);
+          } else {
+            const extraCount = parseInt(event.saltadoresExtra) || 0;
+            const precioExtra = parseFloat(event.precioSaltadorExtra) || 0;
+            return (Number(pDb.precio) || 0) + (extraCount * precioExtra);
+          }
+        }
+        return (parseInt(event.saltadores) || 0) * 350;
+      })();
 
   const totalAbonado = event.abonos ? event.abonos.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0) : 0;
   const totalEvento = calcularTotalVenta(event);

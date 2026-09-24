@@ -72,6 +72,7 @@ export const ProductosProvider = ({ children }) => {
         }
       } else {
         const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        window.PRODUCTOS_GLOBALES = docs;
         setProductos(docs);
         setLoadingProductos(false);
       }
