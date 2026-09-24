@@ -60,6 +60,31 @@ const AdminDashboard = () => {
   let totalEfectivo = 0;
   let totalTarjeta = 0;
 
+  // Global Totals
+  let granTotalGanancia = 0;
+  let granTotalEfectivo = 0;
+  let granTotalTarjeta = 0;
+
+  if (allData) {
+    allData.forEach(venta => {
+      const ventaTotal = parseFloat(venta.total || venta.Total || 0);
+      const metodo = venta.metodoPago || venta['Método de Pago'] || '';
+
+      granTotalGanancia += ventaTotal;
+
+      if (venta.pagoEfectivo !== undefined && venta.pagoTarjeta !== undefined) {
+        granTotalEfectivo += parseFloat(venta.pagoEfectivo || 0);
+        // Note: New sales might use pagoDebito/pagoCredito/pagoTransferencia, so we sum them too if present
+        const cardPaid = parseFloat(venta.pagoTarjeta || 0) + parseFloat(venta.pagoDebito || 0) + parseFloat(venta.pagoCredito || 0) + parseFloat(venta.pagoTransferencia || 0);
+        granTotalTarjeta += cardPaid;
+      } else if (metodo.toLowerCase() === 'efectivo') {
+        granTotalEfectivo += ventaTotal;
+      } else {
+        granTotalTarjeta += ventaTotal;
+      }
+    });
+  }
+
   // Taquilla stats
   let totalSaltadores = 0;
   let totalCalcetas = 0;
@@ -89,7 +114,7 @@ const AdminDashboard = () => {
 
       if (venta.pagoEfectivo !== undefined && venta.pagoTarjeta !== undefined) {
         totalEfectivo += parseFloat(venta.pagoEfectivo || 0);
-        totalTarjeta += parseFloat(venta.pagoTarjeta || 0);
+        totalTarjeta += parseFloat(venta.pagoTarjeta || 0) + parseFloat(venta.pagoDebito || 0) + parseFloat(venta.pagoCredito || 0) + parseFloat(venta.pagoTransferencia || 0);
       } else if (metodo.toLowerCase() === 'efectivo') {
         totalEfectivo += ventaTotal;
       } else {
@@ -277,6 +302,33 @@ const AdminDashboard = () => {
           onClose={() => setClosingCaja(null)}
           onSuccess={() => {}}
         />
+      )}
+
+      {/* Totales Globales del Día (Todas las Áreas) */}
+      {!loading && !error && allData && (
+        <div style={{ marginBottom: '30px' }}>
+          <h2 className="text-gradient-blue" style={{ marginBottom: '15px', fontSize: '1.5rem' }}>💰 Ganancias Globales del Día (3 Áreas)</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+            <div className="neu-box" style={{ padding: '20px', textAlign: 'center', borderBottom: '4px solid var(--accent-success)' }}>
+              <p style={{ margin: '0 0 10px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.9rem' }}>TOTAL GLOBAL EFECTIVO</p>
+              <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--text-main)' }}>
+                ${granTotalEfectivo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+              </h2>
+            </div>
+            <div className="neu-box" style={{ padding: '20px', textAlign: 'center', borderBottom: '4px solid var(--accent-warning)' }}>
+              <p style={{ margin: '0 0 10px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.9rem' }}>TOTAL GLOBAL TARJETA</p>
+              <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--text-main)' }}>
+                ${granTotalTarjeta.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+              </h2>
+            </div>
+            <div className="neu-box" style={{ padding: '20px', textAlign: 'center', borderBottom: '4px solid var(--accent-blue)', background: 'rgba(59, 130, 246, 0.05)' }}>
+              <p style={{ margin: '0 0 10px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.9rem' }}>GRAN TOTAL DEL DÍA</p>
+              <h2 className="text-gradient-blue" style={{ margin: 0, fontSize: '2.2rem' }}>
+                ${granTotalGanancia.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+              </h2>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Filtros */}

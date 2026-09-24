@@ -3,15 +3,15 @@ import { createPortal } from 'react-dom';
 
 // Este componente está siempre oculto en pantalla normal (display: none),
 // pero mediante CSS (en index.css) se hará visible únicamente al imprimir.
-const TicketImpresion = ({ user, cart, total, method, received, change, pagoEfectivo = 0, pagoTarjeta = 0 }) => {
-  const hoy = new Date();
+const TicketImpresion = ({ user, cart, total, method, received, change, pagoEfectivo = 0, pagoTarjeta = 0, transactionDate, customFolio }) => {
+  const hoy = transactionDate ? new Date(transactionDate) : new Date();
 
   // Generar un folio de venta único de alta fidelidad corporativa
   const yyyy = hoy.getFullYear();
   const mm = (hoy.getMonth() + 1).toString().padStart(2, '0');
   const dd = hoy.getDate().toString().padStart(2, '0');
   const randomNum = React.useMemo(() => Math.floor(1000 + Math.random() * 9000), [total]); // Persistente por render
-  const folio = `SZ-SF-${yyyy}${mm}${dd}-${randomNum}`;
+  const folio = customFolio || `SZ-SF-${yyyy}${mm}${dd}-${randomNum}`;
 
   // Desglose de impuestos (IVA 16%) conforme a regulaciones mexicanas
   const iva = total - (total / 1.16);

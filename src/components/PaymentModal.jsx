@@ -291,8 +291,8 @@ const PaymentModal = ({ area, onClose }) => {
       pagoDebito: debitoPaid,
       pagoCredito: creditoPaid,
       pagoTransferencia: transferPaid,
-      // pagoTarjeta mantiene compatibilidad con registros anteriores
       pagoTarjeta: cardPaid,
+      cart: cart,
       fecha: new Date().toISOString(),
       timestamp: Date.now()
     };

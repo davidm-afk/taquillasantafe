@@ -5,6 +5,7 @@ import ProductCard from '../components/ProductCard';
 import PaymentModal from '../components/PaymentModal';
 import SearchBar from '../components/SearchBar';
 import AperturaCajaModal from '../components/AperturaCajaModal';
+import ReimpresionModal from '../components/ReimpresionModal';
 import { useProductos } from '../context/ProductosContext';
 import { useCart } from '../context/CartContext';
 
@@ -15,6 +16,7 @@ const PosCafeteria = () => {
 
   const [customName, setCustomName] = React.useState('');
   const [customPrice, setCustomPrice] = React.useState('');
+  const [showReimpresion, setShowReimpresion] = React.useState(false);
 
   // Productos en tiempo real desde Firestore
   const allCafeteriaProducts = getActivos('Cafeteria');
@@ -86,7 +88,25 @@ const PosCafeteria = () => {
       <Sidebar area="Cafeteria" />
       
       <div style={{ flex: 1, padding: '20px 20px 20px 0', display: 'flex', flexDirection: 'column' }}>
-        <h1 className="text-gradient-blue" style={{ margin: '0 0 15px 0', fontSize: '2rem' }}>Cafetería</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+          <h1 className="text-gradient-blue" style={{ margin: 0, fontSize: '2rem' }}>Cafetería</h1>
+          <button
+            type="button"
+            className="neu-button"
+            onClick={() => setShowReimpresion(true)}
+            style={{
+              padding: '10px 20px',
+              fontWeight: 'bold',
+              color: 'var(--accent-blue)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            🔄 Reimprimir Ticket
+          </button>
+        </div>
         
         <SearchBar 
           products={allCafeteriaProducts} 
@@ -179,6 +199,10 @@ const PosCafeteria = () => {
  
       {showPayment && (
         <PaymentModal area="Cafeteria" onClose={() => setShowPayment(false)} />
+      )}
+
+      {showReimpresion && (
+        <ReimpresionModal area="Cafeteria" user={user} onClose={() => setShowReimpresion(false)} />
       )}
     </div>
   );

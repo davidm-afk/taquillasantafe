@@ -199,6 +199,9 @@ const Eventos = () => {
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
 
+  // Estado para la búsqueda de eventos
+  const [searchTerm, setSearchTerm] = useState('');
+
   // Estados para filtrar las métricas por período (día seleccionado, semana actual, mes actual o todo)
   const [metricPeriod, setMetricPeriod] = useState('mes'); // 'dia', 'semana', 'mes', 'todos'
   const [metricDate, setMetricDate] = useState(() => {
@@ -1409,12 +1412,22 @@ const Eventos = () => {
             </form>
           </div>
 
-          {/* Listado de Reservaciones de la Semana en Curso */}
+          {/* Listado de Reservaciones de la Semana en Curso / Resultados de Búsqueda */}
           <div className="neu-box" style={{ padding: '25px', flex: '2', minWidth: '400px' }}>
-            <h3 className="text-gradient-blue" style={{ margin: '0 0 5px 0', fontSize: '1.4rem' }}>📅 Reservaciones de la Semana</h3>
-            <p style={{ margin: '0 0 20px 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Mostrando los eventos programados para la semana en curso. Abre el <strong>Calendario</strong> para explorar la agenda completa.
+            <h3 className="text-gradient-blue" style={{ margin: '0 0 5px 0', fontSize: '1.4rem' }}>
+              {searchTerm.trim() ? '🔍 Resultados de Búsqueda' : '📅 Reservaciones de la Semana'}
+            </h3>
+            <p style={{ margin: '0 0 15px 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              {searchTerm.trim() ? 'Mostrando todos los eventos que coinciden con tu búsqueda.' : 'Mostrando los eventos programados para la semana en curso. Abre el calendario para explorar más.'}
             </p>
+            <input 
+              type="text" 
+              className="neu-input" 
+              placeholder="Buscar por nombre de cliente o teléfono..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ width: '100%', marginBottom: '20px', padding: '10px 15px' }}
+            />
             
             {(() => {
               if (loading) {
@@ -1433,12 +1446,19 @@ const Eventos = () => {
               end.setHours(23, 59, 59, 999);
 
               const eventosSemana = eventosReservados.filter(ev => {
+                if (searchTerm.trim() !== '') {
+                  const term = searchTerm.toLowerCase();
+                  return (ev.cliente && ev.cliente.toLowerCase().includes(term)) || 
+                         (ev.telefono && ev.telefono.includes(term));
+                }
                 const evDate = parseDateString(ev.fecha);
                 return evDate && evDate >= start && evDate <= end;
               });
 
               if (eventosSemana.length === 0) {
-                return <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay reservaciones registradas para esta semana.</p>;
+                return <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                  {searchTerm.trim() ? 'No se encontraron reservaciones que coincidan con la búsqueda.' : 'No hay reservaciones registradas para esta semana.'}
+                </p>;
               }
 
               // Agrupar eventos por fecha

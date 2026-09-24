@@ -5,6 +5,7 @@ import ProductCard from '../components/ProductCard';
 import PaymentModal from '../components/PaymentModal';
 import SearchBar from '../components/SearchBar';
 import AperturaCajaModal from '../components/AperturaCajaModal';
+import ReimpresionModal from '../components/ReimpresionModal';
 import { useProductos } from '../context/ProductosContext';
 import { useCart } from '../context/CartContext';
 
@@ -17,6 +18,7 @@ const PosTaquilla = () => {
   const [customPrice, setCustomPrice] = React.useState('');
   const [customType, setCustomType] = React.useState('entrada'); // 'entrada' o 'adicional'
   const [customSocks, setCustomSocks] = React.useState('0');
+  const [showReimpresion, setShowReimpresion] = React.useState(false);
 
   // Reloj digital (Hora y Fecha actual)
   const [time, setTime] = React.useState(new Date());
@@ -111,8 +113,26 @@ const PosTaquilla = () => {
             />
           </div>
           
-          <div className="neu-box" style={{ 
-            padding: '10px 20px',
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <button
+              type="button"
+              className="neu-button"
+              onClick={() => setShowReimpresion(true)}
+              style={{
+                height: '50px',
+                padding: '0 20px',
+                fontWeight: 'bold',
+                color: 'var(--accent-orange)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              🔄 Reimprimir Ticket
+            </button>
+            <div className="neu-box" style={{ 
+              padding: '10px 20px',
             borderRadius: '12px',
             display: 'flex', 
             flexDirection: 'row',
@@ -130,6 +150,7 @@ const PosTaquilla = () => {
             <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--accent-orange)', fontFamily: 'monospace' }}>
               ⏱️ {formattedTime}
             </span>
+          </div>
           </div>
         </div>
         
@@ -231,6 +252,10 @@ const PosTaquilla = () => {
       
       {showPayment && (
         <PaymentModal area="Taquilla" onClose={() => setShowPayment(false)} />
+      )}
+
+      {showReimpresion && (
+        <ReimpresionModal area="Taquilla" user={user} onClose={() => setShowReimpresion(false)} />
       )}
     </div>
   );
