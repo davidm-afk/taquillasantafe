@@ -234,15 +234,12 @@ const PaymentModal = ({ area, onClose }) => {
   const isProcessing = useRef(false);
 
   const numRecibido = parseFloat(recibido) || 0;
-  // Mixto sólo aplica cuando el método es Efectivo y el monto recibido es menor al total
+  // Mixto: Efectivo con monto menor al total => el resto va a tarjeta
   const isMixto = metodo === 'Efectivo' && numRecibido > 0 && numRecibido < total;
 
-  const cashPaid   = isMixto ? numRecibido : (metodo === 'Efectivo' && numRecibido >= total ? total : 0);
-  const debitoPaid = metodo === 'Debito' ? total : (isMixto ? total - numRecibido : 0);
-  const creditoPaid = metodo === 'Credito' ? total : 0;
-  const transferPaid = metodo === 'Transferencia' ? total : 0;
-  // cardPaid legacy: para mixto es la parte no pagada en efectivo
-  const cardPaid = isMixto ? total - numRecibido : (metodo !== 'Efectivo' ? total : 0);
+  const cashPaid      = isMixto ? numRecibido : (metodo === 'Efectivo' && numRecibido >= total ? total : 0);
+  const tarjetaPaid   = metodo === 'Tarjeta' ? total : (isMixto ? total - numRecibido : 0);
+  const transferPaid  = metodo === 'Transferencia' ? total : 0;
   const cambio = isMixto ? 0 : (metodo === 'Efectivo' && numRecibido >= total ? numRecibido - total : 0);
 
   const handleConfirm = async () => {
@@ -252,7 +249,7 @@ const PaymentModal = ({ area, onClose }) => {
       alert("Por favor, ingresa un monto recibido en efectivo válido.");
       return;
     }
-    if (!['Efectivo','Debito','Credito','Transferencia'].includes(metodo)) {
+    if (!['Efectivo','Tarjeta','Transferencia'].includes(metodo)) {
       alert("Selecciona un método de pago.");
       return;
     }
@@ -288,10 +285,8 @@ const PaymentModal = ({ area, onClose }) => {
       total: total,
       metodoPago: isMixto ? 'Mixto' : metodo,
       pagoEfectivo: cashPaid,
-      pagoDebito: debitoPaid,
-      pagoCredito: creditoPaid,
+      pagoTarjeta: tarjetaPaid,
       pagoTransferencia: transferPaid,
-      pagoTarjeta: cardPaid,
       cart: cart,
       fecha: new Date().toISOString(),
       timestamp: Date.now()
@@ -360,8 +355,8 @@ const PaymentModal = ({ area, onClose }) => {
               ${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
             </div>
 
-            {/* Fila 1: Efectivo + Débito */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+            {/* Métodos de pago: 3 opciones + Mixto automático */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '20px' }}>
               <button
                 type="button"
                 className={metodo === 'Efectivo' ? 'neu-button' : 'neu-box'}
@@ -372,22 +367,11 @@ const PaymentModal = ({ area, onClose }) => {
               </button>
               <button
                 type="button"
-                className={metodo === 'Debito' ? 'neu-button' : 'neu-box'}
-                onClick={() => setMetodo('Debito')}
-                style={{ padding: '14px 10px', cursor: 'pointer', border: metodo === 'Debito' ? '2px solid #3b82f6' : 'none', borderRadius: '10px', fontWeight: 700 }}
+                className={metodo === 'Tarjeta' ? 'neu-button' : 'neu-box'}
+                onClick={() => setMetodo('Tarjeta')}
+                style={{ padding: '14px 10px', cursor: 'pointer', border: metodo === 'Tarjeta' ? '2px solid #3b82f6' : 'none', borderRadius: '10px', fontWeight: 700 }}
               >
-                💳 Débito
-              </button>
-            </div>
-            {/* Fila 2: Crédito + Transferencia */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
-              <button
-                type="button"
-                className={metodo === 'Credito' ? 'neu-button' : 'neu-box'}
-                onClick={() => setMetodo('Credito')}
-                style={{ padding: '14px 10px', cursor: 'pointer', border: metodo === 'Credito' ? '2px solid #f59e0b' : 'none', borderRadius: '10px', fontWeight: 700 }}
-              >
-                💎 Crédito
+                💳 Tarjeta
               </button>
               <button
                 type="button"
@@ -427,7 +411,7 @@ const PaymentModal = ({ area, onClose }) => {
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '6px' }}>
                         <span style={{ color: 'var(--text-muted)' }}>💳 Restante con Tarjeta:</span>
-                        <strong style={{ color: 'var(--accent-warning)' }}>${cardPaid.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
+                        <strong style={{ color: 'var(--accent-warning)' }}>${tarjetaPaid.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
                       </div>
                       <div className="text-gradient-blue" style={{ fontSize: '0.8rem', fontWeight: 'bold', marginTop: '8px', textAlign: 'center', textTransform: 'uppercase' }}>
                         ⚡ Se cobrará con método Mixto ⚡
@@ -480,9 +464,7 @@ const PaymentModal = ({ area, onClose }) => {
         received={recibido} 
         change={cambio > 0 ? cambio : 0} 
         pagoEfectivo={cashPaid}
-        pagoTarjeta={cardPaid}
-        pagoDebito={debitoPaid}
-        pagoCredito={creditoPaid}
+        pagoTarjeta={tarjetaPaid}
         pagoTransferencia={transferPaid}
       />
     </div>

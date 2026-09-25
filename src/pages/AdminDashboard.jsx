@@ -59,11 +59,13 @@ const AdminDashboard = () => {
   // Procesamiento de métricas
   let totalEfectivo = 0;
   let totalTarjeta = 0;
+  let totalTransferencia = 0;
 
   // Global Totals
   let granTotalGanancia = 0;
   let granTotalEfectivo = 0;
   let granTotalTarjeta = 0;
+  let granTotalTransferencia = 0;
 
   if (allData) {
     allData.forEach(venta => {
@@ -72,13 +74,15 @@ const AdminDashboard = () => {
 
       granTotalGanancia += ventaTotal;
 
-      if (venta.pagoEfectivo !== undefined && venta.pagoTarjeta !== undefined) {
+      if (venta.pagoEfectivo !== undefined) {
         granTotalEfectivo += parseFloat(venta.pagoEfectivo || 0);
-        // Note: New sales might use pagoDebito/pagoCredito/pagoTransferencia, so we sum them too if present
-        const cardPaid = parseFloat(venta.pagoTarjeta || 0) + parseFloat(venta.pagoDebito || 0) + parseFloat(venta.pagoCredito || 0) + parseFloat(venta.pagoTransferencia || 0);
-        granTotalTarjeta += cardPaid;
+        // Sum pagoTarjeta + legacy pagoDebito + pagoCredito into one unified tarjeta bucket
+        granTotalTarjeta += parseFloat(venta.pagoTarjeta || 0) + parseFloat(venta.pagoDebito || 0) + parseFloat(venta.pagoCredito || 0);
+        granTotalTransferencia += parseFloat(venta.pagoTransferencia || 0);
       } else if (metodo.toLowerCase() === 'efectivo') {
         granTotalEfectivo += ventaTotal;
+      } else if (metodo.toLowerCase() === 'transferencia') {
+        granTotalTransferencia += ventaTotal;
       } else {
         granTotalTarjeta += ventaTotal;
       }
@@ -107,16 +111,17 @@ const AdminDashboard = () => {
 
   if (data) {
     data.forEach(venta => {
-      // El backend devuelve llaves como 'total', 'metodoPago', 'productos', 'resumenEntradas', 'resumenAdicionales'
-      // Ajustamos dependiendo de cómo venía en el original
       const ventaTotal = parseFloat(venta.total || venta.Total || 0);
       const metodo = venta.metodoPago || venta['Método de Pago'] || '';
 
-      if (venta.pagoEfectivo !== undefined && venta.pagoTarjeta !== undefined) {
+      if (venta.pagoEfectivo !== undefined) {
         totalEfectivo += parseFloat(venta.pagoEfectivo || 0);
-        totalTarjeta += parseFloat(venta.pagoTarjeta || 0) + parseFloat(venta.pagoDebito || 0) + parseFloat(venta.pagoCredito || 0) + parseFloat(venta.pagoTransferencia || 0);
+        totalTarjeta += parseFloat(venta.pagoTarjeta || 0) + parseFloat(venta.pagoDebito || 0) + parseFloat(venta.pagoCredito || 0);
+        totalTransferencia += parseFloat(venta.pagoTransferencia || 0);
       } else if (metodo.toLowerCase() === 'efectivo') {
         totalEfectivo += ventaTotal;
+      } else if (metodo.toLowerCase() === 'transferencia') {
+        totalTransferencia += ventaTotal;
       } else {
         totalTarjeta += ventaTotal;
       }
@@ -243,24 +248,24 @@ const AdminDashboard = () => {
           if (!cajaInfo) return null; // No abierta hoy
           
           const isAbierta = cajaInfo.abierta === true;
-          let ef = 0, deb = 0, cred = 0, trans = 0;
+          let ef = 0, tarjeta = 0, trans = 0;
           
           const ventasArea = allData.filter(d => d.area === areaName);
           ventasArea.forEach(v => {
-            if (v.pagoEfectivo !== undefined && (v.pagoDebito !== undefined || v.pagoTarjeta !== undefined)) {
+            if (v.pagoEfectivo !== undefined) {
               ef += parseFloat(v.pagoEfectivo || 0);
-              deb += parseFloat(v.pagoDebito || v.pagoTarjeta || 0);
-              cred += parseFloat(v.pagoCredito || 0);
+              tarjeta += parseFloat(v.pagoTarjeta || 0) + parseFloat(v.pagoDebito || 0) + parseFloat(v.pagoCredito || 0);
               trans += parseFloat(v.pagoTransferencia || 0);
             } else {
               const ventaTotal = parseFloat(v.total || v.Total || 0);
               const metodo = v.metodoPago || v['Método de Pago'] || '';
               if (metodo.toLowerCase() === 'efectivo') ef += ventaTotal;
-              else deb += ventaTotal;
+              else if (metodo.toLowerCase() === 'transferencia') trans += ventaTotal;
+              else tarjeta += ventaTotal;
             }
           });
-          const total = ef + deb + cred + trans;
-          const totalesObj = { ef, deb, cred, trans, totalGeneral: total };
+          const total = ef + tarjeta + trans;
+          const totalesObj = { ef, deb: tarjeta, cred: 0, trans, totalGeneral: total };
 
           return (
             <div key={areaName} className="neu-box" style={{ padding: '20px', flex: '1', minWidth: '250px', position: 'relative' }}>
@@ -272,8 +277,7 @@ const AdminDashboard = () => {
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.9rem', opacity: isAbierta ? 1 : 0.6 }}>
                 <div><strong>Efectivo:</strong></div><div style={{ textAlign: 'right' }}>${ef.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
-                <div><strong>Débito:</strong></div><div style={{ textAlign: 'right' }}>${deb.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
-                <div><strong>Crédito:</strong></div><div style={{ textAlign: 'right' }}>${cred.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+                <div><strong>Tarjeta:</strong></div><div style={{ textAlign: 'right' }}>${tarjeta.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
                 <div><strong>Transferencia:</strong></div><div style={{ textAlign: 'right' }}>${trans.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
                 <div style={{ gridColumn: '1 / -1', borderTop: '1px solid var(--bg-color)', margin: '5px 0' }}></div>
                 <div style={{ fontSize: '1rem', color: isAbierta ? 'var(--accent-blue)' : 'inherit' }}><strong>Total:</strong></div>
@@ -308,7 +312,7 @@ const AdminDashboard = () => {
       {!loading && !error && allData && (
         <div style={{ marginBottom: '30px' }}>
           <h2 className="text-gradient-blue" style={{ marginBottom: '15px', fontSize: '1.5rem' }}>💰 Ganancias Globales del Día (3 Áreas)</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px' }}>
             <div className="neu-box" style={{ padding: '20px', textAlign: 'center', borderBottom: '4px solid var(--accent-success)' }}>
               <p style={{ margin: '0 0 10px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.9rem' }}>TOTAL GLOBAL EFECTIVO</p>
               <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--text-main)' }}>
@@ -319,6 +323,12 @@ const AdminDashboard = () => {
               <p style={{ margin: '0 0 10px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.9rem' }}>TOTAL GLOBAL TARJETA</p>
               <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--text-main)' }}>
                 ${granTotalTarjeta.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+              </h2>
+            </div>
+            <div className="neu-box" style={{ padding: '20px', textAlign: 'center', borderBottom: '4px solid #a855f7' }}>
+              <p style={{ margin: '0 0 10px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.9rem' }}>TOTAL GLOBAL TRANSFERENCIA</p>
+              <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--text-main)' }}>
+                ${granTotalTransferencia.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </h2>
             </div>
             <div className="neu-box" style={{ padding: '20px', textAlign: 'center', borderBottom: '4px solid var(--accent-blue)', background: 'rgba(59, 130, 246, 0.05)' }}>
@@ -538,13 +548,21 @@ const EditVentaModal = ({ venta, onClose }) => {
       if (metodoPago === 'Mixto') {
         updateData.pagoEfectivo = parseFloat(pagoEfectivo) || 0;
         updateData.pagoTarjeta = parseFloat(pagoTarjeta) || 0;
+        updateData.pagoTransferencia = 0;
         updateData.total = updateData.pagoEfectivo + updateData.pagoTarjeta;
       } else if (metodoPago === 'Efectivo') {
         updateData.pagoEfectivo = updateData.total;
         updateData.pagoTarjeta = 0;
+        updateData.pagoTransferencia = 0;
+      } else if (metodoPago === 'Transferencia') {
+        updateData.pagoEfectivo = 0;
+        updateData.pagoTarjeta = 0;
+        updateData.pagoTransferencia = updateData.total;
       } else {
+        // Tarjeta
         updateData.pagoEfectivo = 0;
         updateData.pagoTarjeta = updateData.total;
+        updateData.pagoTransferencia = 0;
       }
 
       if (venta.area === 'Taquilla') {
@@ -627,7 +645,8 @@ const EditVentaModal = ({ venta, onClose }) => {
               >
                 <option value="Efectivo">Efectivo</option>
                 <option value="Tarjeta">Tarjeta</option>
-                <option value="Mixto">Mixto</option>
+                <option value="Transferencia">Transferencia</option>
+                <option value="Mixto">Mixto (Efectivo + Tarjeta)</option>
               </select>
             </div>
           </div>

@@ -147,13 +147,11 @@ const ReimpresionModal = ({ area, onClose, user }) => {
               cart={selectedVenta.cart || [{ nombre: selectedVenta.entradas || selectedVenta.productos || 'Productos (Versión Antigua)', qty: 1, precio: selectedVenta.total }]}
               total={selectedVenta.total}
               method={selectedVenta.metodoPago}
-              received={selectedVenta.total} // Asumimos pago completo para reprints
+              received={selectedVenta.total}
               change={0}
-              pagoEfectivo={selectedVenta.pagoEfectivo}
-              pagoTarjeta={selectedVenta.pagoTarjeta}
-              pagoDebito={selectedVenta.pagoDebito}
-              pagoCredito={selectedVenta.pagoCredito}
-              pagoTransferencia={selectedVenta.pagoTransferencia}
+              pagoEfectivo={selectedVenta.pagoEfectivo || 0}
+              pagoTarjeta={(parseFloat(selectedVenta.pagoTarjeta || 0) + parseFloat(selectedVenta.pagoDebito || 0) + parseFloat(selectedVenta.pagoCredito || 0))}
+              pagoTransferencia={selectedVenta.pagoTransferencia || 0}
               transactionDate={selectedVenta.fecha}
               customFolio={selectedVenta.id.toUpperCase().substring(0, 8)}
             />

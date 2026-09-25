@@ -38,12 +38,11 @@ export const generarReporteCierre = (areaName, ventas, totales, resumenCierre) =
   doc.setFont("helvetica", "normal");
   const sysY = 50;
   doc.text(`Efectivo: $${totales.ef.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 20, sysY);
-  doc.text(`Débito: $${totales.deb.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 20, sysY + 6);
-  doc.text(`Crédito: $${totales.cred.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 20, sysY + 12);
-  doc.text(`Transferencia: $${totales.trans.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 20, sysY + 18);
+  doc.text(`Tarjeta: $${totales.deb.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 20, sysY + 6);
+  doc.text(`Transferencia: $${totales.trans.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 20, sysY + 12);
   
   doc.setFont("helvetica", "bold");
-  doc.text(`TOTAL DEL DÍA: $${totales.totalGeneral.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 20, sysY + 28);
+  doc.text(`TOTAL DEL DÍA: $${totales.totalGeneral.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, 20, sysY + 22);
 
   // ================= RESULTADO DEL CONTEO (EFECTIVO) =================
   doc.text("2. Resultado del Conteo Físico (Efectivo)", 110, 42);
@@ -94,8 +93,8 @@ export const generarReporteCierre = (areaName, ventas, totales, resumenCierre) =
     const time = new Date(v.timestamp).toLocaleTimeString('es-MX', {hour: '2-digit', minute:'2-digit'});
     let metodos = [];
     if (v.pagoEfectivo) metodos.push(`Ef($${v.pagoEfectivo})`);
-    if (v.pagoDebito) metodos.push(`Deb($${v.pagoDebito})`);
-    if (v.pagoCredito) metodos.push(`Cre($${v.pagoCredito})`);
+    const tarjeta = (parseFloat(v.pagoTarjeta || 0) + parseFloat(v.pagoDebito || 0) + parseFloat(v.pagoCredito || 0));
+    if (tarjeta > 0) metodos.push(`Tarjeta($${tarjeta.toFixed(2)})`);
     if (v.pagoTransferencia) metodos.push(`Trans($${v.pagoTransferencia})`);
     
     // Fallback if none defined

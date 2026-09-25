@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 
 // Este componente está siempre oculto en pantalla normal (display: none),
 // pero mediante CSS (en index.css) se hará visible únicamente al imprimir.
-const TicketImpresion = ({ user, cart, total, method, received, change, pagoEfectivo = 0, pagoTarjeta = 0, transactionDate, customFolio }) => {
+const TicketImpresion = ({ user, cart, total, method, received, change, pagoEfectivo = 0, pagoTarjeta = 0, pagoTransferencia = 0, transactionDate, customFolio }) => {
   const hoy = transactionDate ? new Date(transactionDate) : new Date();
 
   // Generar un folio de venta único de alta fidelidad corporativa
@@ -107,6 +107,17 @@ const TicketImpresion = ({ user, cart, total, method, received, change, pagoEfec
             <div className="ticket-item">
               <span>Cambio:</span>
               <strong style={{ fontSize: '11px' }}>$0.00</strong>
+            </div>
+          </>
+        ) : method === 'Transferencia' ? (
+          <>
+            <div className="ticket-item">
+              <span>Forma de Pago:</span>
+              <strong style={{ textTransform: 'uppercase' }}>TRANSFERENCIA</strong>
+            </div>
+            <div className="ticket-item">
+              <span>Monto Transferido:</span>
+              <span>${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
             </div>
           </>
         ) : (
