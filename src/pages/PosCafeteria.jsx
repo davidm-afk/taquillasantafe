@@ -6,6 +6,8 @@ import PaymentModal from '../components/PaymentModal';
 import SearchBar from '../components/SearchBar';
 import AperturaCajaModal from '../components/AperturaCajaModal';
 import ReimpresionModal from '../components/ReimpresionModal';
+import ArqueoModal from '../components/ArqueoModal';
+import { useAuth } from '../context/AuthContext';
 import { useProductos } from '../context/ProductosContext';
 import { useCart } from '../context/CartContext';
 
@@ -14,9 +16,11 @@ const PosCafeteria = () => {
   const { addItem } = useCart();
   const { getActivos } = useProductos();
 
+  const { user } = useAuth();
   const [customName, setCustomName] = React.useState('');
   const [customPrice, setCustomPrice] = React.useState('');
   const [showReimpresion, setShowReimpresion] = React.useState(false);
+  const [showArqueo, setShowArqueo] = React.useState(false);
 
   // Productos en tiempo real desde Firestore
   const allCafeteriaProducts = getActivos('Cafeteria');
@@ -90,22 +94,40 @@ const PosCafeteria = () => {
       <div style={{ flex: 1, padding: '20px 20px 20px 0', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
           <h1 className="text-gradient-blue" style={{ margin: 0, fontSize: '2rem' }}>Cafetería</h1>
-          <button
-            type="button"
-            className="neu-button"
-            onClick={() => setShowReimpresion(true)}
-            style={{
-              padding: '10px 20px',
-              fontWeight: 'bold',
-              color: 'var(--accent-blue)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              cursor: 'pointer'
-            }}
-          >
-            🔄 Reimprimir Ticket
-          </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              type="button"
+              className="neu-button"
+              onClick={() => setShowReimpresion(true)}
+              style={{
+                padding: '10px 20px',
+                fontWeight: 'bold',
+                color: 'var(--accent-blue)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              🔄 Reimprimir Ticket
+            </button>
+            <button
+              type="button"
+              className="neu-button"
+              onClick={() => setShowArqueo(true)}
+              style={{
+                padding: '10px 20px',
+                fontWeight: 'bold',
+                color: 'var(--accent-blue)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              ⚖️ Arqueo de Caja
+            </button>
+          </div>
         </div>
         
         <SearchBar 
@@ -203,6 +225,10 @@ const PosCafeteria = () => {
 
       {showReimpresion && (
         <ReimpresionModal area="Cafeteria" user={user} onClose={() => setShowReimpresion(false)} />
+      )}
+
+      {showArqueo && (
+        <ArqueoModal area="Cafeteria" cajeroNombre={user?.nombre || 'Cafetería'} onClose={() => setShowArqueo(false)} />
       )}
     </div>
   );

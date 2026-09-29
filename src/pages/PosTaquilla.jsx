@@ -6,6 +6,8 @@ import PaymentModal from '../components/PaymentModal';
 import SearchBar from '../components/SearchBar';
 import AperturaCajaModal from '../components/AperturaCajaModal';
 import ReimpresionModal from '../components/ReimpresionModal';
+import ArqueoModal from '../components/ArqueoModal';
+import { useAuth } from '../context/AuthContext';
 import { useProductos } from '../context/ProductosContext';
 import { useCart } from '../context/CartContext';
 
@@ -14,11 +16,13 @@ const PosTaquilla = () => {
   const { addItem } = useCart();
   const { getActivos } = useProductos();
 
+  const { user } = useAuth();
   const [customName, setCustomName] = React.useState('');
   const [customPrice, setCustomPrice] = React.useState('');
   const [customType, setCustomType] = React.useState('entrada'); // 'entrada' o 'adicional'
   const [customSocks, setCustomSocks] = React.useState('0');
   const [showReimpresion, setShowReimpresion] = React.useState(false);
+  const [showArqueo, setShowArqueo] = React.useState(false);
 
   // Reloj digital (Hora y Fecha actual)
   const [time, setTime] = React.useState(new Date());
@@ -130,6 +134,23 @@ const PosTaquilla = () => {
               }}
             >
               🔄 Reimprimir Ticket
+            </button>
+            <button
+              type="button"
+              className="neu-button"
+              onClick={() => setShowArqueo(true)}
+              style={{
+                height: '50px',
+                padding: '0 20px',
+                fontWeight: 'bold',
+                color: 'var(--accent-orange)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              ⚖️ Arqueo de Caja
             </button>
             <div className="neu-box" style={{ 
               padding: '10px 20px',
@@ -256,6 +277,10 @@ const PosTaquilla = () => {
 
       {showReimpresion && (
         <ReimpresionModal area="Taquilla" user={user} onClose={() => setShowReimpresion(false)} />
+      )}
+
+      {showArqueo && (
+        <ArqueoModal area="Taquilla" cajeroNombre={user?.nombre || 'Taquilla'} onClose={() => setShowArqueo(false)} />
       )}
     </div>
   );

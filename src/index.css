@@ -169,6 +169,26 @@ body {
     margin-bottom: 3px;
   }
 
+  /* Impresión de Ticket de Arqueo */
+  body.print-arqueo > :not(#ticketArqueo) {
+    display: none !important;
+  }
+
+  body.print-arqueo #ticketArqueo {
+    display: block !important;
+    position: absolute;
+    left: 4mm;
+    top: 0;
+    width: 67mm;
+    box-sizing: border-box;
+    padding: 0 2mm;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 10.5px;
+    color: black;
+    background: white;
+    margin: 0;
+  }
+
   /* Impresión de Ficha de Reservación A4 */
   body.print-reservation > :not(#reservationSheetPrint) {
     display: none !important;

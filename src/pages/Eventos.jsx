@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Sidebar from '../components/Sidebar';
 import AperturaCajaModal from '../components/AperturaCajaModal';
+import ArqueoModal from '../components/ArqueoModal';
 import { useProductos } from '../context/ProductosContext';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../config/firebase';
@@ -141,6 +142,7 @@ const calcularTotalVenta = (ev, paquetesFirestore = []) => {
 
 const Eventos = () => {
   const { user } = useAuth();
+  const [showArqueo, setShowArqueo] = useState(false);
   
   // Paquetes de Firestore (inventario administrable)
   const { getActivos } = useProductos();
@@ -519,26 +521,47 @@ const Eventos = () => {
             <h1 className="text-gradient-blue" style={{ margin: '0 0 5px 0', fontSize: '2.2rem' }}>Eventos & Fiestas</h1>
             <p style={{ margin: 0, color: 'var(--text-muted)' }}>Gestión y Reservaciones Especiales • Sucursal Santa Fe</p>
           </div>
-          <button
-            type="button"
-            className="neu-button"
-            style={{ 
-              padding: '12px 28px', 
-              fontSize: '1rem', 
-              fontWeight: 'bold', 
-              color: 'var(--accent-blue)', 
-              minWidth: '200px', 
-              height: '46px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '10px',
-              cursor: 'pointer'
-            }}
-            onClick={() => setShowCalendar(true)}
-          >
-            📅 Calendario
-          </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              type="button"
+              className="neu-button"
+              style={{ 
+                padding: '12px 22px', 
+                fontSize: '1rem', 
+                fontWeight: 'bold', 
+                color: 'var(--accent-blue)', 
+                height: '46px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                cursor: 'pointer'
+              }}
+              onClick={() => setShowArqueo(true)}
+            >
+              ⚖️ Arqueo de Caja
+            </button>
+            <button
+              type="button"
+              className="neu-button"
+              style={{ 
+                padding: '12px 28px', 
+                fontSize: '1rem', 
+                fontWeight: 'bold', 
+                color: 'var(--accent-blue)', 
+                minWidth: '200px', 
+                height: '46px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                cursor: 'pointer'
+              }}
+              onClick={() => setShowCalendar(true)}
+            >
+              📅 Calendario
+            </button>
+          </div>
         </div>
 
         {/* Filtro de Período para Métricas */}
@@ -2919,8 +2942,7 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
         total: monto,
         metodoPago,
         pagoEfectivo: metodoPago === 'Efectivo' ? monto : 0,
-        pagoDebito: metodoPago === 'Debito' ? monto : 0,
-        pagoCredito: metodoPago === 'Credito' ? monto : 0,
+        pagoTarjeta: metodoPago === 'Tarjeta' ? monto : 0,
         pagoTransferencia: metodoPago === 'Transferencia' ? monto : 0,
         fecha: abonoIsoString,
         timestamp: abonoTimestamp,
@@ -3121,8 +3143,7 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
                     style={{ marginTop: '5px' }}
                   >
                     <option value="Efectivo">Efectivo</option>
-                    <option value="Debito">Débito</option>
-                    <option value="Credito">Crédito</option>
+                    <option value="Tarjeta">Tarjeta</option>
                     <option value="Transferencia">Transferencia</option>
                   </select>
                 </div>
@@ -3695,6 +3716,10 @@ const DayEventsModal = ({ dateLabel, events, onClose, onSelectEvent, getBadgeSty
           })}
         </div>
       </div>
+
+      {showArqueo && (
+        <ArqueoModal area="Eventos" cajeroNombre={user?.nombre || 'Eventos'} onClose={() => setShowArqueo(false)} />
+      )}
     </div>
   );
 };
