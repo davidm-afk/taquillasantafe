@@ -3101,6 +3101,183 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
     return fechaDb.replace(/[\/\-]/g, '');
   };
 
+  const imprimirTicketAbono = (ab) => {
+    const fechaEvento = reservacion.fecha
+      ? (reservacion.fecha.includes('-')
+          ? (() => { const [y, m, d] = reservacion.fecha.split('-'); return `${d}/${m}/${y}`; })()
+          : reservacion.fecha)
+      : 'Sin fecha';
+
+    const fechaImpresion = (() => {
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const yyyy = now.getFullYear();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const min = String(now.getMinutes()).padStart(2, '0');
+      return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+    })();
+
+    const metodoColor = ab.metodoPago === 'Efectivo'
+      ? '#10b981' : ab.metodoPago === 'Tarjeta'
+      ? '#3b82f6' : ab.metodoPago === 'Transferencia'
+      ? '#8b5cf6' : '#6b7280';
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ticket Anticipo - ${ab.folio}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      background: #fff;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+    .ticket {
+      width: 280px;
+      border: 2px solid #111;
+      border-radius: 8px;
+      padding: 16px 14px;
+      font-size: 11px;
+      color: #111;
+    }
+    .logo-area {
+      text-align: center;
+      margin-bottom: 10px;
+      border-bottom: 1px dashed #aaa;
+      padding-bottom: 10px;
+    }
+    .logo-area h1 {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 2px;
+    }
+    .logo-area p {
+      font-size: 9px;
+      color: #666;
+      margin-top: 2px;
+    }
+    .badge {
+      text-align: center;
+      background: #111;
+      color: #fff;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      padding: 5px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+      font-size: 10.5px;
+    }
+    .row .label { color: #555; }
+    .row .value { font-weight: bold; text-align: right; max-width: 60%; word-break: break-word; }
+    .divider { border-top: 1px dashed #aaa; margin: 8px 0; }
+    .monto-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 2px solid #111;
+    }
+    .monto-label { font-size: 12px; font-weight: bold; }
+    .monto-value { font-size: 20px; font-weight: 900; }
+    .metodo-badge {
+      text-align: center;
+      padding: 4px 0;
+      margin: 8px 0 4px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 11px;
+      color: ${metodoColor};
+      border: 1px solid ${metodoColor};
+    }
+    .footer {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 9px;
+      color: #888;
+      border-top: 1px dashed #aaa;
+      padding-top: 8px;
+    }
+    .folio {
+      text-align: center;
+      font-family: monospace;
+      font-size: 9px;
+      color: #888;
+      margin-top: 6px;
+      word-break: break-all;
+    }
+    @media print {
+      body { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="ticket">
+    <div class="logo-area">
+      <h1>★ SKY ZONE ★</h1>
+      <p>Sucursal Santa Fe</p>
+      <p style="margin-top:4px; font-size:9px; color:#888;">Impreso: ${fechaImpresion}</p>
+    </div>
+
+    <div class="badge">COMPROBANTE DE ANTICIPO</div>
+
+    <div class="row">
+      <span class="label">Cliente:</span>
+      <span class="value">${reservacion.cliente || '---'}</span>
+    </div>
+    <div class="row">
+      <span class="label">Paquete:</span>
+      <span class="value">${reservacion.paquete || '---'}</span>
+    </div>
+    <div class="row">
+      <span class="label">Fecha de Evento:</span>
+      <span class="value">${fechaEvento}</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="row">
+      <span class="label">Fecha de Pago:</span>
+      <span class="value">${ab.fecha || '---'}</span>
+    </div>
+
+    <div class="metodo-badge">
+      💳 MÉTODO DE PAGO: ${ab.metodoPago}
+    </div>
+
+    <div class="monto-row">
+      <span class="monto-label">ANTICIPO:</span>
+      <span class="monto-value">$${parseFloat(ab.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+    </div>
+
+    <div class="footer">
+      Gracias por su preferencia<br>
+      Este comprobante es válido solo con sello
+    </div>
+    <div class="folio">Folio: ${ab.folio}</div>
+  </div>
+  <script>window.onload = () => { window.print(); };<\/script>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=340,height=580');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+    }
+  };
+
   const registrarAbono = async (e) => {
     e.preventDefault();
     if (!fechaAbono.trim()) {
@@ -3313,14 +3490,24 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
                         ${parseFloat(ab.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                       </td>
                       <td style={{ padding: '8px', textAlign: 'center' }}>
-                        <button
-                          type="button"
-                          onClick={() => eliminarAbono(idx, ab.folio)}
-                          style={{ border: 'none', background: 'none', color: 'var(--accent-danger)', cursor: 'pointer', fontSize: '1rem' }}
-                          title="Eliminar registro"
-                        >
-                          🗑️
-                        </button>
+                        <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', alignItems: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => imprimirTicketAbono(ab)}
+                            style={{ border: 'none', background: 'none', color: 'var(--accent-blue)', cursor: 'pointer', fontSize: '1rem' }}
+                            title="Imprimir ticket de este abono"
+                          >
+                            🖨️
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => eliminarAbono(idx, ab.folio)}
+                            style={{ border: 'none', background: 'none', color: 'var(--accent-danger)', cursor: 'pointer', fontSize: '1rem' }}
+                            title="Eliminar registro"
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
