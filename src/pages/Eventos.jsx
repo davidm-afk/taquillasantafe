@@ -3101,177 +3101,497 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
     return fechaDb.replace(/[\/\-]/g, '');
   };
 
-  const imprimirTicketAbono = (ab) => {
-    const fechaEvento = reservacion.fecha
-      ? (reservacion.fecha.includes('-')
-          ? (() => { const [y, m, d] = reservacion.fecha.split('-'); return `${d}/${m}/${y}`; })()
-          : reservacion.fecha)
-      : 'Sin fecha';
+  const formatFechaTicket = (fechaStr) => {
+    if (!fechaStr) return 'Sin fecha';
+    if (fechaStr.includes('-')) {
+      const [y, m, d] = fechaStr.split('-');
+      return `${d}/${m}/${y}`;
+    }
+    return fechaStr;
+  };
 
-    const fechaImpresion = (() => {
-      const now = new Date();
-      const dd = String(now.getDate()).padStart(2, '0');
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const yyyy = now.getFullYear();
-      const hh = String(now.getHours()).padStart(2, '0');
-      const min = String(now.getMinutes()).padStart(2, '0');
-      return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
-    })();
-
-    const metodoColor = ab.metodoPago === 'Efectivo'
-      ? '#10b981' : ab.metodoPago === 'Tarjeta'
-      ? '#3b82f6' : ab.metodoPago === 'Transferencia'
-      ? '#8b5cf6' : '#6b7280';
-
-    const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Ticket Anticipo - ${ab.folio}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+  const getCommonTicketStyles = () => `
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      color: #000 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
     body {
       font-family: 'Courier New', Courier, monospace;
       background: #fff;
       display: flex;
       justify-content: center;
-      padding: 20px;
+      padding: 10px;
     }
     .ticket {
-      width: 280px;
-      border: 2px solid #111;
-      border-radius: 8px;
-      padding: 16px 14px;
-      font-size: 11px;
-      color: #111;
+      width: 290px;
+      max-width: 100%;
+      border: 2px solid #000;
+      border-radius: 6px;
+      padding: 14px 10px;
+      font-size: 12px;
+      line-height: 1.35;
+      background: #fff;
     }
-    .logo-area {
+    .header {
       text-align: center;
-      margin-bottom: 10px;
-      border-bottom: 1px dashed #aaa;
-      padding-bottom: 10px;
+      border-bottom: 2px solid #000;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
     }
-    .logo-area h1 {
-      font-size: 18px;
+    .header h1 {
+      font-size: 22px;
       font-weight: 900;
       letter-spacing: 2px;
+      margin-bottom: 2px;
     }
-    .logo-area p {
-      font-size: 9px;
-      color: #666;
-      margin-top: 2px;
-    }
-    .badge {
-      text-align: center;
-      background: #111;
-      color: #fff;
-      font-size: 11px;
+    .header .sub {
+      font-size: 13px;
       font-weight: bold;
-      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .header .address {
+      font-size: 10.5px;
+      font-weight: bold;
+      line-height: 1.25;
+    }
+    .meta {
+      font-size: 11.5px;
+      font-weight: bold;
+      border-bottom: 1px dashed #000;
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+    }
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 2px 0;
+    }
+    .title-badge {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      border: 2px solid #000;
       padding: 5px;
-      border-radius: 4px;
-      margin: 10px 0;
+      margin: 8px 0;
+      text-transform: uppercase;
+    }
+    .section-title {
+      font-size: 11.5px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 6px 0 3px 0;
     }
     .row {
       display: flex;
       justify-content: space-between;
-      margin: 5px 0;
-      font-size: 10.5px;
+      align-items: flex-start;
+      margin: 3px 0;
+      font-size: 12px;
     }
-    .row .label { color: #555; }
-    .row .value { font-weight: bold; text-align: right; max-width: 60%; word-break: break-word; }
-    .divider { border-top: 1px dashed #aaa; margin: 8px 0; }
-    .monto-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 10px;
-      padding-top: 8px;
-      border-top: 2px solid #111;
-    }
-    .monto-label { font-size: 12px; font-weight: bold; }
-    .monto-value { font-size: 20px; font-weight: 900; }
-    .metodo-badge {
-      text-align: center;
-      padding: 4px 0;
-      margin: 8px 0 4px;
-      border-radius: 4px;
+    .row .lbl {
       font-weight: bold;
+      color: #000;
+      min-width: 90px;
+    }
+    .row .val {
+      font-weight: bold;
+      text-align: right;
+      max-width: 65%;
+      word-break: break-word;
+    }
+    .divider-dashed {
+      border-top: 1px dashed #000;
+      margin: 8px 0;
+    }
+    .divider-double {
+      border-top: 2px solid #000;
+      margin: 8px 0;
+    }
+    .table-abonos {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+      margin: 6px 0;
+    }
+    .table-abonos th {
+      border-bottom: 2px solid #000;
+      border-top: 1px solid #000;
+      padding: 4px 2px;
+      text-align: left;
+      font-weight: 900;
       font-size: 11px;
-      color: ${metodoColor};
-      border: 1px solid ${metodoColor};
     }
-    .footer {
+    .table-abonos td {
+      padding: 5px 2px;
+      border-bottom: 1px dashed #000;
+      font-weight: bold;
+    }
+    .monto-highlight {
+      border: 2px solid #000;
+      padding: 8px 6px;
+      margin: 8px 0;
       text-align: center;
-      margin-top: 12px;
-      font-size: 9px;
-      color: #888;
-      border-top: 1px dashed #aaa;
+    }
+    .monto-highlight .monto-lbl {
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+    .monto-highlight .monto-val {
+      font-size: 22px;
+      font-weight: 900;
+      margin-top: 3px;
+    }
+    .status-badge {
+      border: 2px solid #000;
+      padding: 6px 4px;
+      text-align: center;
+      font-weight: 900;
+      font-size: 12px;
+      margin: 8px 0;
+      text-transform: uppercase;
+    }
+    .whatsapp-box {
+      border: 1px dashed #000;
+      border-radius: 4px;
+      padding: 6px 4px;
+      text-align: center;
+      font-size: 11px;
+      line-height: 1.3;
+      margin: 9px 0;
+      font-weight: bold;
+    }
+    .rules-box {
+      font-size: 10.5px;
+      line-height: 1.25;
+      margin: 8px 0;
+      border-top: 1px dashed #000;
+      padding-top: 6px;
+    }
+    .rules-box .rules-title {
+      font-weight: 900;
+      text-align: center;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      font-size: 11px;
+    }
+    .footer-despedida {
+      text-align: center;
+      margin-top: 8px;
+      border-top: 2px solid #000;
       padding-top: 8px;
-    }
-    .folio {
-      text-align: center;
-      font-family: monospace;
-      font-size: 9px;
-      color: #888;
-      margin-top: 6px;
-      word-break: break-all;
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1.35;
     }
     @media print {
-      body { padding: 0; }
+      @page { margin: 0; size: auto; }
+      body { padding: 0; margin: 0; }
+      .ticket {
+        border: none !important;
+        padding: 0 0 10mm 0 !important;
+        width: 100% !important;
+        max-width: 72mm !important;
+      }
     }
-  </style>
+  `;
+
+  const getTicketHeaderHtml = (folio, hoy) => {
+    const dd = String(hoy.getDate()).padStart(2, '0');
+    const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+    const yyyy = hoy.getFullYear();
+    const hh = String(hoy.getHours()).padStart(2, '0');
+    const min = String(hoy.getMinutes()).padStart(2, '0');
+    const ss = String(hoy.getSeconds()).padStart(2, '0');
+
+    return `
+      <div class="header">
+        <h1>SKY ZONE</h1>
+        <div class="sub">Sucursal Santa Fe</div>
+        <div class="address">
+          SKY ZONE SANTA FE<br>
+          Prol. Paseo de la Reforma 400, Santa Fe, Zedec Sta Fé,<br>
+          Álvaro Obregón, 01210 Ciudad de México, CDMX
+        </div>
+      </div>
+
+      <div class="meta">
+        <div class="meta-row">
+          <span>FOLIO: <strong>${folio}</strong></span>
+          <span>CAJA: <strong>EVENTOS</strong></span>
+        </div>
+        <div class="meta-row">
+          <span>FECHA: <strong>${dd}/${mm}/${yyyy}</strong></span>
+          <span>HORA: <strong>${hh}:${min}:${ss}</strong></span>
+        </div>
+        <div class="meta-row">
+          <span>Cajero: <strong>${(user?.nombre || 'Administración').toUpperCase()}</strong></span>
+        </div>
+      </div>
+    `;
+  };
+
+  const getTicketFooterHtml = () => `
+    <div class="whatsapp-box">
+      ★ RESERVACIONES Y EVENTOS ★<br>
+      Para reservar tu evento privado, contáctanos<br>
+      vía WhatsApp al siguiente número:<br>
+      <strong>+52 55 5476 5425</strong>
+    </div>
+
+    <div class="rules-box">
+      <div class="rules-title">Reglas de Seguridad del Parque</div>
+      1. Uso obligatorio de SkySocks en trampolines.<br>
+      2. Respete las instrucciones del Staff en todo momento.<br>
+      3. Prohibido saltar bajo la influencia de alcohol y/o drogas.<br>
+      4. Saltadores que incumplan las reglas tras 3 avisos serán retirados 5 minutos sin derecho a reembolso.
+    </div>
+
+    <div class="footer-despedida">
+      <div>¡GRACIAS POR VOLAR CON NOSOTROS!</div>
+      <div style="margin-top: 4px; font-style: italic; letter-spacing: 1px;">HAVE FUN, FLY SAFE!</div>
+    </div>
+  `;
+
+  // Imprimir Ticket Individual de Abono
+  const imprimirTicketAbono = (ab) => {
+    const hoy = new Date();
+    const fechaEvento = formatFechaTicket(reservacion.fecha);
+    const iva = totalEvento - (totalEvento / 1.16);
+    const subtotal = totalEvento - iva;
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ticket Abono - ${ab.folio}</title>
+  <style>${getCommonTicketStyles()}</style>
 </head>
 <body>
   <div class="ticket">
-    <div class="logo-area">
-      <h1>★ SKY ZONE ★</h1>
-      <p>Sucursal Santa Fe</p>
-      <p style="margin-top:4px; font-size:9px; color:#888;">Impreso: ${fechaImpresion}</p>
-    </div>
+    ${getTicketHeaderHtml(ab.folio, hoy)}
 
-    <div class="badge">COMPROBANTE DE ANTICIPO</div>
+    <div class="title-badge">COMPROBANTE DE ANTICIPO</div>
 
+    <div class="section-title">DATOS DEL EVENTO</div>
     <div class="row">
-      <span class="label">Cliente:</span>
-      <span class="value">${reservacion.cliente || '---'}</span>
+      <span class="lbl">Cliente:</span>
+      <span class="val">${reservacion.cliente || '---'}</span>
     </div>
     <div class="row">
-      <span class="label">Paquete:</span>
-      <span class="value">${reservacion.paquete || '---'}</span>
+      <span class="lbl">Paquete:</span>
+      <span class="val">${reservacion.paquete || '---'}</span>
     </div>
     <div class="row">
-      <span class="label">Fecha de Evento:</span>
-      <span class="value">${fechaEvento}</span>
+      <span class="lbl">Fecha Evento:</span>
+      <span class="val">${fechaEvento}</span>
     </div>
-
-    <div class="divider"></div>
-
+    ${reservacion.horaInicio ? `
     <div class="row">
-      <span class="label">Fecha de Pago:</span>
-      <span class="value">${ab.fecha || '---'}</span>
+      <span class="lbl">Horario:</span>
+      <span class="val">${reservacion.horaInicio}${reservacion.horaFin ? ' - ' + reservacion.horaFin : ''}</span>
+    </div>` : ''}
+    ${reservacion.telefono ? `
+    <div class="row">
+      <span class="lbl">Teléfono:</span>
+      <span class="val">${reservacion.telefono}</span>
+    </div>` : ''}
+
+    <div class="divider-dashed"></div>
+
+    <div class="section-title">DETALLE DEL PAGO</div>
+    <div class="row">
+      <span class="lbl">Fecha de Pago:</span>
+      <span class="val">${ab.fecha || '---'}</span>
+    </div>
+    <div class="row">
+      <span class="lbl">Forma de Pago:</span>
+      <span class="val" style="text-transform: uppercase;">${ab.metodoPago}</span>
     </div>
 
-    <div class="metodo-badge">
-      💳 MÉTODO DE PAGO: ${ab.metodoPago}
+    <div class="monto-highlight">
+      <div class="monto-lbl">ABONO RECIBIDO</div>
+      <div class="monto-val">$${parseFloat(ab.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
     </div>
 
-    <div class="monto-row">
-      <span class="monto-label">ANTICIPO:</span>
-      <span class="monto-value">$${parseFloat(ab.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+    <div class="divider-dashed"></div>
+
+    <div class="section-title">ESTADO DE CUENTA DEL EVENTO</div>
+    <div class="row">
+      <span class="lbl">Subtotal:</span>
+      <span class="val">$${subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+    </div>
+    <div class="row">
+      <span class="lbl">IVA Incluido (16%):</span>
+      <span class="val">$${iva.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+    </div>
+    <div class="row" style="font-size: 13px; font-weight: 900; margin-top: 4px;">
+      <span class="lbl">PRECIO TOTAL:</span>
+      <span class="val">$${totalEvento.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+    </div>
+    <div class="row" style="font-size: 12.5px; font-weight: 900; margin-top: 2px;">
+      <span class="lbl">Total Abonado:</span>
+      <span class="val">$${totalAbonado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+    </div>
+    <div class="row" style="font-size: 13px; font-weight: 900; margin-top: 2px;">
+      <span class="lbl">Saldo Restante:</span>
+      <span class="val">$${saldoRestante.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
     </div>
 
-    <div class="footer">
-      Gracias por su preferencia<br>
-      Este comprobante es válido solo con sello
-    </div>
-    <div class="folio">Folio: ${ab.folio}</div>
+    ${saldoRestante === 0 ? `
+    <div class="status-badge">★★★ EVENTO TOTALMENTE LIQUIDADO ★★★</div>
+    ` : `
+    <div class="status-badge">*** SALDO PENDIENTE POR LIQUIDAR ***</div>
+    `}
+
+    <div class="divider-double"></div>
+
+    ${getTicketFooterHtml()}
   </div>
   <script>window.onload = () => { window.print(); };<\/script>
 </body>
 </html>`;
 
-    const win = window.open('', '_blank', 'width=340,height=580');
+    const win = window.open('', '_blank', 'width=380,height=650');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+    }
+  };
+
+  // Imprimir Recibo Total del Evento (Estado de Cuenta General con todos los abonos)
+  const imprimirReciboTotalEvento = () => {
+    const hoy = new Date();
+    const fechaEvento = formatFechaTicket(reservacion.fecha);
+    const iva = totalEvento - (totalEvento / 1.16);
+    const subtotal = totalEvento - iva;
+    const revFolioLimpio = limpiarFechaReservacion(reservacion.fecha);
+    const folioGeneral = `REC-${revFolioLimpio}-${(reservacion.id || 'EV').substring(0, 5).toUpperCase()}`;
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Recibo Total Evento - ${reservacion.cliente || 'SkyZone'}</title>
+  <style>${getCommonTicketStyles()}</style>
+</head>
+<body>
+  <div class="ticket">
+    ${getTicketHeaderHtml(folioGeneral, hoy)}
+
+    <div class="title-badge">RECIBO TOTAL / ESTADO DE CUENTA</div>
+
+    <div class="section-title">DATOS DEL EVENTO</div>
+    <div class="row">
+      <span class="lbl">Cliente:</span>
+      <span class="val">${reservacion.cliente || '---'}</span>
+    </div>
+    ${reservacion.telefono ? `
+    <div class="row">
+      <span class="lbl">Teléfono:</span>
+      <span class="val">${reservacion.telefono}</span>
+    </div>` : ''}
+    <div class="row">
+      <span class="lbl">Paquete:</span>
+      <span class="val">${reservacion.paquete || '---'}</span>
+    </div>
+    <div class="row">
+      <span class="lbl">Fecha Evento:</span>
+      <span class="val">${fechaEvento}</span>
+    </div>
+    ${reservacion.horaInicio ? `
+    <div class="row">
+      <span class="lbl">Horario:</span>
+      <span class="val">${reservacion.horaInicio}${reservacion.horaFin ? ' - ' + reservacion.horaFin : ''}</span>
+    </div>` : ''}
+    ${reservacion.espacio && reservacion.espacio !== 'Sin definir' ? `
+    <div class="row">
+      <span class="lbl">Espacio:</span>
+      <span class="val">${reservacion.espacio}</span>
+    </div>` : ''}
+    ${reservacion.numSaltadores || reservacion.numInvitados ? `
+    <div class="row">
+      <span class="lbl">Invitados:</span>
+      <span class="val">${reservacion.numSaltadores || reservacion.numInvitados}</span>
+    </div>` : ''}
+
+    <div class="divider-dashed"></div>
+
+    <div class="section-title">DESGLOSE FINANCIERO</div>
+    <div class="row">
+      <span class="lbl">Subtotal:</span>
+      <span class="val">$${subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+    </div>
+    <div class="row">
+      <span class="lbl">IVA (16%):</span>
+      <span class="val">$${iva.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+    </div>
+    <div class="row" style="font-size: 14px; font-weight: 900; margin: 4px 0;">
+      <span class="lbl">TOTAL EVENTO:</span>
+      <span class="val">$${totalEvento.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+    </div>
+
+    <div class="divider-dashed"></div>
+
+    <div class="section-title">HISTORIAL DE ABONOS REGISTRADOS (${abonos.length})</div>
+    ${abonos.length === 0 ? `
+      <div style="text-align: center; font-style: italic; padding: 6px 0;">No se han registrado abonos aún.</div>
+    ` : `
+      <table class="table-abonos">
+        <thead>
+          <tr>
+            <th>FECHA</th>
+            <th>MÉTODO</th>
+            <th>FOLIO</th>
+            <th style="text-align: right;">MONTO</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${abonos.map(ab => `
+            <tr>
+              <td>${ab.fecha}</td>
+              <td style="text-transform: uppercase;">${ab.metodoPago}</td>
+              <td style="font-size: 10px;">${ab.folio}</td>
+              <td style="text-align: right;">$${parseFloat(ab.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `}
+
+    <div class="divider-double"></div>
+
+    <div class="row" style="font-size: 13px; font-weight: 900;">
+      <span class="lbl">TOTAL ABONADO:</span>
+      <span class="val">$${totalAbonado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+    </div>
+    <div class="row" style="font-size: 14px; font-weight: 900; margin-top: 3px;">
+      <span class="lbl">SALDO RESTANTE:</span>
+      <span class="val">$${saldoRestante.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+    </div>
+
+    ${saldoRestante === 0 ? `
+    <div class="status-badge">★★★ EVENTO TOTALMENTE LIQUIDADO ★★★</div>
+    ` : `
+    <div class="status-badge">*** SALDO PENDIENTE: $${saldoRestante.toLocaleString('es-MX', { minimumFractionDigits: 2 })} ***</div>
+    `}
+
+    <div class="divider-double"></div>
+
+    ${getTicketFooterHtml()}
+  </div>
+  <script>window.onload = () => { window.print(); };<\/script>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=380,height=720');
     if (win) {
       win.document.write(html);
       win.document.close();
@@ -3374,14 +3694,25 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid var(--bg-color)', paddingBottom: '12px' }}>
           <h2 className="text-gradient-blue" style={{ marginTop: 0, marginBottom: 0, fontSize: '1.6rem' }}>💰 Registrar / Liquidar Anticipos</h2>
-          <button 
-            type="button" 
-            onClick={onClose}
-            className="neu-button"
-            style={{ padding: '8px 15px', fontSize: '0.8rem', fontWeight: 'bold' }}
-          >
-            Cerrar [X]
-          </button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button 
+              type="button" 
+              onClick={imprimirReciboTotalEvento}
+              className="neu-button"
+              style={{ padding: '8px 16px', fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '6px' }}
+              title="Imprimir ticket del recibo total del evento con subtotal, IVA y desglose de abonos"
+            >
+              🖨️ Recibo Total Evento
+            </button>
+            <button 
+              type="button" 
+              onClick={onClose}
+              className="neu-button"
+              style={{ padding: '8px 15px', fontSize: '0.8rem', fontWeight: 'bold' }}
+            >
+              Cerrar [X]
+            </button>
+          </div>
         </div>
 
         <div style={{ marginBottom: '20px' }}>
@@ -3433,9 +3764,20 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
 
         {/* Historial de Abonos */}
         <div style={{ marginBottom: '25px' }}>
-          <h4 style={{ color: 'var(--accent-blue)', margin: '0 0 12px 0', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.9rem' }}>
-            📜 Historial de Abonos Registrados ({abonos.length})
-          </h4>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+            <h4 style={{ color: 'var(--accent-blue)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.9rem' }}>
+              📜 Historial de Abonos Registrados ({abonos.length})
+            </h4>
+            <button
+              type="button"
+              onClick={imprimirReciboTotalEvento}
+              className="neu-button"
+              style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 'bold', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '6px' }}
+              title="Imprimir ticket del recibo completo con todos los abonos"
+            >
+              🖨️ Recibo Completo
+            </button>
+          </div>
           
           {abonos.length === 0 ? (
             <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.85rem', textAlign: 'center', padding: '15px', border: '1px dashed var(--bg-color)', borderRadius: '10px' }}>

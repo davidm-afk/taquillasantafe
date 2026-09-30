@@ -148,7 +148,8 @@ body {
     box-sizing: border-box;
     padding: 0 2mm;
     font-family: 'Courier New', Courier, monospace;
-    font-size: 10.5px;
+    font-size: 12px;
+    font-weight: bold;
     color: black;
     background: white;
     margin: 0;
