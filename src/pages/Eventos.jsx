@@ -10,7 +10,7 @@ import { collection, addDoc, onSnapshot, query, doc, updateDoc, deleteDoc } from
 
 // Auxiliar: Analizar cadenas de fecha en ambos formatos (dd/mm/yyyy o yyyy-mm-dd)
 const parseDateString = (fechaStr) => {
-  if (!fechaStr) return null;
+  if (!fechaStr || typeof fechaStr !== 'string') return null;
   if (fechaStr.includes('/')) {
     const [day, month, year] = fechaStr.split('/').map(Number);
     return new Date(year, month - 1, day);
@@ -24,6 +24,7 @@ const parseDateString = (fechaStr) => {
 // Formateador de fecha a dd/mm/yyyy para visualización de alta fidelidad incluyendo el día de la semana
 const formatFecha = (fechaStr) => {
   if (!fechaStr) return 'Sin fecha';
+  if (typeof fechaStr !== 'string') return String(fechaStr);
   
   let formattedDate = fechaStr;
   if (fechaStr.includes('-')) {
@@ -36,9 +37,9 @@ const formatFecha = (fechaStr) => {
 
 // Obtener etiqueta legible del día de la semana
 const getDiaSemanaLabel = (fechaStr) => {
-  if (!fechaStr) return '';
+  if (!fechaStr || typeof fechaStr !== 'string') return '';
   const dateObj = parseDateString(fechaStr);
-  if (!dateObj) return '';
+  if (!dateObj || isNaN(dateObj.getTime())) return '';
   const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   return dias[dateObj.getDay()];
 };
@@ -1861,6 +1862,11 @@ const Eventos = () => {
       {printReservacionData && (
         <PDFReservacionPrint event={printReservacionData} />
       )}
+
+      {/* Modal de Arqueo de Caja para Eventos */}
+      {showArqueo && (
+        <ArqueoModal area="Eventos" cajeroNombre={user?.nombre || 'Eventos'} onClose={() => setShowArqueo(false)} />
+      )}
     </div>
   );
 };
@@ -3541,10 +3547,10 @@ const EventDetailModal = ({ event, onClose, onEdit, onAbonar, onPrint }) => {
               {event.horaAlimentos && <div><strong>Hora Alimentos:</strong> {event.horaAlimentos}</div>}
               {event.horaPinata && <div><strong>Hora Piñata:</strong> {event.horaPinata}</div>}
               {event.horaPastel && <div><strong>Hora Pastel:</strong> {event.horaPastel}</div>}
-              {event.cronogramaExtra && event.cronogramaExtra.map((item, idx) => (
-                item.concepto && item.hora && (
+              {Array.isArray(event.cronogramaExtra) && event.cronogramaExtra.map((item, idx) => (
+                item && item.concepto && item.hora ? (
                   <div key={idx}><strong>{item.concepto}:</strong> {item.hora}</div>
-                )
+                ) : null
               ))}
               <div><strong>Hora de Salida:</strong> {event.horaSalida || 'Sin definir'}</div>
             </div>
@@ -3552,15 +3558,17 @@ const EventDetailModal = ({ event, onClose, onEdit, onAbonar, onPrint }) => {
         </div>
 
         {/* Sección de Conceptos Extras */}
-        {event.extras && event.extras.length > 0 && (
+        {Array.isArray(event.extras) && event.extras.length > 0 && (
           <div style={{ marginBottom: '20px', background: 'rgba(0,0,0,0.01)', padding: '12px', borderRadius: '10px', border: '1px solid var(--bg-color)' }}>
             <h4 style={{ margin: '0 0 8px 0', color: 'var(--accent-purple)', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.8rem', fontWeight: 'bold' }}>➕ Cargos Extras</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {event.extras.map((ext, idx) => (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                  <span>• {ext.concepto}</span>
-                  <strong>${parseFloat(ext.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
-                </div>
+                ext && ext.concepto ? (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                    <span>• {ext.concepto}</span>
+                    <strong>${parseFloat(ext.monto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
+                  </div>
+                ) : null
               ))}
             </div>
           </div>
@@ -3716,10 +3724,6 @@ const DayEventsModal = ({ dateLabel, events, onClose, onSelectEvent, getBadgeSty
           })}
         </div>
       </div>
-
-      {showArqueo && (
-        <ArqueoModal area="Eventos" cajeroNombre={user?.nombre || 'Eventos'} onClose={() => setShowArqueo(false)} />
-      )}
     </div>
   );
 };
