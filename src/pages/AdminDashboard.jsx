@@ -10,7 +10,7 @@ import CerrarCajaModal from '../components/CerrarCajaModal';
 
 const AdminDashboard = () => {
   const { logout } = useAuth();
-  const { cajasData } = useCaja();
+  const { cajasData, abrirCaja } = useCaja();
   const navigate = useNavigate();
 
   const [closingCaja, setClosingCaja] = useState(null);
@@ -245,12 +245,11 @@ const AdminDashboard = () => {
       <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap' }}>
         {['Taquilla', 'Cafeteria', 'Eventos'].map(areaName => {
           const cajaInfo = cajasData[areaName];
-          if (!cajaInfo) return null; // No abierta hoy
-          
-          const isAbierta = cajaInfo.abierta === true;
+          const isCerrada = cajaInfo && cajaInfo.abierta === false;
+          const isAbierta = !isCerrada;
           let ef = 0, tarjeta = 0, trans = 0;
           
-          const ventasArea = allData.filter(d => d.area === areaName);
+          const ventasArea = (allData || []).filter(d => d.area === areaName);
           ventasArea.forEach(v => {
             if (v.pagoEfectivo !== undefined) {
               ef += parseFloat(v.pagoEfectivo || 0);
@@ -269,9 +268,16 @@ const AdminDashboard = () => {
 
           return (
             <div key={areaName} className="neu-box" style={{ padding: '20px', flex: '1', minWidth: '250px', position: 'relative' }}>
-              <h3 style={{ margin: '0 0 15px 0', color: isAbierta ? 'var(--accent-blue)' : 'var(--text-muted)', borderBottom: '2px solid var(--bg-color)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+              <h3 style={{ margin: '0 0 15px 0', color: isAbierta ? 'var(--accent-blue)' : 'var(--text-muted)', borderBottom: '2px solid var(--bg-color)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>Caja {areaName}</span>
-                <span style={{ fontSize: '0.8rem', backgroundColor: isAbierta ? 'rgba(0,82,204,0.1)' : 'rgba(0,0,0,0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                <span style={{ 
+                  fontSize: '0.8rem', 
+                  backgroundColor: isAbierta ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', 
+                  color: isAbierta ? 'var(--accent-success)' : 'var(--accent-danger)', 
+                  padding: '2px 8px', 
+                  borderRadius: '12px',
+                  fontWeight: 'bold'
+                }}>
                   {isAbierta ? 'Abierta' : 'Cerrada'}
                 </span>
               </h3>
@@ -284,13 +290,25 @@ const AdminDashboard = () => {
                 <div style={{ textAlign: 'right', fontSize: '1rem', fontWeight: 'bold' }}>${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
               </div>
               
-              {isAbierta && (
+              {isAbierta ? (
                 <button 
                   className="neu-button" 
                   style={{ width: '100%', marginTop: '15px', color: 'var(--accent-danger)' }}
                   onClick={() => setClosingCaja({ area: areaName, totales: totalesObj, ventas: ventasArea })}
                 >
                   Cerrar Caja
+                </button>
+              ) : (
+                <button 
+                  className="neu-button" 
+                  style={{ width: '100%', marginTop: '15px', color: 'var(--accent-success)' }}
+                  onClick={async () => {
+                    if (window.confirm(`¿Deseas volver a abrir la caja de ${areaName}?`)) {
+                      await abrirCaja(areaName);
+                    }
+                  }}
+                >
+                  Reabrir Caja
                 </button>
               )}
             </div>

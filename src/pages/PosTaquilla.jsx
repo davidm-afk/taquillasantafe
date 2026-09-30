@@ -4,7 +4,6 @@ import CartSidebar from '../components/CartSidebar';
 import ProductCard from '../components/ProductCard';
 import PaymentModal from '../components/PaymentModal';
 import SearchBar from '../components/SearchBar';
-import AperturaCajaModal from '../components/AperturaCajaModal';
 import ReimpresionModal from '../components/ReimpresionModal';
 import ArqueoModal from '../components/ArqueoModal';
 import { useAuth } from '../context/AuthContext';
@@ -101,7 +100,6 @@ const PosTaquilla = () => {
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-      <AperturaCajaModal rol="Taquilla" />
       <Sidebar area="Taquilla" />
       
       <div style={{ flex: 1, padding: '20px 20px 20px 0', display: 'flex', flexDirection: 'column' }}>
