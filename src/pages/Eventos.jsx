@@ -181,7 +181,10 @@ const Eventos = () => {
   const [customPaquete, setCustomPaquete] = useState(''); // Estado para paquete manual
   const [espacio, setEspacio] = useState('Sin definir'); // Espacio designado
   
+  const [alimentos, setAlimentos] = useState([]);
   const [pizza, setPizza] = useState([]);
+  const [pizzaMitad1, setPizzaMitad1] = useState('Pepperoni');
+  const [pizzaMitad2, setPizzaMitad2] = useState('Queso');
   const [agua, setAgua] = useState([]);
   const [pastel, setPastel] = useState('Sin definir');
   
@@ -321,7 +324,10 @@ const Eventos = () => {
       saltadores: parseInt(saltadores) || 0,
       paquete: finalPaquete,
       espacio: espacio,
-      pizza: pizza,
+      alimentos: alimentos,
+      pizza: pizza.map(p => p === 'Mitad y Mitad' ? `Mitad y Mitad (${pizzaMitad1} / ${pizzaMitad2})` : p),
+      pizzaMitad1: pizza.includes('Mitad y Mitad') ? pizzaMitad1 : '',
+      pizzaMitad2: pizza.includes('Mitad y Mitad') ? pizzaMitad2 : '',
       agua: agua,
       pastel: pastel,
       horaLlegada: horaLlegada,
@@ -369,7 +375,10 @@ const Eventos = () => {
       setPaquete('Sin definir');
       setCustomPaquete('');
       setEspacio('Sin definir');
+      setAlimentos([]);
       setPizza([]);
+      setPizzaMitad1('Pepperoni');
+      setPizzaMitad2('Queso');
       setAgua([]);
       setPastel('Sin definir');
       setHoraLlegada('');
@@ -981,29 +990,110 @@ const Eventos = () => {
 
               {formTab === 'catering' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  {/* ALIMENTOS: Hotdogs, Hamburguesas, Nuggets, Boneless */}
                   <div>
-                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🍕 ALIMENTOS PIZZA</label>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🌭 ALIMENTOS</label>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                      {['Pepperoni', 'Queso', 'Hawaiana', 'Mitad y Mitad'].map(opt => (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => setPizza(prev => prev.includes(opt) ? prev.filter(x => x !== opt) : [...prev, opt])}
-                          className={pizza.includes(opt) ? 'neu-button' : 'neu-box'}
-                          style={{
-                            padding: '7px 14px', fontSize: '0.78rem', cursor: 'pointer', borderRadius: '8px',
-                            border: pizza.includes(opt) ? '1.5px solid var(--accent-success)' : 'none',
-                            color: pizza.includes(opt) ? 'var(--accent-success)' : 'var(--text-muted)',
-                            fontWeight: pizza.includes(opt) ? 'bold' : 'normal',
-                          }}
-                        >
-                          {pizza.includes(opt) ? '✓ ' : ''}{opt}
-                        </button>
-                      ))}
+                      {[
+                        { label: 'Hotdogs', icon: '🌭' },
+                        { label: 'Hamburguesas', icon: '🍔' },
+                        { label: 'Nuggets', icon: '🍗' },
+                        { label: 'Boneless', icon: '🍖' }
+                      ].map(({ label, icon }) => {
+                        const isSelected = alimentos.includes(label);
+                        return (
+                          <button
+                            key={label}
+                            type="button"
+                            onClick={() => setAlimentos(prev => isSelected ? prev.filter(x => x !== label) : [...prev, label])}
+                            className={isSelected ? 'neu-button' : 'neu-box'}
+                            style={{
+                              padding: '7px 14px', fontSize: '0.78rem', cursor: 'pointer', borderRadius: '8px',
+                              border: isSelected ? '1.5px solid var(--accent-orange)' : 'none',
+                              color: isSelected ? 'var(--accent-orange)' : 'var(--text-muted)',
+                              fontWeight: isSelected ? 'bold' : 'normal',
+                            }}
+                          >
+                            {isSelected ? '✓ ' : ''}{icon} {label}
+                          </button>
+                        );
+                      })}
                     </div>
+                    {alimentos.length > 0 && (
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '5px 0 0 0', fontStyle: 'italic' }}>
+                        Seleccionado: {alimentos.join(', ')}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* PIZZAS: Pepperoni, Queso, Hawaiana, Mitad y Mitad */}
+                  <div>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🍕 PIZZAS</label>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                      {['Pepperoni', 'Queso', 'Hawaiana', 'Mitad y Mitad'].map(opt => {
+                        const isSelected = pizza.includes(opt);
+                        return (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => setPizza(prev => isSelected ? prev.filter(x => x !== opt) : [...prev, opt])}
+                            className={isSelected ? 'neu-button' : 'neu-box'}
+                            style={{
+                              padding: '7px 14px', fontSize: '0.78rem', cursor: 'pointer', borderRadius: '8px',
+                              border: isSelected ? '1.5px solid var(--accent-success)' : 'none',
+                              color: isSelected ? 'var(--accent-success)' : 'var(--text-muted)',
+                              fontWeight: isSelected ? 'bold' : 'normal',
+                            }}
+                          >
+                            {isSelected ? '✓ ' : ''}{opt === 'Pepperoni' ? '🍕 Pepperoni' : opt === 'Queso' ? '🧀 Queso' : opt === 'Hawaiana' ? '🍍 Hawaiana' : '🌓 Mitad y Mitad'}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Selector de dos sabores para Mitad y Mitad */}
+                    {pizza.includes('Mitad y Mitad') && (
+                      <div style={{ marginTop: '10px', padding: '12px', background: 'rgba(16, 185, 129, 0.08)', borderRadius: '10px', border: '1px dashed var(--accent-success)' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--accent-success)', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>
+                          🌓 Elegir los 2 sabores para Pizza Mitad y Mitad:
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                          <div>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Primera Mitad:</span>
+                            <select
+                              className="neu-input"
+                              value={pizzaMitad1}
+                              onChange={(e) => setPizzaMitad1(e.target.value)}
+                              style={{ fontSize: '0.78rem', padding: '6px 10px', width: '100%' }}
+                            >
+                              <option value="Pepperoni">🍕 Pepperoni</option>
+                              <option value="Queso">🧀 Queso</option>
+                              <option value="Hawaiana">🍍 Hawaiana</option>
+                            </select>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Segunda Mitad:</span>
+                            <select
+                              className="neu-input"
+                              value={pizzaMitad2}
+                              onChange={(e) => setPizzaMitad2(e.target.value)}
+                              style={{ fontSize: '0.78rem', padding: '6px 10px', width: '100%' }}
+                            >
+                              <option value="Pepperoni">🍕 Pepperoni</option>
+                              <option value="Queso">🧀 Queso</option>
+                              <option value="Hawaiana">🍍 Hawaiana</option>
+                            </select>
+                          </div>
+                        </div>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '6px 0 0 0', fontStyle: 'italic' }}>
+                          Combinación: Mitad {pizzaMitad1} y Mitad {pizzaMitad2}
+                        </p>
+                      </div>
+                    )}
+
                     {pizza.length > 0 && (
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '5px 0 0 0', fontStyle: 'italic' }}>
-                        Seleccionado: {pizza.join(', ')}
+                        Seleccionado: {pizza.map(p => p === 'Mitad y Mitad' ? `Mitad y Mitad (${pizzaMitad1} / ${pizzaMitad2})` : p).join(', ')}
                       </p>
                     )}
                   </div>
@@ -1757,6 +1847,17 @@ const Eventos = () => {
                                       🎂 {ev.festejado ? `Festejad@: ${ev.festejado}` : 'Festejad@ Faltante'}
                                     </span>
 
+                                    {/* Alimentos - array-aware */}
+                                    {(() => {
+                                      const alimArr = Array.isArray(ev.alimentos) ? ev.alimentos : (ev.alimentos && ev.alimentos !== 'Sin definir' ? [ev.alimentos] : []);
+                                      if (alimArr.length === 0) return null;
+                                      return (
+                                        <span style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: '8px', background: 'rgba(249, 115, 22, 0.1)', color: 'var(--accent-orange)' }}>
+                                          🌭 Alimentos: {alimArr.join(', ')}
+                                        </span>
+                                      );
+                                    })()}
+
                                     {/* Pizza - array-aware */}
                                     {(() => {
                                       const pizzaArr = Array.isArray(ev.pizza) ? ev.pizza : (ev.pizza && ev.pizza !== 'Sin definir' ? [ev.pizza] : []);
@@ -1898,7 +1999,24 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
   const [customPaquete, setCustomPaquete] = useState(isEstandar ? '' : (reservacion.paquete || ''));
   const [espacio, setEspacio] = useState(reservacion.espacio || 'Sin definir'); // Nuevo campo en edición
   
-  const [pizza, setPizza] = useState(normalizeToArray(reservacion.pizza));
+  let initialMitad1 = reservacion.pizzaMitad1 || 'Pepperoni';
+  let initialMitad2 = reservacion.pizzaMitad2 || 'Queso';
+  const initialPizza = normalizeToArray(reservacion.pizza).map(p => {
+    if (typeof p === 'string' && p.startsWith('Mitad y Mitad')) {
+      const match = p.match(/Mitad y Mitad\s*\((.*?)\s*\/\s*(.*?)\)/i);
+      if (match) {
+        initialMitad1 = match[1].trim();
+        initialMitad2 = match[2].trim();
+      }
+      return 'Mitad y Mitad';
+    }
+    return p;
+  });
+
+  const [alimentos, setAlimentos] = useState(normalizeToArray(reservacion.alimentos));
+  const [pizza, setPizza] = useState(initialPizza);
+  const [pizzaMitad1, setPizzaMitad1] = useState(initialMitad1);
+  const [pizzaMitad2, setPizzaMitad2] = useState(initialMitad2);
   const [agua, setAgua] = useState(normalizeToArray(reservacion.agua));
   const [pastel, setPastel] = useState(reservacion.pastel || 'Sin definir');
   
@@ -2019,7 +2137,10 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
         saltadores: parseInt(saltadores) || 0,
         paquete: finalPaquete,
         espacio: espacio,
-        pizza: pizza,
+        alimentos: alimentos,
+        pizza: pizza.map(p => p === 'Mitad y Mitad' ? `Mitad y Mitad (${pizzaMitad1} / ${pizzaMitad2})` : p),
+        pizzaMitad1: pizza.includes('Mitad y Mitad') ? pizzaMitad1 : '',
+        pizzaMitad2: pizza.includes('Mitad y Mitad') ? pizzaMitad2 : '',
         agua: agua,
         pastel: pastel,
         horaLlegada: horaLlegada,
@@ -2465,22 +2586,112 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
           <div style={{ borderBottom: '1px solid var(--bg-color)', paddingBottom: '15px' }}>
             <h4 style={{ color: 'var(--accent-blue)', margin: '0 0 12px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🍕 Alimentos y Bebidas (Catering)</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              {/* ALIMENTOS: Hotdogs, Hamburguesas, Nuggets, Boneless */}
               <div>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Pizza</label>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🌭 Alimentos</label>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                  {['Pepperoni', 'Queso', 'Hawaiana', 'Mitad y Mitad'].map(opt => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => setPizza(prev => prev.includes(opt) ? prev.filter(x => x !== opt) : [...prev, opt])}
-                      className={pizza.includes(opt) ? 'neu-button' : 'neu-box'}
-                      style={{ padding: '7px 14px', fontSize: '0.78rem', cursor: 'pointer', borderRadius: '8px', border: pizza.includes(opt) ? '1.5px solid var(--accent-success)' : 'none', color: pizza.includes(opt) ? 'var(--accent-success)' : 'var(--text-muted)', fontWeight: pizza.includes(opt) ? 'bold' : 'normal' }}
-                    >
-                      {pizza.includes(opt) ? '✓ ' : ''}{opt}
-                    </button>
-                  ))}
+                  {[
+                    { label: 'Hotdogs', icon: '🌭' },
+                    { label: 'Hamburguesas', icon: '🍔' },
+                    { label: 'Nuggets', icon: '🍗' },
+                    { label: 'Boneless', icon: '🍖' }
+                  ].map(({ label, icon }) => {
+                    const isSelected = alimentos.includes(label);
+                    return (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => setAlimentos(prev => isSelected ? prev.filter(x => x !== label) : [...prev, label])}
+                        className={isSelected ? 'neu-button' : 'neu-box'}
+                        style={{
+                          padding: '7px 14px', fontSize: '0.78rem', cursor: 'pointer', borderRadius: '8px',
+                          border: isSelected ? '1.5px solid var(--accent-orange)' : 'none',
+                          color: isSelected ? 'var(--accent-orange)' : 'var(--text-muted)',
+                          fontWeight: isSelected ? 'bold' : 'normal',
+                        }}
+                      >
+                        {isSelected ? '✓ ' : ''}{icon} {label}
+                      </button>
+                    );
+                  })}
                 </div>
-                {pizza.length > 0 && <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '5px 0 0 0', fontStyle: 'italic' }}>Seleccionado: {pizza.join(', ')}</p>}
+                {alimentos.length > 0 && (
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '5px 0 0 0', fontStyle: 'italic' }}>
+                    Seleccionado: {alimentos.join(', ')}
+                  </p>
+                )}
+              </div>
+
+              {/* PIZZAS: Pepperoni, Queso, Hawaiana, Mitad y Mitad */}
+              <div>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🍕 Pizza</label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                  {['Pepperoni', 'Queso', 'Hawaiana', 'Mitad y Mitad'].map(opt => {
+                    const isSelected = pizza.includes(opt);
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setPizza(prev => isSelected ? prev.filter(x => x !== opt) : [...prev, opt])}
+                        className={isSelected ? 'neu-button' : 'neu-box'}
+                        style={{
+                          padding: '7px 14px', fontSize: '0.78rem', cursor: 'pointer', borderRadius: '8px',
+                          border: isSelected ? '1.5px solid var(--accent-success)' : 'none',
+                          color: isSelected ? 'var(--accent-success)' : 'var(--text-muted)',
+                          fontWeight: isSelected ? 'bold' : 'normal'
+                        }}
+                      >
+                        {isSelected ? '✓ ' : ''}{opt === 'Pepperoni' ? '🍕 Pepperoni' : opt === 'Queso' ? '🧀 Queso' : opt === 'Hawaiana' ? '🍍 Hawaiana' : '🌓 Mitad y Mitad'}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Selector de dos sabores para Mitad y Mitad */}
+                {pizza.includes('Mitad y Mitad') && (
+                  <div style={{ marginTop: '10px', padding: '12px', background: 'rgba(16, 185, 129, 0.08)', borderRadius: '10px', border: '1px dashed var(--accent-success)' }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--accent-success)', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>
+                      🌓 Elegir los 2 sabores para la Pizza Mitad y Mitad:
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <div>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Primera Mitad:</span>
+                        <select
+                          className="neu-input"
+                          value={pizzaMitad1}
+                          onChange={(e) => setPizzaMitad1(e.target.value)}
+                          style={{ fontSize: '0.78rem', padding: '6px 10px', width: '100%' }}
+                        >
+                          <option value="Pepperoni">🍕 Pepperoni</option>
+                          <option value="Queso">🧀 Queso</option>
+                          <option value="Hawaiana">🍍 Hawaiana</option>
+                        </select>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Segunda Mitad:</span>
+                        <select
+                          className="neu-input"
+                          value={pizzaMitad2}
+                          onChange={(e) => setPizzaMitad2(e.target.value)}
+                          style={{ fontSize: '0.78rem', padding: '6px 10px', width: '100%' }}
+                        >
+                          <option value="Pepperoni">🍕 Pepperoni</option>
+                          <option value="Queso">🧀 Queso</option>
+                          <option value="Hawaiana">🍍 Hawaiana</option>
+                        </select>
+                      </div>
+                    </div>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '6px 0 0 0', fontStyle: 'italic' }}>
+                      Combinación: Mitad {pizzaMitad1} y Mitad {pizzaMitad2}
+                    </p>
+                  </div>
+                )}
+
+                {pizza.length > 0 && (
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '5px 0 0 0', fontStyle: 'italic' }}>
+                    Seleccionado: {pizza.map(p => p === 'Mitad y Mitad' ? `Mitad y Mitad (${pizzaMitad1} / ${pizzaMitad2})` : p).join(', ')}
+                  </p>
+                )}
               </div>
               <div>
                 <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Agua</label>
@@ -3527,6 +3738,9 @@ const EventDetailModal = ({ event, onClose, onEdit, onAbonar, onPrint }) => {
           <div>
             <h4 style={{ margin: '0 0 12px 0', color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.85rem' }}>🍕 Catering y F&B</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.85rem' }}>
+              {Array.isArray(event.alimentos) && event.alimentos.length > 0 && (
+                <div><strong>Alimentos:</strong> {event.alimentos.join(', ')}</div>
+              )}
               <div><strong>Pizza:</strong> {Array.isArray(event.pizza) ? (event.pizza.length > 0 ? event.pizza.join(', ') : 'Pendiente') : (event.pizza && event.pizza !== 'Sin definir' ? event.pizza : 'Pendiente')}</div>
               <div><strong>Agua:</strong> {Array.isArray(event.agua) ? (event.agua.length > 0 ? event.agua.join(', ') : 'Pendiente') : (event.agua && event.agua !== 'Sin definir' ? event.agua : 'Pendiente')}</div>
               <div><strong>Pastel sabor:</strong> {event.pastel && event.pastel !== 'Sin definir' ? event.pastel : 'Pendiente'}</div>
@@ -3914,6 +4128,15 @@ const PDFReservacionPrint = ({ event }) => {
                   <tr>
                     <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>COMIDA ADULTOS:</td>
                     <td style={{ padding: '1px 0' }}>{parts.join(', ')}</td>
+                  </tr>
+                ) : null;
+              })()}
+              {(() => {
+                const alimArr = Array.isArray(event.alimentos) ? event.alimentos : (event.alimentos && event.alimentos !== 'Sin definir' ? [event.alimentos] : []);
+                return alimArr.length > 0 ? (
+                  <tr>
+                    <td style={{ width: '40%', fontWeight: 'bold', padding: '1px 0' }}>ALIMENTOS:</td>
+                    <td style={{ padding: '1px 0' }}>{alimArr.join(', ')}</td>
                   </tr>
                 ) : null;
               })()}
