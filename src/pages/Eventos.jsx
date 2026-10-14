@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import Sidebar from '../components/Sidebar';
 import ArqueoModal from '../components/ArqueoModal';
@@ -237,6 +237,9 @@ const Eventos = () => {
 
   // Estado para la búsqueda de eventos
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Estado para modal de búsqueda y gestión de eventos por vendedor
+  const [showVendedorModal, setShowVendedorModal] = useState(false);
 
   // Estados para filtrar las métricas por período (día seleccionado, semana actual, mes actual o todo)
   const [metricPeriod, setMetricPeriod] = useState('mes'); // 'dia', 'semana', 'mes', 'todos'
@@ -529,7 +532,27 @@ const Eventos = () => {
             <h1 className="text-gradient-blue" style={{ margin: '0 0 5px 0', fontSize: '2.2rem' }}>Eventos & Fiestas</h1>
             <p style={{ margin: 0, color: 'var(--text-muted)' }}>Gestión y Reservaciones Especiales • Sucursal Santa Fe</p>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="neu-button"
+              style={{ 
+                padding: '12px 20px', 
+                fontSize: '1rem', 
+                fontWeight: 'bold', 
+                color: 'var(--accent-blue)', 
+                height: '46px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                cursor: 'pointer'
+              }}
+              onClick={() => setShowVendedorModal(true)}
+              title="Buscar y filtrar eventos por vendedor"
+            >
+              👤 Eventos por Vendedor
+            </button>
             <button
               type="button"
               className="neu-button"
@@ -1636,14 +1659,35 @@ const Eventos = () => {
             <p style={{ margin: '0 0 15px 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               {searchTerm.trim() ? 'Mostrando todos los eventos que coinciden con tu búsqueda.' : 'Mostrando los eventos programados para la semana en curso. Abre el calendario para explorar más.'}
             </p>
-            <input 
-              type="text" 
-              className="neu-input" 
-              placeholder="Buscar por nombre de cliente o teléfono..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: '100%', marginBottom: '20px', padding: '10px 15px' }}
-            />
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+              <input 
+                type="text" 
+                className="neu-input" 
+                placeholder="Buscar por cliente, teléfono o vendedor..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ flex: 1, padding: '10px 15px' }}
+              />
+              <button
+                type="button"
+                className="neu-button"
+                onClick={() => setShowVendedorModal(true)}
+                title="Filtrar eventos por vendedor"
+                style={{
+                  padding: '10px 16px',
+                  fontSize: '0.85rem',
+                  fontWeight: 'bold',
+                  color: 'var(--accent-blue)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer'
+                }}
+              >
+                👤 Por Vendedor
+              </button>
+            </div>
             
             {(() => {
               if (loading) {
@@ -1665,7 +1709,9 @@ const Eventos = () => {
                 if (searchTerm.trim() !== '') {
                   const term = searchTerm.toLowerCase();
                   return (ev.cliente && ev.cliente.toLowerCase().includes(term)) || 
-                         (ev.telefono && ev.telefono.includes(term));
+                         (ev.telefono && ev.telefono.includes(term)) ||
+                         (ev.vendedor && ev.vendedor.toLowerCase().includes(term)) ||
+                         (ev.paquete && ev.paquete.toLowerCase().includes(term));
                 }
                 const evDate = parseDateString(ev.fecha);
                 return evDate && evDate >= start && evDate <= end;
@@ -1952,6 +1998,22 @@ const Eventos = () => {
           onAbonarEvent={(ev) => {
             setAbonosReservacion(ev);
             setShowCalendar(false);
+          }}
+          onPrintEvent={(ev) => handlePrintReservacion(ev)}
+        />
+      )}
+
+      {/* Modal de Búsqueda y Gestión de Eventos por Vendedor */}
+      {showVendedorModal && (
+        <VendedorEventsModal
+          eventosReservados={eventosReservados}
+          paquetesFirestore={paquetesFirestore}
+          onClose={() => setShowVendedorModal(false)}
+          onEditEvent={(ev) => {
+            setEditingReservacion(ev);
+          }}
+          onAbonarEvent={(ev) => {
+            setAbonosReservacion(ev);
           }}
           onPrintEvent={(ev) => handlePrintReservacion(ev)}
         />
@@ -4256,6 +4318,7 @@ const EventDetailModal = ({ event, onClose, onEdit, onAbonar, onPrint }) => {
               <div><strong>Fecha:</strong> {event.fecha ? formatFecha(event.fecha) : 'Sin fecha'} ({getDiaSemanaLabel(event.fecha)})</div>
               <div><strong>Festejad@:</strong> {event.festejado || 'Faltante'}</div>
               <div><strong>Paquete:</strong> <strong style={{ color: 'var(--text-main)' }}>{event.paquete}</strong></div>
+              <div><strong>👤 Vendedor / Asesor:</strong> <span style={{ fontWeight: 'bold', color: 'var(--accent-orange)' }}>{event.vendedor || 'Sin definir'}</span></div>
               <div><strong>Espacio Asignado:</strong> <span style={{ fontWeight: 'bold', color: 'var(--accent-blue)' }}>{event.espacio && event.espacio !== 'Sin definir' ? (event.espacio === 'salon 1' ? 'Salón 1' : event.espacio === 'salon 2' ? 'Salón 2' : event.espacio === 'salon 3' ? 'Salón 3' : event.espacio === 'Cafeteria' ? 'Cafetería' : event.espacio) : 'Sin definir'}</span></div>
               <div><strong>Saltadores:</strong> {event.saltadores || 0} niños • <strong>Adultos:</strong> {event.adultos || 0}</div>
             </div>
@@ -4464,6 +4527,688 @@ const DayEventsModal = ({ dateLabel, events, onClose, onSelectEvent, getBadgeSty
             );
           })}
         </div>
+      </div>
+    </div>
+  );
+};
+
+// Componente Modal de Búsqueda y Gestión de Eventos por Vendedor
+const VendedorEventsModal = ({
+  eventosReservados = [],
+  paquetesFirestore = [],
+  onClose,
+  onEditEvent,
+  onAbonarEvent,
+  onPrintEvent
+}) => {
+  const [selectedVendedor, setSelectedVendedor] = useState('');
+  const [filterStatus, setFilterStatus] = useState('todos'); // 'todos', 'liquidado', 'anticipo', 'pendiente'
+  const [filterPeriodo, setFilterPeriodo] = useState('todos'); // 'todos', 'proximos', 'pasados'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedEventDetail, setSelectedEventDetail] = useState(null);
+
+  // Extraer lista unificada de vendedores y estadísticas
+  const { vendedoresList, sellerStatsMap, statsGlobal } = useMemo(() => {
+    const map = {};
+    let gEventos = 0;
+    let gVenta = 0;
+    let gAbonado = 0;
+    let gSaltadores = 0;
+
+    // Inicializar con la lista de staff oficial
+    staffVendedores.forEach(s => {
+      if (s && s !== 'Sin definir') {
+        map[s] = { count: 0, totalVenta: 0, totalAbonado: 0, totalSaltadores: 0, liquidados: 0, conAnticipo: 0, sinAbono: 0 };
+      }
+    });
+
+    // Contabilizar desde eventos reales en Firestore
+    eventosReservados.forEach(ev => {
+      const v = (ev.vendedor && ev.vendedor.trim() && ev.vendedor !== 'Sin definir') 
+        ? ev.vendedor.trim() 
+        : 'Sin vendedor asignado';
+      
+      if (!map[v]) {
+        map[v] = { count: 0, totalVenta: 0, totalAbonado: 0, totalSaltadores: 0, liquidados: 0, conAnticipo: 0, sinAbono: 0 };
+      }
+      map[v].count += 1;
+      const venta = calcularTotalVenta(ev, paquetesFirestore);
+      const abonado = ev.abonos ? ev.abonos.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0) : 0;
+      map[v].totalVenta += venta;
+      map[v].totalAbonado += abonado;
+      map[v].totalSaltadores += (parseInt(ev.saltadores) || 0);
+
+      const saldo = Math.max(0, venta - abonado);
+      if (saldo <= 0) map[v].liquidados += 1;
+      else if (abonado > 0) map[v].conAnticipo += 1;
+      else map[v].sinAbono += 1;
+
+      gEventos += 1;
+      gVenta += venta;
+      gAbonado += abonado;
+      gSaltadores += (parseInt(ev.saltadores) || 0);
+    });
+
+    const list = Object.keys(map).sort((a, b) => {
+      // Ordenar primero por cantidad de eventos descendente
+      if (map[b].count !== map[a].count) return map[b].count - map[a].count;
+      return a.localeCompare(b);
+    });
+
+    return { 
+      vendedoresList: list, 
+      sellerStatsMap: map,
+      statsGlobal: {
+        totalEventos: gEventos,
+        totalVenta: gVenta,
+        totalCobrado: gAbonado,
+        saldoPendiente: Math.max(0, gVenta - gAbonado),
+        totalSaltadores: gSaltadores
+      }
+    };
+  }, [eventosReservados, paquetesFirestore]);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Filtrar eventos del vendedor seleccionado
+  const eventosDelVendedor = useMemo(() => {
+    if (!selectedVendedor) return [];
+    
+    return eventosReservados.filter(ev => {
+      const v = (ev.vendedor && ev.vendedor.trim() && ev.vendedor !== 'Sin definir') 
+        ? ev.vendedor.trim() 
+        : 'Sin vendedor asignado';
+      
+      if (v !== selectedVendedor) return false;
+
+      // Filtro de búsqueda textual
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesCliente = ev.cliente && ev.cliente.toLowerCase().includes(q);
+        const matchesTel = ev.telefono && ev.telefono.includes(q);
+        const matchesFestejado = ev.festejado && ev.festejado.toLowerCase().includes(q);
+        const matchesPaquete = ev.paquete && ev.paquete.toLowerCase().includes(q);
+        if (!matchesCliente && !matchesTel && !matchesFestejado && !matchesPaquete) return false;
+      }
+
+      // Filtro de estatus financiero
+      const totalEvento = calcularTotalVenta(ev, paquetesFirestore);
+      const totalAbonado = ev.abonos ? ev.abonos.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0) : 0;
+      const saldoRestante = Math.max(0, totalEvento - totalAbonado);
+
+      if (filterStatus === 'liquidado' && saldoRestante > 0) return false;
+      if (filterStatus === 'anticipo' && (totalAbonado === 0 || saldoRestante <= 0)) return false;
+      if (filterStatus === 'pendiente' && totalAbonado > 0) return false;
+
+      // Filtro de período cronológico
+      if (filterPeriodo !== 'todos') {
+        const evDate = parseDateString(ev.fecha);
+        if (evDate) {
+          if (filterPeriodo === 'proximos' && evDate < today) return false;
+          if (filterPeriodo === 'pasados' && evDate >= today) return false;
+        }
+      }
+
+      return true;
+    }).sort((a, b) => {
+      if (!a.fecha) return 1;
+      if (!b.fecha) return -1;
+      return new Date(b.fecha) - new Date(a.fecha);
+    });
+  }, [selectedVendedor, eventosReservados, searchQuery, filterStatus, filterPeriodo, paquetesFirestore]);
+
+  // Métricas del vendedor seleccionado
+  const statsVendedorActual = useMemo(() => {
+    if (!selectedVendedor) return null;
+    return sellerStatsMap[selectedVendedor] || {
+      count: 0,
+      totalVenta: 0,
+      totalAbonado: 0,
+      totalSaltadores: 0,
+      liquidados: 0,
+      conAnticipo: 0,
+      sinAbono: 0
+    };
+  }, [selectedVendedor, sellerStatsMap]);
+
+  return (
+    <div 
+      className="modal-overlay" 
+      style={{ 
+        display: 'flex', 
+        position: 'fixed', 
+        zIndex: 1000, 
+        left: 0, 
+        top: 0, 
+        width: '100%', 
+        height: '100%', 
+        backgroundColor: 'rgba(0,0,0,0.75)', 
+        backdropFilter: 'blur(8px)', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        padding: '20px' 
+      }}
+    >
+      <div 
+        className="neu-box animate-fade-in" 
+        style={{ 
+          padding: '25px', 
+          width: '95vw', 
+          maxWidth: '1200px', 
+          height: '92vh', 
+          background: 'var(--bg-color)', 
+          borderRadius: '20px', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          overflow: 'hidden' 
+        }}
+      >
+        {/* Cabecera del Modal */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid var(--bg-color)', paddingBottom: '15px', marginBottom: '15px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '1.8rem' }}>👤</span>
+              <h2 className="text-gradient-blue" style={{ margin: 0, fontSize: '1.6rem' }}>
+                Búsqueda y Gestión de Eventos por Vendedor
+              </h2>
+            </div>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Filtra reservaciones vendidas, analiza metas comerciales, comisiones y seguimiento de saldos.
+            </p>
+          </div>
+          <button 
+            type="button" 
+            onClick={onClose}
+            className="neu-button"
+            style={{ padding: '8px 18px', fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--accent-danger)' }}
+          >
+            Cerrar [X]
+          </button>
+        </div>
+
+        {/* Barra de Selección de Vendedor */}
+        <div className="neu-box" style={{ padding: '15px', marginBottom: '15px', background: 'var(--bg-color)' }}>
+          <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1', minWidth: '240px' }}>
+              <label style={{ fontSize: '0.78rem', fontWeight: 'bold', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                SELECCIONAR VENDEDOR:
+              </label>
+              <select
+                className="neu-input"
+                value={selectedVendedor}
+                onChange={(e) => {
+                  setSelectedVendedor(e.target.value);
+                  setSearchQuery('');
+                  setFilterStatus('todos');
+                  setFilterPeriodo('todos');
+                }}
+                style={{ width: '100%', padding: '10px 14px', fontSize: '0.95rem', fontWeight: 'bold' }}
+              >
+                <option value="">— Ver Resumen General (Todos los Vendedores) —</option>
+                {vendedoresList.map(v => {
+                  const s = sellerStatsMap[v] || { count: 0 };
+                  return (
+                    <option key={v} value={v}>
+                      👤 {v} ({s.count} {s.count === 1 ? 'evento' : 'eventos'})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            {/* Acceso Rápido en Botones / Pills para vendedores activos */}
+            <div style={{ flex: '2', minWidth: '300px' }}>
+              <label style={{ fontSize: '0.78rem', fontWeight: 'bold', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                ACCESO RÁPIDO A VENDEDORES CON EVENTOS:
+              </label>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', maxHeight: '70px', overflowY: 'auto' }}>
+                <button
+                  type="button"
+                  className={selectedVendedor === '' ? 'neu-button' : 'neu-box'}
+                  onClick={() => setSelectedVendedor('')}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '0.78rem',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    color: selectedVendedor === '' ? 'var(--accent-blue)' : 'var(--text-muted)',
+                    border: selectedVendedor === '' ? '1.5px solid var(--accent-blue)' : 'none'
+                  }}
+                >
+                  🌐 Todos ({statsGlobal.totalEventos})
+                </button>
+                {vendedoresList.filter(v => sellerStatsMap[v]?.count > 0).map(v => {
+                  const isSel = selectedVendedor === v;
+                  return (
+                    <button
+                      key={v}
+                      type="button"
+                      className={isSel ? 'neu-button' : 'neu-box'}
+                      onClick={() => setSelectedVendedor(v)}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '0.78rem',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        color: isSel ? 'var(--accent-blue)' : 'var(--text-main)',
+                        border: isSel ? '1.5px solid var(--accent-blue)' : 'none'
+                      }}
+                    >
+                      {v} <span style={{ opacity: 0.7, fontSize: '0.72rem' }}>({sellerStatsMap[v].count})</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Contenido Principal */}
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          
+          {/* CASO A: RESUMEN GENERAL (No hay vendedor individual seleccionado) */}
+          {selectedVendedor === '' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* Tarjetas de Métricas Globales */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px' }}>
+                <div className="neu-box" style={{ padding: '16px', textAlign: 'center' }}>
+                  <p style={{ margin: '0 0 5px 0', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>TOTAL EVENTOS</p>
+                  <h3 className="text-gradient-blue" style={{ margin: 0, fontSize: '1.8rem' }}>{statsGlobal.totalEventos}</h3>
+                </div>
+                <div className="neu-box" style={{ padding: '16px', textAlign: 'center' }}>
+                  <p style={{ margin: '0 0 5px 0', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>SALTADORES TOTALES</p>
+                  <h3 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--accent-orange)' }}>{statsGlobal.totalSaltadores}</h3>
+                </div>
+                <div className="neu-box" style={{ padding: '16px', textAlign: 'center' }}>
+                  <p style={{ margin: '0 0 5px 0', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>VENTA PROYECTADA</p>
+                  <h3 className="text-gradient-blue" style={{ margin: 0, fontSize: '1.8rem' }}>
+                    ${statsGlobal.totalVenta.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  </h3>
+                </div>
+                <div className="neu-box" style={{ padding: '16px', textAlign: 'center' }}>
+                  <p style={{ margin: '0 0 5px 0', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>TOTAL COBRADO</p>
+                  <h3 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--accent-success)' }}>
+                    ${statsGlobal.totalCobrado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  </h3>
+                </div>
+                <div className="neu-box" style={{ padding: '16px', textAlign: 'center' }}>
+                  <p style={{ margin: '0 0 5px 0', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>SALDO POR COBRAR</p>
+                  <h3 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--accent-danger)' }}>
+                    ${statsGlobal.saldoPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  </h3>
+                </div>
+              </div>
+
+              {/* Tabla Comparativa de Vendedores */}
+              <div className="neu-box" style={{ padding: '20px' }}>
+                <h3 className="text-gradient-blue" style={{ margin: '0 0 12px 0', fontSize: '1.2rem' }}>
+                  📊 Rendimiento por Vendedor
+                </h3>
+                <p style={{ margin: '0 0 15px 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Haz clic en "Ver Eventos" para inspeccionar todas las reservaciones asignadas a cada vendedor.
+                </p>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid var(--bg-color)', color: 'var(--text-muted)', fontSize: '0.78rem', textTransform: 'uppercase' }}>
+                        <th style={{ padding: '10px 12px' }}>#</th>
+                        <th style={{ padding: '10px 12px' }}>Vendedor</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center' }}>Eventos</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center' }}>Saltadores</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right' }}>Venta Total</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right' }}>Cobrado</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right' }}>Saldo Restante</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center' }}>Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {vendedoresList.map((v, idx) => {
+                        const s = sellerStatsMap[v] || { count: 0, totalVenta: 0, totalAbonado: 0, totalSaltadores: 0 };
+                        const saldo = Math.max(0, s.totalVenta - s.totalAbonado);
+                        return (
+                          <tr 
+                            key={v} 
+                            style={{ 
+                              borderBottom: '1px solid rgba(0,0,0,0.05)', 
+                              backgroundColor: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.02)',
+                              cursor: 'pointer'
+                            }}
+                            onClick={() => setSelectedVendedor(v)}
+                          >
+                            <td style={{ padding: '12px', fontWeight: 'bold', color: 'var(--text-muted)' }}>{idx + 1}</td>
+                            <td style={{ padding: '12px', fontWeight: 'bold', color: 'var(--text-main)' }}>
+                              👤 {v}
+                            </td>
+                            <td style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold' }}>
+                              <span style={{ 
+                                padding: '3px 8px', 
+                                borderRadius: '12px', 
+                                background: s.count > 0 ? 'rgba(59, 130, 246, 0.15)' : 'rgba(0,0,0,0.05)',
+                                color: s.count > 0 ? 'var(--accent-blue)' : 'var(--text-muted)'
+                              }}>
+                                {s.count}
+                              </span>
+                            </td>
+                            <td style={{ padding: '12px', textAlign: 'center', color: 'var(--accent-orange)', fontWeight: 'bold' }}>
+                              {s.totalSaltadores}
+                            </td>
+                            <td style={{ padding: '12px', textAlign: 'right', fontWeight: 'bold' }}>
+                              ${s.totalVenta.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td style={{ padding: '12px', textAlign: 'right', color: 'var(--accent-success)', fontWeight: 'bold' }}>
+                              ${s.totalAbonado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td style={{ padding: '12px', textAlign: 'right', color: saldo > 0 ? 'var(--accent-danger)' : 'var(--accent-success)', fontWeight: 'bold' }}>
+                              ${saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                className="neu-button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedVendedor(v);
+                                }}
+                                style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 'bold', color: 'var(--accent-blue)' }}
+                              >
+                                Ver Eventos →
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* CASO B: VENDEDOR INDIVIDUAL SELECCIONADO */}
+          {selectedVendedor !== '' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              
+              {/* Tarjetas de Métricas del Vendedor */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                <div className="neu-box" style={{ padding: '14px', textAlign: 'center' }}>
+                  <p style={{ margin: '0 0 4px 0', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>EVENTOS VENDIDOS</p>
+                  <h3 className="text-gradient-blue" style={{ margin: 0, fontSize: '1.7rem' }}>{statsVendedorActual.count}</h3>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    🟢 {statsVendedorActual.liquidados} liq. • 🟡 {statsVendedorActual.conAnticipo} ant. • 🔴 {statsVendedorActual.sinAbono} pend.
+                  </div>
+                </div>
+                <div className="neu-box" style={{ padding: '14px', textAlign: 'center' }}>
+                  <p style={{ margin: '0 0 4px 0', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>SALTADORES (NIÑOS)</p>
+                  <h3 style={{ margin: 0, fontSize: '1.7rem', color: 'var(--accent-orange)' }}>{statsVendedorActual.totalSaltadores}</h3>
+                </div>
+                <div className="neu-box" style={{ padding: '14px', textAlign: 'center' }}>
+                  <p style={{ margin: '0 0 4px 0', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>TOTAL VENTA</p>
+                  <h3 className="text-gradient-blue" style={{ margin: 0, fontSize: '1.7rem' }}>
+                    ${statsVendedorActual.totalVenta.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  </h3>
+                </div>
+                <div className="neu-box" style={{ padding: '14px', textAlign: 'center' }}>
+                  <p style={{ margin: '0 0 4px 0', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>COBRADO / ABONADO</p>
+                  <h3 style={{ margin: 0, fontSize: '1.7rem', color: 'var(--accent-success)' }}>
+                    ${statsVendedorActual.totalAbonado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  </h3>
+                </div>
+                <div className="neu-box" style={{ padding: '14px', textAlign: 'center' }}>
+                  <p style={{ margin: '0 0 4px 0', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>SALDO POR COBRAR</p>
+                  <h3 style={{ margin: 0, fontSize: '1.7rem', color: (statsVendedorActual.totalVenta - statsVendedorActual.totalAbonado) > 0 ? 'var(--accent-danger)' : 'var(--accent-success)' }}>
+                    ${Math.max(0, statsVendedorActual.totalVenta - statsVendedorActual.totalAbonado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  </h3>
+                </div>
+              </div>
+
+              {/* Filtros Internos del Vendedor */}
+              <div className="neu-box" style={{ padding: '14px 18px', display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap', background: 'var(--bg-color)' }}>
+                <div style={{ flex: '2', minWidth: '220px' }}>
+                  <input
+                    type="text"
+                    className="neu-input"
+                    placeholder="Buscar cliente, teléfono o paquete..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem' }}
+                  />
+                </div>
+
+                {/* Filtro de Estatus */}
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>ESTADO:</span>
+                  {[
+                    { key: 'todos', label: 'Todos' },
+                    { key: 'liquidado', label: '🟢 Liquidados' },
+                    { key: 'anticipo', label: '🟡 Con Anticipo' },
+                    { key: 'pendiente', label: '🔴 Sin Abono' }
+                  ].map(tab => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      className={filterStatus === tab.key ? 'neu-button' : 'neu-box'}
+                      onClick={() => setFilterStatus(tab.key)}
+                      style={{
+                        padding: '6px 10px',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        color: filterStatus === tab.key ? 'var(--accent-blue)' : 'var(--text-muted)',
+                        border: filterStatus === tab.key ? '1.5px solid var(--accent-blue)' : 'none'
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Filtro de Período */}
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>FECHA:</span>
+                  {[
+                    { key: 'todos', label: 'Todos' },
+                    { key: 'proximos', label: '📅 Próximos' },
+                    { key: 'pasados', label: '⏳ Pasados' }
+                  ].map(tab => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      className={filterPeriodo === tab.key ? 'neu-button' : 'neu-box'}
+                      onClick={() => setFilterPeriodo(tab.key)}
+                      style={{
+                        padding: '6px 10px',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        color: filterPeriodo === tab.key ? 'var(--accent-blue)' : 'var(--text-muted)',
+                        border: filterPeriodo === tab.key ? '1.5px solid var(--accent-blue)' : 'none'
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Listado de Eventos */}
+              {eventosDelVendedor.length === 0 ? (
+                <div className="neu-box" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <p style={{ fontSize: '1.1rem', margin: '0 0 8px 0' }}>No se encontraron eventos para {selectedVendedor}</p>
+                  <p style={{ fontSize: '0.85rem', margin: 0 }}>
+                    {searchQuery || filterStatus !== 'todos' || filterPeriodo !== 'todos'
+                      ? 'Prueba modificando los filtros de búsqueda o estatus.'
+                      : 'Este vendedor no tiene reservaciones registradas aún.'}
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingBottom: '20px' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 'bold', color: 'var(--text-muted)', paddingLeft: '5px' }}>
+                    Mostrando {eventosDelVendedor.length} {eventosDelVendedor.length === 1 ? 'evento vendido' : 'eventos vendidos'} por {selectedVendedor}:
+                  </div>
+                  {eventosDelVendedor.map(ev => {
+                    const totalEvento = calcularTotalVenta(ev, paquetesFirestore);
+                    const totalAbonado = ev.abonos ? ev.abonos.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0) : 0;
+                    const saldoRestante = Math.max(0, totalEvento - totalAbonado);
+                    const isLiquidado = saldoRestante <= 0;
+                    const hasAnticipo = totalAbonado > 0 && saldoRestante > 0;
+
+                    const evDate = parseDateString(ev.fecha);
+                    const isUpcoming = evDate && evDate >= today;
+
+                    return (
+                      <div 
+                        key={ev.id}
+                        className="neu-box"
+                        style={{
+                          padding: '18px 22px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '12px',
+                          background: 'var(--bg-color)',
+                          boxShadow: 'var(--shadow-inset)',
+                          borderLeft: isLiquidado 
+                            ? '5px solid var(--accent-success)' 
+                            : hasAnticipo 
+                              ? '5px solid var(--accent-warning)' 
+                              : '5px solid var(--accent-danger)'
+                        }}
+                      >
+                        {/* Cabecera de la Tarjeta */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                              <h4 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-main)' }}>
+                                {ev.cliente}
+                              </h4>
+                              {ev.festejado && (
+                                <span style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', fontWeight: 'bold' }}>
+                                  🎉 Festejad@: {ev.festejado}
+                                </span>
+                              )}
+                              <span style={{
+                                padding: '3px 8px',
+                                borderRadius: '8px',
+                                fontSize: '0.72rem',
+                                fontWeight: 'bold',
+                                background: isLiquidado ? 'rgba(16, 185, 129, 0.15)' : hasAnticipo ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                color: isLiquidado ? 'var(--accent-success)' : hasAnticipo ? 'var(--accent-warning)' : 'var(--accent-danger)'
+                              }}>
+                                {isLiquidado ? '🟢 LIQUIDADO' : hasAnticipo ? `🟡 ANTICIPO ($${totalAbonado.toLocaleString('es-MX')})` : '🔴 SIN ABONO'}
+                              </span>
+                              {isUpcoming ? (
+                                <span style={{ padding: '2px 6px', borderRadius: '6px', fontSize: '0.7rem', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--accent-blue)', fontWeight: 'bold' }}>
+                                  Próximo
+                                </span>
+                              ) : (
+                                <span style={{ padding: '2px 6px', borderRadius: '6px', fontSize: '0.7rem', background: 'rgba(107, 114, 128, 0.1)', color: 'var(--text-muted)' }}>
+                                  Pasado
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ marginTop: '4px', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                              📅 <strong>{formatFecha(ev.fecha)}</strong> ({getDiaSemanaLabel(ev.fecha)}) • 
+                              ⏰ {ev.horaLlegada || 'S/H'} a {ev.horaSalida || 'S/H'} • 
+                              📍 Salón/Espacio: <strong>{ev.espacio && ev.espacio !== 'Sin definir' ? ev.espacio : 'Sin asignar'}</strong>
+                            </div>
+                          </div>
+
+                          {/* Resumen Financiero Rápido */}
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-main)' }}>
+                              ${totalEvento.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: saldoRestante > 0 ? 'var(--accent-danger)' : 'var(--accent-success)', fontWeight: 'bold' }}>
+                              {saldoRestante > 0 ? `Resta: $${saldoRestante.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : '100% Cubierto'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Detalles de Paquete y Contacto */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', fontSize: '0.82rem', background: 'rgba(0,0,0,0.02)', padding: '10px 14px', borderRadius: '10px' }}>
+                          <div>
+                            <strong>📦 Paquete:</strong> {ev.paquete || 'Sin definir'}<br />
+                            <strong>👥 Saltadores:</strong> {ev.saltadores || 0} niños • <strong>Adultos:</strong> {ev.adultos || 0}
+                          </div>
+                          <div>
+                            <strong>📞 Teléfono:</strong> {ev.telefono ? (
+                              <a href={`tel:${ev.telefono}`} style={{ color: 'var(--accent-blue)', textDecoration: 'none', fontWeight: 'bold' }}>
+                                {ev.telefono}
+                              </a>
+                            ) : 'No registrado'}<br />
+                            <strong>✉️ Email:</strong> {ev.email || 'No registrado'}
+                          </div>
+                          <div>
+                            <strong>🍕 Catering:</strong> {Array.isArray(ev.alimentos) && ev.alimentos.length > 0 ? ev.alimentos.join(', ') : 'Pendiente'}<br />
+                            <strong>🎂 Pastel:</strong> {ev.pastel && ev.pastel !== 'Sin definir' ? ev.pastel : 'Sin pastel'}
+                          </div>
+                        </div>
+
+                        {/* Botones de Acción */}
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap', borderTop: '1px dashed var(--bg-color)', paddingTop: '10px' }}>
+                          <button
+                            type="button"
+                            className="neu-button"
+                            onClick={() => setSelectedEventDetail(ev)}
+                            style={{ padding: '6px 14px', fontSize: '0.78rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}
+                          >
+                            👁️ Ver Ficha
+                          </button>
+                          <button
+                            type="button"
+                            className="neu-button"
+                            onClick={() => {
+                              onEditEvent(ev);
+                            }}
+                            style={{ padding: '6px 14px', fontSize: '0.78rem', fontWeight: 'bold', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '5px' }}
+                          >
+                            ✏️ Editar
+                          </button>
+                          <button
+                            type="button"
+                            className="neu-button"
+                            onClick={() => {
+                              onAbonarEvent(ev);
+                            }}
+                            style={{ padding: '6px 14px', fontSize: '0.78rem', fontWeight: 'bold', color: 'var(--accent-success)', display: 'flex', alignItems: 'center', gap: '5px' }}
+                          >
+                            💰 Abonar / Liquidar
+                          </button>
+                          <button
+                            type="button"
+                            className="neu-button"
+                            onClick={() => onPrintEvent(ev)}
+                            style={{ padding: '6px 14px', fontSize: '0.78rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}
+                          >
+                            🖨️ Imprimir Ficha
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Modal de Detalle Encimado si el usuario hace clic en "Ver Ficha" */}
+        {selectedEventDetail && (
+          <EventDetailModal
+            event={selectedEventDetail}
+            onClose={() => setSelectedEventDetail(null)}
+            onEdit={(ev) => {
+              setSelectedEventDetail(null);
+              onEditEvent(ev);
+            }}
+            onAbonar={(ev) => {
+              setSelectedEventDetail(null);
+              onAbonarEvent(ev);
+            }}
+            onPrint={(ev) => onPrintEvent(ev)}
+          />
+        )}
       </div>
     </div>
   );
