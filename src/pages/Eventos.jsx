@@ -78,8 +78,47 @@ const staffVendedores = [
 ];
 
 
+// Obtiene la información del primer abono registrado (o en su defecto fecha de alta/creación)
+const getPrimerAbonoInfo = (ev) => {
+  if (!ev) return null;
 
+  // 1. Revisar si hay abonos registrados
+  if (Array.isArray(ev.abonos) && ev.abonos.length > 0) {
+    const primer = ev.abonos[0];
+    if (primer && primer.fecha) {
+      let fechaStr = String(primer.fecha).trim();
+      // Si viene en formato ISO o YYYY-MM-DD convertir a DD/MM/YYYY
+      if (fechaStr.includes('-')) {
+        const parts = fechaStr.split('-');
+        if (parts.length === 3 && parts[0].length === 4) {
+          fechaStr = `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+        }
+      }
+      return {
+        fecha: fechaStr,
+        monto: parseFloat(primer.monto) || 0,
+        metodoPago: primer.metodoPago || '',
+        esAbono: true
+      };
+    }
+  }
 
+  // 2. Si aún no tiene abonos, usar timestamp de creación
+  if (ev.timestamp) {
+    const d = new Date(typeof ev.timestamp === 'number' ? ev.timestamp : parseInt(ev.timestamp));
+    if (!isNaN(d.getTime())) {
+      const pad = (n) => String(n).padStart(2, '0');
+      return {
+        fecha: `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`,
+        monto: 0,
+        metodoPago: '',
+        esAbono: false
+      };
+    }
+  }
+
+  return null;
+};
 
 // Estimación de recaudación contable (incluyendo extras, decoración y precio base manual)
 const calcularTotalVenta = (ev, paquetesFirestore = []) => {
@@ -1774,6 +1813,28 @@ const Eventos = () => {
                                       📅 <strong>{formatFecha(ev.fecha)}</strong> <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginLeft: '4px' }}>({getDiaSemanaLabel(ev.fecha)})</span> • Paquete: <strong>{ev.paquete}</strong> • Saltadores: <strong>{ev.saltadores || 0}</strong> • Adultos: <strong>{ev.adultos || 0}</strong>
                                     </p>
                                     
+                                    {/* Fecha del primer abono / reservación */}
+                                    {(() => {
+                                      const infoAbono = getPrimerAbonoInfo(ev);
+                                      if (!infoAbono) return null;
+                                      return (
+                                        <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                          💳 {infoAbono.esAbono ? 'Primer abono:' : 'Registrado el:'}{' '}
+                                          <strong style={{ color: 'var(--accent-blue)' }}>{infoAbono.fecha}</strong>
+                                          {infoAbono.esAbono && infoAbono.monto > 0 && (
+                                            <span style={{ marginLeft: '4px', color: 'var(--accent-success)', fontWeight: 'bold' }}>
+                                              (${infoAbono.monto.toLocaleString('es-MX', { minimumFractionDigits: 2 })})
+                                            </span>
+                                          )}
+                                          {ev.vendedor && ev.vendedor !== 'Sin definir' && (
+                                            <span style={{ marginLeft: '8px', color: 'var(--text-muted)' }}>
+                                              • Vendedor: <strong style={{ color: 'var(--accent-orange)' }}>{ev.vendedor}</strong>
+                                            </span>
+                                          )}
+                                        </p>
+                                      );
+                                    })()}
+
                                     {/* Cotización y Estado de Abonos */}
                                     <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                                       <div style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>
@@ -4315,7 +4376,26 @@ const EventDetailModal = ({ event, onClose, onEdit, onAbonar, onPrint }) => {
 
             <h4 style={{ margin: '15px 0 12px 0', color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.85rem' }}>🎉 Detalles de la Fiesta</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.85rem' }}>
-              <div><strong>Fecha:</strong> {event.fecha ? formatFecha(event.fecha) : 'Sin fecha'} ({getDiaSemanaLabel(event.fecha)})</div>
+              <div><strong>Fecha del Evento:</strong> {event.fecha ? formatFecha(event.fecha) : 'Sin fecha'} ({getDiaSemanaLabel(event.fecha)})</div>
+              {(() => {
+                const infoAbono = getPrimerAbonoInfo(event);
+                if (!infoAbono) return null;
+                return (
+                  <div style={{ background: 'rgba(59, 130, 246, 0.08)', padding: '6px 10px', borderRadius: '8px', borderLeft: '3px solid var(--accent-blue)', margin: '2px 0' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      🗓️ {infoAbono.esAbono ? 'Día del Primer Abono (Reservación):' : 'Fecha de Registro:'}
+                    </span>
+                    <div style={{ fontSize: '0.92rem', fontWeight: 'bold', color: 'var(--accent-blue)', marginTop: '2px' }}>
+                      {infoAbono.fecha}
+                      {infoAbono.esAbono && infoAbono.monto > 0 && (
+                        <span style={{ color: 'var(--accent-success)', marginLeft: '6px', fontSize: '0.82rem' }}>
+                          (${infoAbono.monto.toLocaleString('es-MX', { minimumFractionDigits: 2 })})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
               <div><strong>Festejad@:</strong> {event.festejado || 'Faltante'}</div>
               <div><strong>Paquete:</strong> <strong style={{ color: 'var(--text-main)' }}>{event.paquete}</strong></div>
               <div><strong>👤 Vendedor / Asesor:</strong> <span style={{ fontWeight: 'bold', color: 'var(--accent-orange)' }}>{event.vendedor || 'Sin definir'}</span></div>
@@ -4373,6 +4453,29 @@ const EventDetailModal = ({ event, onClose, onEdit, onAbonar, onPrint }) => {
                     <strong>${parseFloat(ext.monto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
                   </div>
                 ) : null
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Desglose de Abonos Registrados */}
+        {Array.isArray(event.abonos) && event.abonos.length > 0 && (
+          <div style={{ marginBottom: '20px', background: 'rgba(0,0,0,0.02)', padding: '12px 16px', borderRadius: '10px', border: '1px solid var(--bg-color)' }}>
+            <h4 style={{ margin: '0 0 8px 0', color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+              💳 Historial de Abonos ({event.abonos.length})
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {event.abonos.map((ab, idx) => (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', padding: '4px 0', borderBottom: idx < event.abonos.length - 1 ? '1px dashed rgba(0,0,0,0.06)' : 'none' }}>
+                  <span>
+                    <strong>{idx === 0 ? '⭐ 1er Abono (Reservación):' : `Abono #${idx + 1}:`}</strong>{' '}
+                    <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{ab.fecha}</span>
+                    <span style={{ color: 'var(--text-muted)', marginLeft: '6px', fontSize: '0.75rem' }}>({ab.metodoPago || 'Efectivo'})</span>
+                  </span>
+                  <strong style={{ color: 'var(--accent-success)' }}>
+                    ${parseFloat(ab.monto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  </strong>
+                </div>
               ))}
             </div>
           </div>
@@ -4507,6 +4610,15 @@ const DayEventsModal = ({ dateLabel, events, onClose, onSelectEvent, getBadgeSty
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                     🏡 Espacio: {ev.espacio && ev.espacio !== 'Sin definir' ? (ev.espacio === 'salon 1' ? 'Salón 1' : ev.espacio === 'salon 2' ? 'Salón 2' : ev.espacio === 'salon 3' ? 'Salón 3' : ev.espacio === 'Cafeteria' ? 'Cafetería' : ev.espacio) : 'Sin asignar'}
                   </span>
+                  {(() => {
+                    const infoAbono = getPrimerAbonoInfo(ev);
+                    if (!infoAbono) return null;
+                    return (
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        💳 {infoAbono.esAbono ? '1er Abono:' : 'Registro:'} <strong style={{ color: 'var(--accent-blue)' }}>{infoAbono.fecha}</strong>
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
                   <span style={{ 
@@ -4629,7 +4741,9 @@ const VendedorEventsModal = ({
         const matchesTel = ev.telefono && ev.telefono.includes(q);
         const matchesFestejado = ev.festejado && ev.festejado.toLowerCase().includes(q);
         const matchesPaquete = ev.paquete && ev.paquete.toLowerCase().includes(q);
-        if (!matchesCliente && !matchesTel && !matchesFestejado && !matchesPaquete) return false;
+        const infoAbono = getPrimerAbonoInfo(ev);
+        const matchesFechaAbono = infoAbono && infoAbono.fecha.includes(q);
+        if (!matchesCliente && !matchesTel && !matchesFestejado && !matchesPaquete && !matchesFechaAbono) return false;
       }
 
       // Filtro de estatus financiero
@@ -4969,7 +5083,7 @@ const VendedorEventsModal = ({
                   <input
                     type="text"
                     className="neu-input"
-                    placeholder="Buscar cliente, teléfono o paquete..."
+                    placeholder="Buscar cliente, teléfono, paquete o fecha de abono..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem' }}
@@ -5112,6 +5226,41 @@ const VendedorEventsModal = ({
                               ⏰ {ev.horaLlegada || 'S/H'} a {ev.horaSalida || 'S/H'} • 
                               📍 Salón/Espacio: <strong>{ev.espacio && ev.espacio !== 'Sin definir' ? ev.espacio : 'Sin asignar'}</strong>
                             </div>
+
+                            {/* Día del Primer Abono / Fecha de Reservación */}
+                            {(() => {
+                              const infoAbono = getPrimerAbonoInfo(ev);
+                              if (!infoAbono) return null;
+                              return (
+                                <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                  <span style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '4px 10px',
+                                    borderRadius: '8px',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 'bold',
+                                    background: infoAbono.esAbono ? 'rgba(59, 130, 246, 0.15)' : 'rgba(107, 114, 128, 0.12)',
+                                    color: infoAbono.esAbono ? 'var(--accent-blue)' : 'var(--text-muted)',
+                                    border: infoAbono.esAbono ? '1px solid rgba(59, 130, 246, 0.35)' : '1px dashed rgba(107, 114, 128, 0.3)'
+                                  }}>
+                                    💳 <span>{infoAbono.esAbono ? 'Día de Primer Abono:' : 'Fecha de Registro:'}</span>
+                                    <strong style={{ color: infoAbono.esAbono ? 'var(--text-main)' : 'inherit', fontSize: '0.84rem' }}>{infoAbono.fecha}</strong>
+                                    {infoAbono.esAbono && infoAbono.monto > 0 && (
+                                      <span style={{ color: 'var(--accent-success)', marginLeft: '3px' }}>
+                                        (${infoAbono.monto.toLocaleString('es-MX', { minimumFractionDigits: 2 })})
+                                      </span>
+                                    )}
+                                  </span>
+                                  {infoAbono.esAbono && ev.abonos && ev.abonos.length > 1 && (
+                                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                                      • {ev.abonos.length} abonos registrados
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
 
                           {/* Resumen Financiero Rápido */}
@@ -5129,7 +5278,20 @@ const VendedorEventsModal = ({
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', fontSize: '0.82rem', background: 'rgba(0,0,0,0.02)', padding: '10px 14px', borderRadius: '10px' }}>
                           <div>
                             <strong>📦 Paquete:</strong> {ev.paquete || 'Sin definir'}<br />
-                            <strong>👥 Saltadores:</strong> {ev.saltadores || 0} niños • <strong>Adultos:</strong> {ev.adultos || 0}
+                            <strong>👥 Saltadores:</strong> {ev.saltadores || 0} niños • <strong>Adultos:</strong> {ev.adultos || 0}<br />
+                            {(() => {
+                              const infoAbono = getPrimerAbonoInfo(ev);
+                              return (
+                                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                  🗓️ <strong>Primer Abono:</strong>{' '}
+                                  {infoAbono && infoAbono.esAbono ? (
+                                    <span style={{ color: 'var(--accent-blue)', fontWeight: 'bold' }}>{infoAbono.fecha}</span>
+                                  ) : (
+                                    <span style={{ color: 'var(--accent-danger)' }}>Sin abono aún</span>
+                                  )}
+                                </span>
+                              );
+                            })()}
                           </div>
                           <div>
                             <strong>📞 Teléfono:</strong> {ev.telefono ? (
@@ -5327,7 +5489,15 @@ const PDFReservacionPrint = ({ event }) => {
               <td style={{ fontWeight: 'bold', padding: '2px 0' }}>Correo electrónico:</td>
               <td style={{ padding: '2px 0' }}>{event.email || 'N/A'}</td>
               <td style={{ fontWeight: 'bold', padding: '2px 0' }}>Fecha de reservación:</td>
-              <td style={{ padding: '2px 0' }}>{formatTimestamp(event.timestamp)}</td>
+              <td style={{ padding: '2px 0' }}>
+                {(() => {
+                  const infoAbono = getPrimerAbonoInfo(event);
+                  if (infoAbono) {
+                    return `${infoAbono.fecha}${infoAbono.esAbono ? ' (1er abono)' : ''}`;
+                  }
+                  return formatTimestamp(event.timestamp);
+                })()}
+              </td>
             </tr>
             <tr>
               <td style={{ fontWeight: 'bold', padding: '2px 0' }}>Dirección:</td>
