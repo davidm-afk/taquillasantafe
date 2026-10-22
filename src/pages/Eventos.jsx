@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Sidebar from '../components/Sidebar';
 import ArqueoModal from '../components/ArqueoModal';
@@ -7,17 +7,35 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../config/firebase';
 import { collection, addDoc, onSnapshot, query, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 
-// Auxiliar: Analizar cadenas de fecha en ambos formatos (dd/mm/yyyy o yyyy-mm-dd)
+// Auxiliar: Analizar cadenas de fecha en ambos formatos (dd/mm/yyyy o yyyy-mm-dd o ISO)
 const parseDateString = (fechaStr) => {
-  if (!fechaStr || typeof fechaStr !== 'string') return null;
-  if (fechaStr.includes('/')) {
-    const [day, month, year] = fechaStr.split('/').map(Number);
-    return new Date(year, month - 1, day);
-  } else if (fechaStr.includes('-')) {
-    const [year, month, day] = fechaStr.split('-').map(Number);
-    return new Date(year, month - 1, day);
+  if (!fechaStr) return null;
+  if (fechaStr instanceof Date) return isNaN(fechaStr.getTime()) ? null : fechaStr;
+  if (typeof fechaStr !== 'string') return null;
+  const str = fechaStr.trim();
+  if (str.includes('/')) {
+    const parts = str.split('/').map(Number);
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      if (year && month && day) return new Date(year, month - 1, day);
+    }
+  } else if (str.includes('-')) {
+    if (str.includes('T')) {
+      const d = new Date(str);
+      if (!isNaN(d.getTime())) return d;
+    }
+    const cleanStr = str.split(' ')[0];
+    const parts = cleanStr.split('-').map(Number);
+    if (parts.length === 3) {
+      if (parts[0] > 1000) {
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+      } else {
+        return new Date(parts[2], parts[1] - 1, parts[0]);
+      }
+    }
   }
-  return null;
+  const fallback = new Date(str);
+  return isNaN(fallback.getTime()) ? null : fallback;
 };
 
 // Formateador de fecha a dd/mm/yyyy para visualización de alta fidelidad incluyendo el día de la semana
@@ -77,28 +95,72 @@ const staffVendedores = [
   'Sin definir', 'Isaac', 'Jeshua', 'Fernanda', 'David', 'Tania', 'Monserrat', 'Brigitte', 'Javier', 'Valentina', 'Sandy', 'Yunn'
 ];
 
+// Nombres de meses en español para filtros
+const mesesNombres = [
+  { index: 0, nombre: 'Enero' },
+  { index: 1, nombre: 'Febrero' },
+  { index: 2, nombre: 'Marzo' },
+  { index: 3, nombre: 'Abril' },
+  { index: 4, nombre: 'Mayo' },
+  { index: 5, nombre: 'Junio' },
+  { index: 6, nombre: 'Julio' },
+  { index: 7, nombre: 'Agosto' },
+  { index: 8, nombre: 'Septiembre' },
+  { index: 9, nombre: 'Octubre' },
+  { index: 10, nombre: 'Noviembre' },
+  { index: 11, nombre: 'Diciembre' }
+];
 
 // Obtiene la información del primer abono registrado (o en su defecto fecha de alta/creación)
 const getPrimerAbonoInfo = (ev) => {
   if (!ev) return null;
 
-  // 1. Revisar si hay abonos registrados
+  // 1. Revisar si hay abonos registrados y localizar el primer abono por fecha más antigua
   if (Array.isArray(ev.abonos) && ev.abonos.length > 0) {
-    const primer = ev.abonos[0];
-    if (primer && primer.fecha) {
-      let fechaStr = String(primer.fecha).trim();
-      // Si viene en formato ISO o YYYY-MM-DD convertir a DD/MM/YYYY
+    let primerAbono = null;
+    let earliestDate = null;
+
+    for (const ab of ev.abonos) {
+      if (ab && ab.fecha) {
+        const d = parseDateString(String(ab.fecha).trim());
+        if (d && !isNaN(d.getTime())) {
+          if (!earliestDate || d.getTime() < earliestDate.getTime()) {
+            earliestDate = d;
+            primerAbono = ab;
+          }
+        }
+      }
+    }
+
+    if (primerAbono && primerAbono.fecha) {
+      let fechaStr = String(primerAbono.fecha).trim();
       if (fechaStr.includes('-')) {
-        const parts = fechaStr.split('-');
-        if (parts.length === 3 && parts[0].length === 4) {
-          fechaStr = `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+        const parts = fechaStr.split('T')[0].split('-');
+        if (parts.length === 3) {
+          if (parts[0].length === 4) {
+            fechaStr = `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+          } else {
+            fechaStr = `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2]}`;
+          }
         }
       }
       return {
         fecha: fechaStr,
+        monto: parseFloat(primerAbono.monto) || 0,
+        metodoPago: primerAbono.metodoPago || '',
+        esAbono: true,
+        dateObj: earliestDate
+      };
+    }
+
+    const primer = ev.abonos[0];
+    if (primer) {
+      return {
+        fecha: String(primer.fecha || 'Sin fecha'),
         monto: parseFloat(primer.monto) || 0,
         metodoPago: primer.metodoPago || '',
-        esAbono: true
+        esAbono: true,
+        dateObj: parseDateString(primer.fecha)
       };
     }
   }
@@ -108,15 +170,28 @@ const getPrimerAbonoInfo = (ev) => {
     const d = new Date(typeof ev.timestamp === 'number' ? ev.timestamp : parseInt(ev.timestamp));
     if (!isNaN(d.getTime())) {
       const pad = (n) => String(n).padStart(2, '0');
+      d.setHours(0, 0, 0, 0);
       return {
         fecha: `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`,
         monto: 0,
         metodoPago: '',
-        esAbono: false
+        esAbono: false,
+        dateObj: d
       };
     }
   }
 
+  return null;
+};
+
+// Obtiene el objeto Date (medianoche local) de la fecha de reservación / primer abono
+const getPrimerAbonoDateObj = (ev) => {
+  const info = getPrimerAbonoInfo(ev);
+  if (info && info.dateObj) {
+    const d = new Date(info.dateObj);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
   return null;
 };
 
@@ -139,10 +214,27 @@ const calcularTotalVenta = (ev, paquetesFirestore = []) => {
     
     if (paqueteDb && paqueteDb.tipoCobro === 'por_saltador') {
       totalBase = saltadoresTotales * basePrice;
-    } else {
+    } else if (paqueteDb) {
       const extraCount = parseInt(ev.saltadoresExtra) || 0;
       const precioExtra = parseFloat(ev.precioSaltadorExtra) || 0;
       totalBase = basePrice + (extraCount * precioExtra);
+    } else {
+      // Fallback para paquetes estándar
+      if (ev.paquete === 'Grupos - Paquete A') {
+        totalBase = saltadoresTotales * 280;
+      } else if (ev.paquete === 'Grupos - Paquete B') {
+        totalBase = saltadoresTotales * 380;
+      } else if (ev.paquete === 'Grupos - Paquete C') {
+        totalBase = saltadoresTotales * 460;
+      } else if (ev.paquete === 'NTP $6299') {
+        totalBase = 6299;
+      } else if (ev.paquete === 'NTP $6100') {
+        totalBase = 6100;
+      } else {
+        const extraCount = parseInt(ev.saltadoresExtra) || 0;
+        const precioExtra = parseFloat(ev.precioSaltadorExtra) || 0;
+        totalBase = basePrice + (extraCount * precioExtra);
+      }
     }
   }
 
@@ -850,7 +942,7 @@ const Eventos = () => {
                           } else {
                             setPaquete(val);
                           }
-                          if (val === 'VIP' || val === 'Platinum') {
+                          if (val === 'VIP' || val === 'Platinum' || val?.includes('VIP') || val?.includes('Platinum')) {
                             setDecoracionTipo('Neon');
                           } else {
                             setDecoracionTipo('No incluye');
@@ -864,6 +956,9 @@ const Eventos = () => {
                         {paquetesFirestore.map(p => (
                           <option key={p.id} value={p.nombre}>{p.nombre}{p.subtitle ? ` — ${p.subtitle}` : ''}</option>
                         ))}
+                        {!paquetesFirestore.some(p => p.nombre === 'Grupos') && (
+                          <option value="Grupos">Grupos</option>
+                        )}
                         <option value="Otro (Elegir manualmente)">Nombre a elegir manualmente</option>
                       </select>
                     </div>
@@ -2095,7 +2190,29 @@ const Eventos = () => {
 
 // Componente Modal de Edición de Reservación
 const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestore, onClose }) => {
-  const isEstandar = paquetesEstandar.includes(reservacion.paquete);
+  // Buscar si coincide con un paquete administrable en Firestore (por nombre exacto o case-insensitive)
+  const paqueteEnFirestore = (paquetesFirestore || []).find(
+    p => p.nombre === reservacion.paquete || p.nombre?.trim().toLowerCase() === (reservacion.paquete || '').trim().toLowerCase()
+  );
+
+  const esGrupos = Boolean(reservacion.paquete && reservacion.paquete.startsWith('Grupos'));
+  const esEstandar = Boolean(paquetesEstandar.some(p => p.toLowerCase() === (reservacion.paquete || '').trim().toLowerCase()));
+
+  // Si está en Firestore, conservar el nombre oficial de Firestore
+  // Si es Grupos o estándar, conservar el paquete original
+  // Si no tiene paquete o es 'Sin definir', 'Sin definir'
+  // Si no coincide con ninguno, es un paquete manual ('Otro (Elegir manualmente)')
+  const initialPaquete = paqueteEnFirestore
+    ? paqueteEnFirestore.nombre
+    : (esGrupos || esEstandar)
+      ? reservacion.paquete
+      : (!reservacion.paquete || reservacion.paquete === 'Sin definir')
+        ? 'Sin definir'
+        : 'Otro (Elegir manualmente)';
+
+  const initialCustomPaquete = initialPaquete === 'Otro (Elegir manualmente)'
+    ? (reservacion.paquete || '')
+    : '';
 
   const [cliente, setCliente] = useState(reservacion.cliente || '');
   const [telefono, setTelefono] = useState(reservacion.telefono || '');
@@ -2116,8 +2233,8 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
   const [saltadores, setSaltadores] = useState(reservacion.saltadores || '');
   const [saltadoresExtra, setSaltadoresExtra] = useState(reservacion.saltadoresExtra || '');
   const [precioSaltadorExtra, setPrecioSaltadorExtra] = useState(reservacion.precioSaltadorExtra || '');
-  const [paquete, setPaquete] = useState(isEstandar ? (reservacion.paquete || 'Sin definir') : 'Otro (Elegir manualmente)');
-  const [customPaquete, setCustomPaquete] = useState(isEstandar ? '' : (reservacion.paquete || ''));
+  const [paquete, setPaquete] = useState(initialPaquete);
+  const [customPaquete, setCustomPaquete] = useState(initialCustomPaquete);
   const [espacio, setEspacio] = useState(reservacion.espacio || 'Sin definir'); // Nuevo campo en edición
   
   let initialMitad1 = reservacion.pizzaMitad1 || 'Pepperoni';
@@ -2339,7 +2456,19 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
       precioCalculadoModal = baseP + (extraCount * precioExtra);
     }
   } else {
-    precioCalculadoModal = (parseInt(saltadores) || 0) * 350;
+    if (paquete === 'Grupos - Paquete A') {
+      precioCalculadoModal = (parseInt(saltadores) || 0) * 280;
+    } else if (paquete === 'Grupos - Paquete B') {
+      precioCalculadoModal = (parseInt(saltadores) || 0) * 380;
+    } else if (paquete === 'Grupos - Paquete C') {
+      precioCalculadoModal = (parseInt(saltadores) || 0) * 460;
+    } else if (paquete === 'NTP $6299') {
+      precioCalculadoModal = 6299;
+    } else if (paquete === 'NTP $6100') {
+      precioCalculadoModal = 6100;
+    } else {
+      precioCalculadoModal = (parseInt(saltadores) || 0) * 350;
+    }
   }
 
   const totalExtrasModal = extras.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0);
@@ -2475,7 +2604,7 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
                     } else {
                       setPaquete(val);
                     }
-                    if (val === 'VIP' || val === 'Platinum') {
+                    if (val === 'VIP' || val === 'Platinum' || val?.includes('VIP') || val?.includes('Platinum')) {
                       setDecoracionTipo('Neon');
                     } else {
                       setDecoracionTipo('No incluye');
@@ -2489,6 +2618,12 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
                   {paquetesFirestore.map(p => (
                     <option key={p.id} value={p.nombre}>{p.nombre}{p.subtitle ? ` — ${p.subtitle}` : ''}</option>
                   ))}
+                  {!paquetesFirestore.some(p => p.nombre === 'Grupos') && (
+                    <option value="Grupos">Grupos</option>
+                  )}
+                  {paquete && paquete !== 'Sin definir' && paquete !== 'Otro (Elegir manualmente)' && !paquete.startsWith('Grupos') && !paquetesFirestore.some(p => p.nombre === paquete) && (
+                    <option value={paquete}>{paquete}</option>
+                  )}
                   <option value="Otro (Elegir manualmente)">Nombre a elegir manualmente</option>
                 </select>
               </div>
@@ -4659,7 +4794,73 @@ const VendedorEventsModal = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEventDetail, setSelectedEventDetail] = useState(null);
 
-  // Extraer lista unificada de vendedores y estadísticas
+  // Estados para filtrar eventos por fecha de reservación (fecha de primer abono)
+  const [filtroTipoFechaAbono, setFiltroTipoFechaAbono] = useState('todos'); // 'todos', 'mes', 'rango'
+  const [filtroMesAbono, setFiltroMesAbono] = useState(() => String(new Date().getMonth())); // 0 a 11
+  const [filtroAnoAbono, setFiltroAnoAbono] = useState(() => String(new Date().getFullYear())); // '2026', 'todos', etc.
+  const [fechaInicioAbono, setFechaInicioAbono] = useState(''); // 'YYYY-MM-DD'
+  const [fechaFinAbono, setFechaFinAbono] = useState(''); // 'YYYY-MM-DD'
+
+  // Función para evaluar si un evento coincide con el filtro de fecha de reservación (primer abono)
+  const coincideFiltroFechaAbono = useCallback((ev) => {
+    if (filtroTipoFechaAbono === 'todos') return true;
+
+    const abonoDate = getPrimerAbonoDateObj(ev);
+    if (!abonoDate) return false;
+
+    if (filtroTipoFechaAbono === 'mes') {
+      if (filtroMesAbono !== 'todos') {
+        if (abonoDate.getMonth() !== parseInt(filtroMesAbono, 10)) return false;
+      }
+      if (filtroAnoAbono !== 'todos') {
+        if (abonoDate.getFullYear() !== parseInt(filtroAnoAbono, 10)) return false;
+      }
+      return true;
+    }
+
+    if (filtroTipoFechaAbono === 'rango') {
+      if (fechaInicioAbono) {
+        const startParts = fechaInicioAbono.split('-').map(Number);
+        if (startParts.length === 3) {
+          const startDate = new Date(startParts[0], startParts[1] - 1, startParts[2], 0, 0, 0);
+          if (abonoDate < startDate) return false;
+        }
+      }
+      if (fechaFinAbono) {
+        const endParts = fechaFinAbono.split('-').map(Number);
+        if (endParts.length === 3) {
+          const endDate = new Date(endParts[0], endParts[1] - 1, endParts[2], 23, 59, 59, 999);
+          if (abonoDate > endDate) return false;
+        }
+      }
+      return true;
+    }
+
+    return true;
+  }, [filtroTipoFechaAbono, filtroMesAbono, filtroAnoAbono, fechaInicioAbono, fechaFinAbono]);
+
+  // Etiqueta legible del filtro de fecha actual
+  const getFiltroFechaLabel = useCallback(() => {
+    if (filtroTipoFechaAbono === 'todos') return null;
+    if (filtroTipoFechaAbono === 'mes') {
+      const mesNombre = filtroMesAbono !== 'todos' ? mesesNombres[parseInt(filtroMesAbono, 10)]?.nombre : 'Todos los meses';
+      const anoTexto = filtroAnoAbono !== 'todos' ? filtroAnoAbono : 'todos los años';
+      return `${mesNombre} ${anoTexto}`;
+    }
+    if (filtroTipoFechaAbono === 'rango') {
+      if (fechaInicioAbono && fechaFinAbono) {
+        return `del ${formatFecha(fechaInicioAbono)} al ${formatFecha(fechaFinAbono)}`;
+      } else if (fechaInicioAbono) {
+        return `desde ${formatFecha(fechaInicioAbono)}`;
+      } else if (fechaFinAbono) {
+        return `hasta ${formatFecha(fechaFinAbono)}`;
+      }
+      return 'Rango de fechas';
+    }
+    return null;
+  }, [filtroTipoFechaAbono, filtroMesAbono, filtroAnoAbono, fechaInicioAbono, fechaFinAbono]);
+
+  // Extraer lista unificada de vendedores y estadísticas (con soporte para filtro por fecha de abono)
   const { vendedoresList, sellerStatsMap, statsGlobal } = useMemo(() => {
     const map = {};
     let gEventos = 0;
@@ -4676,6 +4877,9 @@ const VendedorEventsModal = ({
 
     // Contabilizar desde eventos reales en Firestore
     eventosReservados.forEach(ev => {
+      // Aplicar filtro de fecha de reservación (primer abono)
+      if (!coincideFiltroFechaAbono(ev)) return;
+
       const v = (ev.vendedor && ev.vendedor.trim() && ev.vendedor !== 'Sin definir') 
         ? ev.vendedor.trim() 
         : 'Sin vendedor asignado';
@@ -4718,7 +4922,7 @@ const VendedorEventsModal = ({
         totalSaltadores: gSaltadores
       }
     };
-  }, [eventosReservados, paquetesFirestore]);
+  }, [eventosReservados, paquetesFirestore, coincideFiltroFechaAbono]);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -4733,6 +4937,9 @@ const VendedorEventsModal = ({
         : 'Sin vendedor asignado';
       
       if (v !== selectedVendedor) return false;
+
+      // Filtro de fecha de reservación (fecha de primer abono)
+      if (!coincideFiltroFechaAbono(ev)) return false;
 
       // Filtro de búsqueda textual
       if (searchQuery.trim()) {
@@ -4755,7 +4962,7 @@ const VendedorEventsModal = ({
       if (filterStatus === 'anticipo' && (totalAbonado === 0 || saldoRestante <= 0)) return false;
       if (filterStatus === 'pendiente' && totalAbonado > 0) return false;
 
-      // Filtro de período cronológico
+      // Filtro de período cronológico (fecha del evento/fiesta)
       if (filterPeriodo !== 'todos') {
         const evDate = parseDateString(ev.fecha);
         if (evDate) {
@@ -4766,11 +4973,14 @@ const VendedorEventsModal = ({
 
       return true;
     }).sort((a, b) => {
-      if (!a.fecha) return 1;
-      if (!b.fecha) return -1;
-      return new Date(b.fecha) - new Date(a.fecha);
+      // Ordenar por fecha de primer abono (más reciente primero), o fallback a fecha del evento
+      const dateA = getPrimerAbonoDateObj(a) || parseDateString(a.fecha);
+      const dateB = getPrimerAbonoDateObj(b) || parseDateString(b.fecha);
+      const timeA = dateA ? dateA.getTime() : 0;
+      const timeB = dateB ? dateB.getTime() : 0;
+      return timeB - timeA;
     });
-  }, [selectedVendedor, eventosReservados, searchQuery, filterStatus, filterPeriodo, paquetesFirestore]);
+  }, [selectedVendedor, eventosReservados, searchQuery, filterStatus, filterPeriodo, coincideFiltroFechaAbono, paquetesFirestore]);
 
   // Métricas del vendedor seleccionado
   const statsVendedorActual = useMemo(() => {
@@ -4916,6 +5126,295 @@ const VendedorEventsModal = ({
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Barra de Filtro por Fecha de Reservación (Primer Abono) */}
+        <div 
+          className="neu-box animate-fade-in" 
+          style={{ 
+            padding: '12px 18px', 
+            marginBottom: '15px', 
+            background: 'var(--bg-color)', 
+            borderRadius: '16px',
+            border: filtroTipoFechaAbono !== 'todos' ? '1.5px solid var(--accent-blue)' : '1px solid rgba(255,255,255,0.06)'
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.2rem' }}>💳</span>
+              <span style={{ fontSize: '0.82rem', fontWeight: 'bold', color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Filtrar por Fecha de Reservación (Primer Abono):
+              </span>
+              {filtroTipoFechaAbono !== 'todos' && (
+                <span style={{ 
+                  padding: '2px 8px', 
+                  borderRadius: '6px', 
+                  fontSize: '0.72rem', 
+                  fontWeight: 'bold', 
+                  background: 'rgba(59, 130, 246, 0.15)', 
+                  color: 'var(--accent-blue)' 
+                }}>
+                  Filtro activo: {getFiltroFechaLabel()}
+                </span>
+              )}
+            </div>
+
+            {filtroTipoFechaAbono !== 'todos' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFiltroTipoFechaAbono('todos');
+                  setFechaInicioAbono('');
+                  setFechaFinAbono('');
+                }}
+                className="neu-button"
+                style={{ padding: '4px 10px', fontSize: '0.75rem', color: 'var(--accent-danger)', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                ✕ Ver Todos los Tiempos
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginTop: '10px' }}>
+            {/* Botones de Modalidad */}
+            <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.04)', padding: '3px', borderRadius: '8px' }}>
+              <button
+                type="button"
+                className={filtroTipoFechaAbono === 'todos' ? 'neu-button' : 'neu-box'}
+                onClick={() => setFiltroTipoFechaAbono('todos')}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '0.76rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  borderRadius: '6px',
+                  color: filtroTipoFechaAbono === 'todos' ? 'var(--accent-blue)' : 'var(--text-muted)',
+                  border: filtroTipoFechaAbono === 'todos' ? '1.5px solid var(--accent-blue)' : 'none'
+                }}
+              >
+                🌐 Todos
+              </button>
+              <button
+                type="button"
+                className={filtroTipoFechaAbono === 'mes' ? 'neu-button' : 'neu-box'}
+                onClick={() => {
+                  setFiltroTipoFechaAbono('mes');
+                  if (filtroMesAbono === 'todos') setFiltroMesAbono(String(new Date().getMonth()));
+                }}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '0.76rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  borderRadius: '6px',
+                  color: filtroTipoFechaAbono === 'mes' ? 'var(--accent-blue)' : 'var(--text-muted)',
+                  border: filtroTipoFechaAbono === 'mes' ? '1.5px solid var(--accent-blue)' : 'none'
+                }}
+              >
+                📅 Por Mes
+              </button>
+              <button
+                type="button"
+                className={filtroTipoFechaAbono === 'rango' ? 'neu-button' : 'neu-box'}
+                onClick={() => setFiltroTipoFechaAbono('rango')}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '0.76rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  borderRadius: '6px',
+                  color: filtroTipoFechaAbono === 'rango' ? 'var(--accent-blue)' : 'var(--text-muted)',
+                  border: filtroTipoFechaAbono === 'rango' ? '1.5px solid var(--accent-blue)' : 'none'
+                }}
+              >
+                🗓️ Rango de Fechas
+              </button>
+            </div>
+
+            {/* Accesos rápidos solicitados */}
+            <div style={{ display: 'flex', gap: '5px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className={(filtroTipoFechaAbono === 'mes' && filtroMesAbono === '8') ? 'neu-button' : 'neu-box'}
+                onClick={() => {
+                  setFiltroTipoFechaAbono('mes');
+                  setFiltroMesAbono('8');
+                  setFiltroAnoAbono(String(new Date().getFullYear()));
+                }}
+                title="Filtrar eventos reservados en Septiembre"
+                style={{
+                  padding: '5px 11px',
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  borderRadius: '6px',
+                  color: (filtroTipoFechaAbono === 'mes' && filtroMesAbono === '8') ? 'var(--accent-blue)' : 'var(--text-main)',
+                  border: (filtroTipoFechaAbono === 'mes' && filtroMesAbono === '8') ? '1.5px solid var(--accent-blue)' : 'none'
+                }}
+              >
+                🍂 Septiembre
+              </button>
+
+              <button
+                type="button"
+                className={(filtroTipoFechaAbono === 'mes' && filtroMesAbono === '9') ? 'neu-button' : 'neu-box'}
+                onClick={() => {
+                  setFiltroTipoFechaAbono('mes');
+                  setFiltroMesAbono('9');
+                  setFiltroAnoAbono(String(new Date().getFullYear()));
+                }}
+                title="Filtrar eventos reservados en Octubre"
+                style={{
+                  padding: '5px 11px',
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  borderRadius: '6px',
+                  color: (filtroTipoFechaAbono === 'mes' && filtroMesAbono === '9') ? 'var(--accent-blue)' : 'var(--text-main)',
+                  border: (filtroTipoFechaAbono === 'mes' && filtroMesAbono === '9') ? '1.5px solid var(--accent-blue)' : 'none'
+                }}
+              >
+                🎃 Octubre
+              </button>
+
+              <button
+                type="button"
+                className={(filtroTipoFechaAbono === 'mes' && filtroMesAbono === String(new Date().getMonth())) ? 'neu-button' : 'neu-box'}
+                onClick={() => {
+                  setFiltroTipoFechaAbono('mes');
+                  setFiltroMesAbono(String(new Date().getMonth()));
+                  setFiltroAnoAbono(String(new Date().getFullYear()));
+                }}
+                style={{
+                  padding: '5px 11px',
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  borderRadius: '6px',
+                  color: (filtroTipoFechaAbono === 'mes' && filtroMesAbono === String(new Date().getMonth())) ? 'var(--accent-blue)' : 'var(--text-muted)',
+                  border: (filtroTipoFechaAbono === 'mes' && filtroMesAbono === String(new Date().getMonth())) ? '1.5px solid var(--accent-blue)' : 'none'
+                }}
+              >
+                ⭐ Este Mes
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const now = new Date();
+                  let m = now.getMonth() - 1;
+                  let y = now.getFullYear();
+                  if (m < 0) {
+                    m = 11;
+                    y -= 1;
+                  }
+                  setFiltroTipoFechaAbono('mes');
+                  setFiltroMesAbono(String(m));
+                  setFiltroAnoAbono(String(y));
+                }}
+                className="neu-box"
+                style={{
+                  padding: '5px 11px',
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  borderRadius: '6px',
+                  color: 'var(--text-muted)'
+                }}
+              >
+                ⏪ Mes Pasado
+              </button>
+            </div>
+          </div>
+
+          {/* Desplegables de Mes y Año si se elige Por Mes */}
+          {filtroTipoFechaAbono === 'mes' && (
+            <div className="animate-fade-in" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginTop: '10px', background: 'rgba(0,0,0,0.02)', padding: '8px 12px', borderRadius: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontSize: '0.76rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>MES:</label>
+                <select
+                  className="neu-input"
+                  value={filtroMesAbono}
+                  onChange={(e) => setFiltroMesAbono(e.target.value)}
+                  style={{ padding: '6px 12px', fontSize: '0.82rem', fontWeight: 'bold' }}
+                >
+                  <option value="todos">Todos los meses</option>
+                  {mesesNombres.map(m => (
+                    <option key={m.index} value={String(m.index)}>{m.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontSize: '0.76rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>AÑO:</label>
+                <select
+                  className="neu-input"
+                  value={filtroAnoAbono}
+                  onChange={(e) => setFiltroAnoAbono(e.target.value)}
+                  style={{ padding: '6px 12px', fontSize: '0.82rem', fontWeight: 'bold' }}
+                >
+                  <option value="todos">Todos los años</option>
+                  <option value="2024">2024</option>
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                  <option value="2027">2027</option>
+                </select>
+              </div>
+
+              {getFiltroFechaLabel() && (
+                <span style={{ fontSize: '0.78rem', color: 'var(--accent-blue)', fontWeight: 'bold', marginLeft: 'auto' }}>
+                  📅 Eventos con primer abono en <u>{getFiltroFechaLabel()}</u>
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Selector de Rango Personalizado de Fechas (Inicio y Fin) */}
+          {filtroTipoFechaAbono === 'rango' && (
+            <div className="animate-fade-in" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginTop: '10px', background: 'rgba(0,0,0,0.02)', padding: '8px 12px', borderRadius: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontSize: '0.76rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>FECHA INICIO:</label>
+                <input
+                  type="date"
+                  className="neu-input"
+                  value={fechaInicioAbono}
+                  onChange={(e) => setFechaInicioAbono(e.target.value)}
+                  style={{ padding: '6px 10px', fontSize: '0.82rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontSize: '0.76rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>FECHA FIN:</label>
+                <input
+                  type="date"
+                  className="neu-input"
+                  value={fechaFinAbono}
+                  onChange={(e) => setFechaFinAbono(e.target.value)}
+                  style={{ padding: '6px 10px', fontSize: '0.82rem' }}
+                />
+              </div>
+
+              {(fechaInicioAbono || fechaFinAbono) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFechaInicioAbono('');
+                    setFechaFinAbono('');
+                  }}
+                  className="neu-button"
+                  style={{ padding: '5px 10px', fontSize: '0.74rem', color: 'var(--accent-danger)' }}
+                >
+                  Limpiar fechas
+                </button>
+              )}
+
+              {getFiltroFechaLabel() && (
+                <span style={{ fontSize: '0.78rem', color: 'var(--accent-blue)', fontWeight: 'bold', marginLeft: 'auto' }}>
+                  🗓️ Rango: <u>{getFiltroFechaLabel()}</u>
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Contenido Principal */}
@@ -5159,7 +5658,7 @@ const VendedorEventsModal = ({
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingBottom: '20px' }}>
                   <div style={{ fontSize: '0.82rem', fontWeight: 'bold', color: 'var(--text-muted)', paddingLeft: '5px' }}>
-                    Mostrando {eventosDelVendedor.length} {eventosDelVendedor.length === 1 ? 'evento vendido' : 'eventos vendidos'} por {selectedVendedor}:
+                    Mostrando {eventosDelVendedor.length} {eventosDelVendedor.length === 1 ? 'evento vendido' : 'eventos vendidos'} por {selectedVendedor}{getFiltroFechaLabel() ? ` (reservados en ${getFiltroFechaLabel()})` : ''}:
                   </div>
                   {eventosDelVendedor.map(ev => {
                     const totalEvento = calcularTotalVenta(ev, paquetesFirestore);
@@ -5231,6 +5730,7 @@ const VendedorEventsModal = ({
                             {(() => {
                               const infoAbono = getPrimerAbonoInfo(ev);
                               if (!infoAbono) return null;
+                              const matchesDateFilter = filtroTipoFechaAbono !== 'todos';
                               return (
                                 <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                   <span style={{
@@ -5241,15 +5741,25 @@ const VendedorEventsModal = ({
                                     borderRadius: '8px',
                                     fontSize: '0.8rem',
                                     fontWeight: 'bold',
-                                    background: infoAbono.esAbono ? 'rgba(59, 130, 246, 0.15)' : 'rgba(107, 114, 128, 0.12)',
+                                    background: matchesDateFilter
+                                      ? 'rgba(59, 130, 246, 0.22)'
+                                      : (infoAbono.esAbono ? 'rgba(59, 130, 246, 0.15)' : 'rgba(107, 114, 128, 0.12)'),
                                     color: infoAbono.esAbono ? 'var(--accent-blue)' : 'var(--text-muted)',
-                                    border: infoAbono.esAbono ? '1px solid rgba(59, 130, 246, 0.35)' : '1px dashed rgba(107, 114, 128, 0.3)'
+                                    border: matchesDateFilter
+                                      ? '1.5px solid var(--accent-blue)'
+                                      : (infoAbono.esAbono ? '1px solid rgba(59, 130, 246, 0.35)' : '1px dashed rgba(107, 114, 128, 0.3)'),
+                                    boxShadow: matchesDateFilter ? '0 0 8px rgba(59, 130, 246, 0.25)' : 'none'
                                   }}>
-                                    💳 <span>{infoAbono.esAbono ? 'Día de Primer Abono:' : 'Fecha de Registro:'}</span>
+                                    💳 <span>{infoAbono.esAbono ? 'Día de Primer Abono (Reserva):' : 'Fecha de Registro:'}</span>
                                     <strong style={{ color: infoAbono.esAbono ? 'var(--text-main)' : 'inherit', fontSize: '0.84rem' }}>{infoAbono.fecha}</strong>
                                     {infoAbono.esAbono && infoAbono.monto > 0 && (
                                       <span style={{ color: 'var(--accent-success)', marginLeft: '3px' }}>
                                         (${infoAbono.monto.toLocaleString('es-MX', { minimumFractionDigits: 2 })})
+                                      </span>
+                                    )}
+                                    {matchesDateFilter && (
+                                      <span style={{ fontSize: '0.68rem', background: 'var(--accent-blue)', color: '#fff', padding: '1px 5px', borderRadius: '4px', marginLeft: '3px' }}>
+                                        ✓ Coincide
                                       </span>
                                     )}
                                   </span>
