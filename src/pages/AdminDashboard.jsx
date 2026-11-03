@@ -60,12 +60,18 @@ const AdminDashboard = () => {
   let totalEfectivo = 0;
   let totalTarjeta = 0;
   let totalTransferencia = 0;
+  let totalAmex = 0;
+  let totalVisa = 0;
+  let totalMastercard = 0;
 
   // Global Totals
   let granTotalGanancia = 0;
   let granTotalEfectivo = 0;
   let granTotalTarjeta = 0;
   let granTotalTransferencia = 0;
+  let granTotalAmex = 0;
+  let granTotalVisa = 0;
+  let granTotalMastercard = 0;
 
   if (allData) {
     allData.forEach(venta => {
@@ -76,8 +82,15 @@ const AdminDashboard = () => {
 
       if (venta.pagoEfectivo !== undefined) {
         granTotalEfectivo += parseFloat(venta.pagoEfectivo || 0);
-        // Sum pagoTarjeta + legacy pagoDebito + pagoCredito into one unified tarjeta bucket
-        granTotalTarjeta += parseFloat(venta.pagoTarjeta || 0) + parseFloat(venta.pagoDebito || 0) + parseFloat(venta.pagoCredito || 0);
+        granTotalAmex += parseFloat(venta.pagoAmex || 0);
+        granTotalVisa += parseFloat(venta.pagoVisa || 0);
+        granTotalMastercard += parseFloat(venta.pagoMastercard || 0);
+        // Legacy tarjeta (sin tipo de tarjeta definido)
+        const tarjetaLegacy = parseFloat(venta.pagoTarjeta || 0) + parseFloat(venta.pagoDebito || 0) + parseFloat(venta.pagoCredito || 0);
+        const tarjetaDesglosada = parseFloat(venta.pagoAmex || 0) + parseFloat(venta.pagoVisa || 0) + parseFloat(venta.pagoMastercard || 0);
+        if (tarjetaDesglosada === 0 && tarjetaLegacy > 0) {
+          granTotalTarjeta += tarjetaLegacy;
+        }
         granTotalTransferencia += parseFloat(venta.pagoTransferencia || 0);
       } else if (metodo.toLowerCase() === 'efectivo') {
         granTotalEfectivo += ventaTotal;
@@ -116,7 +129,14 @@ const AdminDashboard = () => {
 
       if (venta.pagoEfectivo !== undefined) {
         totalEfectivo += parseFloat(venta.pagoEfectivo || 0);
-        totalTarjeta += parseFloat(venta.pagoTarjeta || 0) + parseFloat(venta.pagoDebito || 0) + parseFloat(venta.pagoCredito || 0);
+        totalAmex += parseFloat(venta.pagoAmex || 0);
+        totalVisa += parseFloat(venta.pagoVisa || 0);
+        totalMastercard += parseFloat(venta.pagoMastercard || 0);
+        const tarjetaLegacy = parseFloat(venta.pagoTarjeta || 0) + parseFloat(venta.pagoDebito || 0) + parseFloat(venta.pagoCredito || 0);
+        const tarjetaDesglosada = parseFloat(venta.pagoAmex || 0) + parseFloat(venta.pagoVisa || 0) + parseFloat(venta.pagoMastercard || 0);
+        if (tarjetaDesglosada === 0 && tarjetaLegacy > 0) {
+          totalTarjeta += tarjetaLegacy;
+        }
         totalTransferencia += parseFloat(venta.pagoTransferencia || 0);
       } else if (metodo.toLowerCase() === 'efectivo') {
         totalEfectivo += ventaTotal;
@@ -248,12 +268,22 @@ const AdminDashboard = () => {
           const isCerrada = cajaInfo && cajaInfo.abierta === false;
           const isAbierta = !isCerrada;
           let ef = 0, tarjeta = 0, trans = 0;
+          let amex = 0, visa = 0, mastercard = 0;
           
           const ventasArea = (allData || []).filter(d => d.area === areaName);
           ventasArea.forEach(v => {
             if (v.pagoEfectivo !== undefined) {
               ef += parseFloat(v.pagoEfectivo || 0);
-              tarjeta += parseFloat(v.pagoTarjeta || 0) + parseFloat(v.pagoDebito || 0) + parseFloat(v.pagoCredito || 0);
+              // Desglosar por tipo de tarjeta si existen campos específicos
+              amex += parseFloat(v.pagoAmex || 0);
+              visa += parseFloat(v.pagoVisa || 0);
+              mastercard += parseFloat(v.pagoMastercard || 0);
+              // Si no tiene campos individuales, acumular en tarjeta legacy
+              const tarjetaLegacy = parseFloat(v.pagoTarjeta || 0) + parseFloat(v.pagoDebito || 0) + parseFloat(v.pagoCredito || 0);
+              const tarjetaDesglosada = parseFloat(v.pagoAmex || 0) + parseFloat(v.pagoVisa || 0) + parseFloat(v.pagoMastercard || 0);
+              if (tarjetaDesglosada === 0 && tarjetaLegacy > 0) {
+                tarjeta += tarjetaLegacy;
+              }
               trans += parseFloat(v.pagoTransferencia || 0);
             } else {
               const ventaTotal = parseFloat(v.total || v.Total || 0);
@@ -263,8 +293,8 @@ const AdminDashboard = () => {
               else tarjeta += ventaTotal;
             }
           });
-          const total = ef + tarjeta + trans;
-          const totalesObj = { ef, deb: tarjeta, cred: 0, trans, totalGeneral: total };
+          const total = ef + amex + visa + mastercard + tarjeta + trans;
+          const totalesObj = { ef, deb: tarjeta + amex + visa + mastercard, cred: 0, trans, totalGeneral: total };
 
           return (
             <div key={areaName} className="neu-box" style={{ padding: '20px', flex: '1', minWidth: '250px', position: 'relative' }}>
@@ -281,10 +311,17 @@ const AdminDashboard = () => {
                   {isAbierta ? 'Abierta' : 'Cerrada'}
                 </span>
               </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.9rem', opacity: isAbierta ? 1 : 0.6 }}>
-                <div><strong>Efectivo:</strong></div><div style={{ textAlign: 'right' }}>${ef.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
-                <div><strong>Tarjeta:</strong></div><div style={{ textAlign: 'right' }}>${tarjeta.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
-                <div><strong>Transferencia:</strong></div><div style={{ textAlign: 'right' }}>${trans.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.9rem', opacity: isAbierta ? 1 : 0.6 }}>
+                <div><strong>💵 Efectivo:</strong></div><div style={{ textAlign: 'right' }}>${ef.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+                <div><strong>🟦 AMEX:</strong></div><div style={{ textAlign: 'right', color: amex > 0 ? 'var(--accent-blue)' : 'var(--text-muted)' }}>${amex.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+                <div><strong>🔵 VISA:</strong></div><div style={{ textAlign: 'right', color: visa > 0 ? 'var(--accent-blue)' : 'var(--text-muted)' }}>${visa.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+                <div><strong>🔴 MASTERCARD:</strong></div><div style={{ textAlign: 'right', color: mastercard > 0 ? 'var(--accent-blue)' : 'var(--text-muted)' }}>${mastercard.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+                {tarjeta > 0 && (
+                  <>
+                    <div><strong>💳 Tarjeta (sin tipo):</strong></div><div style={{ textAlign: 'right', color: 'var(--text-muted)' }}>${tarjeta.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+                  </>
+                )}
+                <div><strong>🏦 Transferencia:</strong></div><div style={{ textAlign: 'right' }}>${trans.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
                 <div style={{ gridColumn: '1 / -1', borderTop: '1px solid var(--bg-color)', margin: '5px 0' }}></div>
                 <div style={{ fontSize: '1rem', color: isAbierta ? 'var(--accent-blue)' : 'inherit' }}><strong>Total:</strong></div>
                 <div style={{ textAlign: 'right', fontSize: '1rem', fontWeight: 'bold' }}>${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
@@ -330,28 +367,48 @@ const AdminDashboard = () => {
       {!loading && !error && allData && (
         <div style={{ marginBottom: '30px' }}>
           <h2 className="text-gradient-blue" style={{ marginBottom: '15px', fontSize: '1.5rem' }}>💰 Ganancias Globales del Día (3 Áreas)</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px' }}>
-            <div className="neu-box" style={{ padding: '20px', textAlign: 'center', borderBottom: '4px solid var(--accent-success)' }}>
-              <p style={{ margin: '0 0 10px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.9rem' }}>TOTAL GLOBAL EFECTIVO</p>
-              <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--text-main)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px' }}>
+            <div className="neu-box" style={{ padding: '15px', textAlign: 'center', borderBottom: '4px solid var(--accent-success)' }}>
+              <p style={{ margin: '0 0 8px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.8rem' }}>💵 TOTAL EFECTIVO</p>
+              <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-main)' }}>
                 ${granTotalEfectivo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </h2>
             </div>
-            <div className="neu-box" style={{ padding: '20px', textAlign: 'center', borderBottom: '4px solid var(--accent-warning)' }}>
-              <p style={{ margin: '0 0 10px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.9rem' }}>TOTAL GLOBAL TARJETA</p>
-              <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--text-main)' }}>
-                ${granTotalTarjeta.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+            <div className="neu-box" style={{ padding: '15px', textAlign: 'center', borderBottom: '4px solid #1c4ed8' }}>
+              <p style={{ margin: '0 0 8px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.8rem' }}>🟦 TOTAL AMEX</p>
+              <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-main)' }}>
+                ${granTotalAmex.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </h2>
             </div>
-            <div className="neu-box" style={{ padding: '20px', textAlign: 'center', borderBottom: '4px solid #a855f7' }}>
-              <p style={{ margin: '0 0 10px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.9rem' }}>TOTAL GLOBAL TRANSFERENCIA</p>
-              <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--text-main)' }}>
+            <div className="neu-box" style={{ padding: '15px', textAlign: 'center', borderBottom: '4px solid #3b82f6' }}>
+              <p style={{ margin: '0 0 8px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.8rem' }}>🔵 TOTAL VISA</p>
+              <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-main)' }}>
+                ${granTotalVisa.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+              </h2>
+            </div>
+            <div className="neu-box" style={{ padding: '15px', textAlign: 'center', borderBottom: '4px solid #ef4444' }}>
+              <p style={{ margin: '0 0 8px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.8rem' }}>🔴 TOTAL MASTERCARD</p>
+              <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-main)' }}>
+                ${granTotalMastercard.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+              </h2>
+            </div>
+            {granTotalTarjeta > 0 && (
+              <div className="neu-box" style={{ padding: '15px', textAlign: 'center', borderBottom: '4px solid var(--accent-warning)' }}>
+                <p style={{ margin: '0 0 8px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.8rem' }}>💳 TARJETA (SIN TIPO)</p>
+                <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-main)' }}>
+                  ${granTotalTarjeta.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                </h2>
+              </div>
+            )}
+            <div className="neu-box" style={{ padding: '15px', textAlign: 'center', borderBottom: '4px solid #a855f7' }}>
+              <p style={{ margin: '0 0 8px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.8rem' }}>🏦 TOTAL TRANSFERENCIA</p>
+              <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-main)' }}>
                 ${granTotalTransferencia.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </h2>
             </div>
-            <div className="neu-box" style={{ padding: '20px', textAlign: 'center', borderBottom: '4px solid var(--accent-blue)', background: 'rgba(59, 130, 246, 0.05)' }}>
-              <p style={{ margin: '0 0 10px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.9rem' }}>GRAN TOTAL DEL DÍA</p>
-              <h2 className="text-gradient-blue" style={{ margin: 0, fontSize: '2.2rem' }}>
+            <div className="neu-box" style={{ padding: '15px', textAlign: 'center', borderBottom: '4px solid var(--accent-blue)', background: 'rgba(59, 130, 246, 0.05)' }}>
+              <p style={{ margin: '0 0 8px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.8rem' }}>GRAN TOTAL DEL DÍA</p>
+              <h2 className="text-gradient-blue" style={{ margin: 0, fontSize: '2rem' }}>
                 ${granTotalGanancia.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </h2>
             </div>
@@ -546,12 +603,14 @@ const EditVentaModal = ({ venta, onClose }) => {
   const [cajero, setCajero] = useState(venta.cajero || '');
   const [totalVal, setTotalVal] = useState(venta.total || '');
   const [metodoPago, setMetodoPago] = useState(venta.metodoPago || 'Efectivo');
+  const [tipoTarjeta, setTipoTarjeta] = useState(venta.tipoTarjeta || '');
   const [pagoEfectivo, setPagoEfectivo] = useState(venta.pagoEfectivo !== undefined ? venta.pagoEfectivo : (venta.metodoPago === 'Efectivo' ? venta.total : 0));
   const [pagoTarjeta, setPagoTarjeta] = useState(venta.pagoTarjeta !== undefined ? venta.pagoTarjeta : (venta.metodoPago === 'Tarjeta' ? venta.total : 0));
   const [detalle, setDetalle] = useState(venta.entradas || venta.productos || '');
   const [exitHour, setExitHour] = useState(venta.exitHour !== null && venta.exitHour !== undefined ? venta.exitHour : '');
   const [exitMinute, setExitMinute] = useState(venta.exitMinute !== null && venta.exitMinute !== undefined ? venta.exitMinute : '');
   const [submitting, setSubmitting] = useState(false);
+  const isCardMethod = metodoPago === 'Tarjeta' || metodoPago === 'Mixto';
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -563,24 +622,45 @@ const EditVentaModal = ({ venta, onClose }) => {
         metodoPago,
       };
 
+      const cardAmount = metodoPago === 'Mixto' ? (parseFloat(pagoTarjeta) || 0) : (metodoPago === 'Tarjeta' ? updateData.total : 0);
+
       if (metodoPago === 'Mixto') {
         updateData.pagoEfectivo = parseFloat(pagoEfectivo) || 0;
-        updateData.pagoTarjeta = parseFloat(pagoTarjeta) || 0;
+        updateData.pagoTarjeta = cardAmount;
         updateData.pagoTransferencia = 0;
-        updateData.total = updateData.pagoEfectivo + updateData.pagoTarjeta;
+        updateData.total = updateData.pagoEfectivo + cardAmount;
       } else if (metodoPago === 'Efectivo') {
         updateData.pagoEfectivo = updateData.total;
         updateData.pagoTarjeta = 0;
         updateData.pagoTransferencia = 0;
+        updateData.tipoTarjeta = null;
+        updateData.pagoAmex = 0;
+        updateData.pagoVisa = 0;
+        updateData.pagoMastercard = 0;
       } else if (metodoPago === 'Transferencia') {
         updateData.pagoEfectivo = 0;
         updateData.pagoTarjeta = 0;
         updateData.pagoTransferencia = updateData.total;
+        updateData.tipoTarjeta = null;
+        updateData.pagoAmex = 0;
+        updateData.pagoVisa = 0;
+        updateData.pagoMastercard = 0;
       } else {
         // Tarjeta
         updateData.pagoEfectivo = 0;
-        updateData.pagoTarjeta = updateData.total;
+        updateData.pagoTarjeta = cardAmount;
         updateData.pagoTransferencia = 0;
+      }
+
+      // Guardar tipo de tarjeta y montos por marca si aplica
+      if (metodoPago === 'Tarjeta' || metodoPago === 'Mixto') {
+        updateData.tipoTarjeta = tipoTarjeta || null;
+        updateData.pagoAmex = tipoTarjeta === 'AMEX' ? cardAmount : 0;
+        updateData.pagoVisa = tipoTarjeta === 'VISA' ? cardAmount : 0;
+        updateData.pagoMastercard = tipoTarjeta === 'MASTERCARD' ? cardAmount : 0;
+        if (tipoTarjeta) {
+          updateData.metodoPago = `Tarjeta (${tipoTarjeta})`;
+        }
       }
 
       if (venta.area === 'Taquilla') {
@@ -658,7 +738,7 @@ const EditVentaModal = ({ venta, onClose }) => {
               <select
                 className="neu-input"
                 value={metodoPago}
-                onChange={(e) => setMetodoPago(e.target.value)}
+                onChange={(e) => { setMetodoPago(e.target.value); setTipoTarjeta(''); }}
                 style={{ marginTop: '5px' }}
               >
                 <option value="Efectivo">Efectivo</option>
@@ -704,6 +784,35 @@ const EditVentaModal = ({ venta, onClose }) => {
                   required
                   style={{ marginTop: '5px' }}
                 />
+              </div>
+            </div>
+          )}
+
+          {isCardMethod && (
+            <div>
+              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>TIPO DE TARJETA</label>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                {['AMEX', 'VISA', 'MASTERCARD'].map(brand => (
+                  <button
+                    key={brand}
+                    type="button"
+                    onClick={() => setTipoTarjeta(tipoTarjeta === brand ? '' : brand)}
+                    className="neu-button"
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      fontWeight: 'bold',
+                      fontSize: '0.8rem',
+                      color: tipoTarjeta === brand ? '#fff' : 'var(--text-muted)',
+                      backgroundColor: tipoTarjeta === brand
+                        ? (brand === 'AMEX' ? '#1a56db' : brand === 'VISA' ? '#1c64f2' : '#e3342f')
+                        : 'transparent',
+                      border: `2px solid ${tipoTarjeta === brand ? 'transparent' : 'var(--border-color)'}`,
+                    }}
+                  >
+                    {brand}
+                  </button>
+                ))}
               </div>
             </div>
           )}

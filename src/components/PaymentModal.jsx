@@ -226,6 +226,7 @@ const PaymentModal = ({ area, onClose }) => {
   const { user } = useAuth();
   
   const [metodo, setMetodo] = useState('Efectivo');
+  const [tipoTarjeta, setTipoTarjeta] = useState('');
   const [recibido, setRecibido] = useState('');
 
   const [loading, setLoading] = useState(false);
@@ -253,9 +254,17 @@ const PaymentModal = ({ area, onClose }) => {
       alert("Selecciona un método de pago.");
       return;
     }
+    if ((metodo === 'Tarjeta' || isMixto) && !tipoTarjeta) {
+      alert("Por favor selecciona el tipo de tarjeta (AMEX, VISA o MASTERCARD).");
+      return;
+    }
 
     isProcessing.current = true;
     setLoading(true);
+
+    const amexPaid = (metodo === 'Tarjeta' || isMixto) && tipoTarjeta === 'AMEX' ? tarjetaPaid : 0;
+    const visaPaid = (metodo === 'Tarjeta' || isMixto) && tipoTarjeta === 'VISA' ? tarjetaPaid : 0;
+    const mastercardPaid = (metodo === 'Tarjeta' || isMixto) && tipoTarjeta === 'MASTERCARD' ? tarjetaPaid : 0;
 
     // Preparar objeto para Firebase
     let resumenEntradasList = [];
@@ -283,9 +292,13 @@ const PaymentModal = ({ area, onClose }) => {
       area: area,
       cajero: user?.nombre || 'Desconocido',
       total: total,
-      metodoPago: isMixto ? 'Mixto' : metodo,
+      metodoPago: isMixto ? 'Mixto' : (metodo === 'Tarjeta' ? `Tarjeta (${tipoTarjeta})` : metodo),
+      tipoTarjeta: (metodo === 'Tarjeta' || isMixto) ? tipoTarjeta : null,
       pagoEfectivo: cashPaid,
       pagoTarjeta: tarjetaPaid,
+      pagoAmex: amexPaid,
+      pagoVisa: visaPaid,
+      pagoMastercard: mastercardPaid,
       pagoTransferencia: transferPaid,
       cart: cart,
       fecha: new Date().toISOString(),
@@ -383,6 +396,45 @@ const PaymentModal = ({ area, onClose }) => {
               </button>
             </div>
 
+            {metodo === 'Tarjeta' && (
+              <div className="neu-box animate-fade-in" style={{ padding: '15px', marginBottom: '20px', textAlign: 'center' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '10px' }}>
+                  💳 Selecciona el tipo de tarjeta:
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                  {['AMEX', 'VISA', 'MASTERCARD'].map(brand => (
+                    <button
+                      key={brand}
+                      type="button"
+                      className={tipoTarjeta === brand ? 'neu-button' : 'neu-box'}
+                      onClick={() => setTipoTarjeta(brand)}
+                      style={{
+                        padding: '12px 6px',
+                        cursor: 'pointer',
+                        borderRadius: '10px',
+                        fontWeight: 'bold',
+                        fontSize: '0.9rem',
+                        border: tipoTarjeta === brand ? '2px solid var(--accent-blue)' : '1px solid transparent',
+                        color: tipoTarjeta === brand ? 'var(--accent-blue)' : 'var(--text-main)',
+                        background: tipoTarjeta === brand ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-color)',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {brand === 'AMEX' && '🟦 '}
+                      {brand === 'VISA' && '🔵 '}
+                      {brand === 'MASTERCARD' && '🔴 '}
+                      {brand}
+                    </button>
+                  ))}
+                </div>
+                {!tipoTarjeta && (
+                  <p style={{ margin: '8px 0 0 0', fontSize: '0.75rem', color: 'var(--accent-danger)', fontWeight: 600 }}>
+                    * Obligatorio seleccionar una opción
+                  </p>
+                )}
+              </div>
+            )}
+
             {metodo === 'Efectivo' && (
               <>
                 <div className="neu-box" style={{ padding: '15px', marginBottom: '20px', textAlign: 'left' }}>
@@ -413,7 +465,42 @@ const PaymentModal = ({ area, onClose }) => {
                         <span style={{ color: 'var(--text-muted)' }}>💳 Restante con Tarjeta:</span>
                         <strong style={{ color: 'var(--accent-warning)' }}>${tarjetaPaid.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
                       </div>
-                      <div className="text-gradient-blue" style={{ fontSize: '0.8rem', fontWeight: 'bold', marginTop: '8px', textAlign: 'center', textTransform: 'uppercase' }}>
+
+                      {/* Selección de tarjeta para Mixto */}
+                      <div style={{ marginTop: '12px', borderTop: '1px dashed var(--bg-color)', paddingTop: '10px' }}>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textAlign: 'center' }}>
+                          Tipo de tarjeta para el restante:
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+                          {['AMEX', 'VISA', 'MASTERCARD'].map(brand => (
+                            <button
+                              key={brand}
+                              type="button"
+                              className={tipoTarjeta === brand ? 'neu-button' : 'neu-box'}
+                              onClick={() => setTipoTarjeta(brand)}
+                              style={{
+                                padding: '8px 4px',
+                                cursor: 'pointer',
+                                borderRadius: '8px',
+                                fontWeight: 'bold',
+                                fontSize: '0.8rem',
+                                border: tipoTarjeta === brand ? '2px solid var(--accent-blue)' : '1px solid transparent',
+                                color: tipoTarjeta === brand ? 'var(--accent-blue)' : 'var(--text-main)',
+                                background: tipoTarjeta === brand ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-color)'
+                              }}
+                            >
+                              {brand}
+                            </button>
+                          ))}
+                        </div>
+                        {!tipoTarjeta && (
+                          <p style={{ margin: '6px 0 0 0', fontSize: '0.72rem', color: 'var(--accent-danger)', fontWeight: 600, textAlign: 'center' }}>
+                            * Selecciona tipo de tarjeta para el restante
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="text-gradient-blue" style={{ fontSize: '0.8rem', fontWeight: 'bold', marginTop: '10px', textAlign: 'center', textTransform: 'uppercase' }}>
                         ⚡ Se cobrará con método Mixto ⚡
                       </div>
                     </div>
@@ -461,6 +548,7 @@ const PaymentModal = ({ area, onClose }) => {
         cart={cart} 
         total={total} 
         method={isMixto ? 'Mixto' : metodo} 
+        tipoTarjeta={tipoTarjeta}
         received={recibido} 
         change={cambio > 0 ? cambio : 0} 
         pagoEfectivo={cashPaid}

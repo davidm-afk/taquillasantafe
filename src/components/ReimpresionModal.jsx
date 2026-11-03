@@ -148,7 +148,7 @@ const ReimpresionModal = ({ area, onClose, user = {} }) => {
                 <span>${parseFloat(selectedVenta.total || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
               </div>
               <div style={{ fontSize: '9.5px', color: '#333' }}>
-                <span>Forma de Pago: <strong style={{ textTransform: 'uppercase' }}>{selectedVenta.metodoPago || 'Efectivo'}</strong></span>
+                <span>Forma de Pago: <strong style={{ textTransform: 'uppercase' }}>{selectedVenta.tipoTarjeta ? `TARJETA ${selectedVenta.tipoTarjeta}` : (selectedVenta.metodoPago || 'Efectivo')}</strong></span>
               </div>
             </div>
 
@@ -173,6 +173,7 @@ const ReimpresionModal = ({ area, onClose, user = {} }) => {
               cart={selectedVenta.cart || [{ nombre: selectedVenta.entradas || selectedVenta.productos || 'Productos (Versión Antigua)', qty: 1, precio: selectedVenta.total }]}
               total={selectedVenta.total}
               method={selectedVenta.metodoPago}
+              tipoTarjeta={selectedVenta.tipoTarjeta}
               received={selectedVenta.total}
               change={0}
               pagoEfectivo={selectedVenta.pagoEfectivo || 0}

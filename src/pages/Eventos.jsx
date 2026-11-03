@@ -3343,6 +3343,7 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
     return `${dd}/${mm}/${yyyy}`;
   });
   const [metodoPago, setMetodoPago] = useState('Efectivo');
+  const [tipoTarjeta, setTipoTarjeta] = useState('');
   const [montoAbono, setMontoAbono] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -3671,7 +3672,7 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
     </div>
     <div class="row">
       <span class="lbl">Forma de Pago:</span>
-      <span class="val" style="text-transform: uppercase;">${ab.metodoPago}</span>
+      <span class="val" style="text-transform: uppercase;">${ab.tipoTarjeta ? `TARJETA ${ab.tipoTarjeta}` : (ab.metodoPago || '---')}</span>
     </div>
 
     <div class="monto-highlight">
@@ -3815,7 +3816,7 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
           ${abonos.map(ab => `
             <tr>
               <td>${ab.fecha}</td>
-              <td style="text-transform: uppercase;">${ab.metodoPago}</td>
+              <td style="text-transform: uppercase;">${ab.tipoTarjeta ? `TARJETA ${ab.tipoTarjeta}` : (ab.metodoPago || '---')}</td>
               <td style="font-size: 10px;">${ab.folio}</td>
               <td style="text-align: right;">$${parseFloat(ab.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
             </tr>
@@ -3885,10 +3886,16 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
     const randomNum = Math.floor(100 + Math.random() * 900);
     const folio = `${fechaPagoLimpia}-${fechaRevLimpia}-${randomNum}`;
 
+    if (metodoPago === 'Tarjeta' && !tipoTarjeta) {
+      alert("Por favor selecciona el tipo de tarjeta (AMEX, VISA o MASTERCARD).");
+      return;
+    }
+
     const nuevoAbono = {
       folio,
       fecha: fechaAbono.trim(),
-      metodoPago,
+      metodoPago: metodoPago === 'Tarjeta' ? `Tarjeta (${tipoTarjeta})` : metodoPago,
+      tipoTarjeta: metodoPago === 'Tarjeta' ? tipoTarjeta : null,
       monto
     };
 
@@ -3910,9 +3917,13 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
         area: 'Eventos',
         cajero: user?.nombre || 'Admin',
         total: monto,
-        metodoPago,
+        metodoPago: metodoPago === 'Tarjeta' ? `Tarjeta (${tipoTarjeta})` : metodoPago,
+        tipoTarjeta: metodoPago === 'Tarjeta' ? tipoTarjeta : null,
         pagoEfectivo: metodoPago === 'Efectivo' ? monto : 0,
         pagoTarjeta: metodoPago === 'Tarjeta' ? monto : 0,
+        pagoAmex: (metodoPago === 'Tarjeta' && tipoTarjeta === 'AMEX') ? monto : 0,
+        pagoVisa: (metodoPago === 'Tarjeta' && tipoTarjeta === 'VISA') ? monto : 0,
+        pagoMastercard: (metodoPago === 'Tarjeta' && tipoTarjeta === 'MASTERCARD') ? monto : 0,
         pagoTransferencia: metodoPago === 'Transferencia' ? monto : 0,
         fecha: abonoIsoString,
         timestamp: abonoTimestamp,
@@ -3921,6 +3932,7 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
 
       setAbonos(nuevosAbonos);
       setMontoAbono('');
+      setTipoTarjeta('');
       alert(`¡Anticipo registrado correctamente!\nFolio generado: ${folio}`);
     } catch (err) {
       console.error("Error al registrar abono:", err);
@@ -4083,7 +4095,7 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
                                   : 'var(--accent-blue)',
                           fontWeight: 'bold'
                         }}>
-                          {ab.metodoPago}
+                          {ab.tipoTarjeta ? `Tarjeta (${ab.tipoTarjeta})` : ab.metodoPago}
                         </span>
                       </td>
                       <td style={{ padding: '8px', fontWeight: 'bold' }}>
@@ -4141,7 +4153,10 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
                   <select 
                     className="neu-input"
                     value={metodoPago}
-                    onChange={(e) => setMetodoPago(e.target.value)}
+                    onChange={(e) => {
+                      setMetodoPago(e.target.value);
+                      if (e.target.value !== 'Tarjeta') setTipoTarjeta('');
+                    }}
                     style={{ marginTop: '5px' }}
                   >
                     <option value="Efectivo">Efectivo</option>
@@ -4150,6 +4165,45 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
                   </select>
                 </div>
               </div>
+
+              {metodoPago === 'Tarjeta' && (
+                <div className="animate-fade-in" style={{ padding: '12px', background: 'var(--bg-color)', borderRadius: '10px', border: '1px solid var(--accent-blue)' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--accent-blue)', fontWeight: 'bold', marginBottom: '8px' }}>
+                    💳 SELECCIONA EL TIPO DE TARJETA (OBLIGATORIO):
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                    {['AMEX', 'VISA', 'MASTERCARD'].map(brand => (
+                      <button
+                        key={brand}
+                        type="button"
+                        className={tipoTarjeta === brand ? 'neu-button' : 'neu-box'}
+                        onClick={() => setTipoTarjeta(brand)}
+                        style={{
+                          padding: '10px 4px',
+                          cursor: 'pointer',
+                          borderRadius: '8px',
+                          fontWeight: 'bold',
+                          fontSize: '0.85rem',
+                          border: tipoTarjeta === brand ? '2px solid var(--accent-blue)' : '1px solid transparent',
+                          color: tipoTarjeta === brand ? 'var(--accent-blue)' : 'var(--text-main)',
+                          background: tipoTarjeta === brand ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-color)',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        {brand === 'AMEX' && '🟦 '}
+                        {brand === 'VISA' && '🔵 '}
+                        {brand === 'MASTERCARD' && '🔴 '}
+                        {brand}
+                      </button>
+                    ))}
+                  </div>
+                  {!tipoTarjeta && (
+                    <p style={{ margin: '6px 0 0 0', fontSize: '0.72rem', color: 'var(--accent-danger)', fontWeight: 600 }}>
+                      * Obligatorio seleccionar AMEX, VISA o MASTERCARD
+                    </p>
+                  )}
+                </div>
+              )}
               
               <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-end', borderTop: '1px solid var(--bg-color)', paddingTop: '12px' }}>
                 <div style={{ flex: 1 }}>
@@ -4605,7 +4659,7 @@ const EventDetailModal = ({ event, onClose, onEdit, onAbonar, onPrint }) => {
                   <span>
                     <strong>{idx === 0 ? '⭐ 1er Abono (Reservación):' : `Abono #${idx + 1}:`}</strong>{' '}
                     <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{ab.fecha}</span>
-                    <span style={{ color: 'var(--text-muted)', marginLeft: '6px', fontSize: '0.75rem' }}>({ab.metodoPago || 'Efectivo'})</span>
+                    <span style={{ color: 'var(--text-muted)', marginLeft: '6px', fontSize: '0.75rem' }}>({ab.tipoTarjeta ? `Tarjeta (${ab.tipoTarjeta})` : (ab.metodoPago || 'Efectivo')})</span>
                   </span>
                   <strong style={{ color: 'var(--accent-success)' }}>
                     ${parseFloat(ab.monto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
