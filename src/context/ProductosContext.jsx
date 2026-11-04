@@ -40,14 +40,14 @@ const buildSeed = () => {
 
   // Eventos - Paquetes (simplificados: nombre libre + precio fijo)
   const paquetesEventos = [
-    { nombre: 'VIP L-J', precio: 0, emoji: '⭐', subtitle: 'Lunes a Jueves', activo: true },
-    { nombre: 'VIP V-D', precio: 0, emoji: '⭐', subtitle: 'Viernes a Domingo', activo: true },
-    { nombre: 'Platinum L-J', precio: 0, emoji: '💎', subtitle: 'Lunes a Jueves', activo: true },
-    { nombre: 'Platinum V-D', precio: 0, emoji: '💎', subtitle: 'Viernes a Domingo', activo: true },
-    { nombre: 'NTP $6299', precio: 6299, emoji: '🎉', subtitle: 'Niños Todo el Parque', activo: true },
-    { nombre: 'NTP $6100', precio: 6100, emoji: '🎉', subtitle: 'Niños Todo el Parque', activo: true },
-    { nombre: 'Grupos', precio: 0, emoji: '👥', subtitle: 'Precio especial grupos', activo: true },
-    { nombre: 'Evento Privado', precio: 0, emoji: '🏛️', subtitle: 'Cierre de parque', activo: true },
+    { nombre: 'VIP L-J', precio: 899, emoji: '⭐', subtitle: 'Lunes a Jueves', tipoCobro: 'por_saltador', incluyePastel: true, incluyeDecoracion: true, activo: true },
+    { nombre: 'VIP V-D', precio: 999, emoji: '⭐', subtitle: 'Viernes a Domingo', tipoCobro: 'por_saltador', incluyePastel: true, incluyeDecoracion: true, activo: true },
+    { nombre: 'Platinum L-J', precio: 999, emoji: '💎', subtitle: 'Lunes a Jueves', tipoCobro: 'por_saltador', incluyePastel: true, incluyeDecoracion: true, activo: true },
+    { nombre: 'Platinum V-D', precio: 1099, emoji: '💎', subtitle: 'Viernes a Domingo', tipoCobro: 'por_saltador', incluyePastel: true, incluyeDecoracion: true, activo: true },
+    { nombre: 'NTP $6299', precio: 6299, emoji: '🎉', subtitle: 'Niños Todo el Parque', tipoCobro: 'total', incluyePastel: false, incluyeDecoracion: false, activo: true },
+    { nombre: 'NTP $6100', precio: 6100, emoji: '🎉', subtitle: 'Niños Todo el Parque', tipoCobro: 'total', incluyePastel: false, incluyeDecoracion: false, activo: true },
+    { nombre: 'Grupos', precio: 0, emoji: '👥', subtitle: 'Precio especial grupos', tipoCobro: 'por_saltador', incluyePastel: false, incluyeDecoracion: false, activo: true },
+    { nombre: 'Evento Privado', precio: 0, emoji: '🏛️', subtitle: 'Cierre de parque', tipoCobro: 'total', incluyePastel: true, incluyeDecoracion: false, activo: true },
   ];
   paquetesEventos.forEach(p => {
     seed.push({ area: 'Eventos', categoria: 'Paquetes', ...p });

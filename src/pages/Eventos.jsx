@@ -195,6 +195,109 @@ const getPrimerAbonoDateObj = (ev) => {
   return null;
 };
 
+// Determina si un paquete incluye el pastel de cortesía (sin costo)
+const esPastelIncluido = (paqueteNombre, paqueteDb = null) => {
+  if (!paqueteNombre || paqueteNombre === 'Sin definir') return false;
+  const pUpper = String(paqueteNombre).toUpperCase();
+  // Regla de negocio: VIP y Platinum siempre incluyen pastel, sin importar el paquete específico ni tamaño
+  if (pUpper.includes('VIP') || pUpper.includes('PLATINUM')) return true;
+  if (pUpper.includes('EVENTO PRIVADO')) return true;
+  if (paqueteDb && paqueteDb.incluyePastel) return true;
+  return false;
+};
+
+// Calcula el costo del pastel (0 si es de cortesía / incluido, o según tamaño si se cobra)
+const calcularPrecioPastel = (pastelSabor, tamañoPastel, paqueteNombre, paqueteDb = null) => {
+  if (!pastelSabor || pastelSabor === 'Sin definir') return 0;
+  if (esPastelIncluido(paqueteNombre, paqueteDb)) return 0;
+  
+  if (tamañoPastel === 'Chico') return 699;
+  if (tamañoPastel === 'Grande') return 799;
+  if (tamañoPastel === 'Rectangular') return 899;
+  return 0;
+};
+
+// Obtiene la configuración de precio de un paquete con fallback inteligente para VIP / Platinum / Grupos
+const getInfoPaquete = (paqueteNombre, fechaStr = '', paquetesFirestore = []) => {
+  if (!paqueteNombre || paqueteNombre === 'Sin definir') {
+    return { precio: 0, tipoCobro: 'total', paqueteDb: null };
+  }
+
+  const list = (paquetesFirestore && paquetesFirestore.length > 0)
+    ? paquetesFirestore
+    : ((window.PRODUCTOS_GLOBALES || []).filter(p => p.area === 'Eventos' || p.categoria === 'Paquetes'));
+
+  const cleanNombre = String(paqueteNombre).trim().toLowerCase();
+  const matches = list.filter(p => (p.nombre || '').trim().toLowerCase() === cleanNombre);
+  // Si hay más de un producto, preferir aquel con precio > 0 o tipoCobro definido
+  const paqueteDb = matches.find(p => (Number(p.precio) > 0) || p.tipoCobro) || matches[0] || null;
+
+  let precio = paqueteDb ? (Number(paqueteDb.precio) || 0) : 0;
+  let tipoCobro = paqueteDb?.tipoCobro;
+
+  const pUpper = String(paqueteNombre).toUpperCase();
+  const esVip = pUpper.includes('VIP');
+  const esPlatinum = pUpper.includes('PLATINUM');
+
+  // Todo paquete VIP o Platinum se cobra SIEMPRE por saltador
+  if (esVip || esPlatinum) {
+    tipoCobro = 'por_saltador';
+  }
+
+  // Si no hay precio en DB o es 0, aplicar precios oficiales de catálogo
+  if (precio === 0) {
+    let esFinDeSemana = true;
+    if (fechaStr) {
+      const d = parseDateString(fechaStr);
+      if (d && !isNaN(d.getTime())) {
+        const dia = d.getDay(); // 0: Dom, 1: Lun, ..., 4: Jue, 5: Vie, 6: Sab
+        esFinDeSemana = (dia === 0 || dia === 5 || dia === 6);
+      }
+    }
+
+    if (esPlatinum) {
+      if (pUpper.includes('L-J')) precio = 999;
+      else if (pUpper.includes('V-D')) precio = 1099;
+      else precio = esFinDeSemana ? 1099 : 999;
+    } else if (esVip) {
+      if (pUpper.includes('L-J')) precio = 899;
+      else if (pUpper.includes('V-D')) precio = 999;
+      else precio = esFinDeSemana ? 999 : 899;
+    } else if (paqueteNombre === 'Grupos - Paquete A') {
+      precio = 280;
+      tipoCobro = 'por_saltador';
+    } else if (paqueteNombre === 'Grupos - Paquete B') {
+      precio = 380;
+      tipoCobro = 'por_saltador';
+    } else if (paqueteNombre === 'Grupos - Paquete C') {
+      precio = 460;
+      tipoCobro = 'por_saltador';
+    } else if (paqueteNombre === 'NTP $6299') {
+      precio = 6299;
+      tipoCobro = 'total';
+    } else if (paqueteNombre === 'NTP $6100') {
+      precio = 6100;
+      tipoCobro = 'total';
+    }
+  }
+
+  return { precio, tipoCobro: tipoCobro || 'total', paqueteDb };
+};
+
+// Calcula el costo base del paquete (número de saltadores * precio unitario si es por saltador)
+const calcularCostoBasePaquete = (paqueteNombre, numSaltadores, fechaStr = '', extraJumpers = 0, precioExtraJumper = 0, paquetesFirestore = []) => {
+  const { precio, tipoCobro } = getInfoPaquete(paqueteNombre, fechaStr, paquetesFirestore);
+  const saltadoresCount = parseInt(numSaltadores) || 0;
+
+  if (tipoCobro === 'por_saltador') {
+    return saltadoresCount * precio;
+  } else {
+    const extraCount = parseInt(extraJumpers) || 0;
+    const precioExtra = parseFloat(precioExtraJumper) || 0;
+    return precio + (extraCount * precioExtra);
+  }
+};
+
 // Estimación de recaudación contable (incluyendo extras, decoración y precio base manual)
 const calcularTotalVenta = (ev, paquetesFirestore = []) => {
   if (!ev) return 0;
@@ -202,62 +305,22 @@ const calcularTotalVenta = (ev, paquetesFirestore = []) => {
   if (ev.precioBaseManual !== undefined && ev.precioBaseManual !== null && ev.precioBaseManual !== '') {
     totalBase = parseFloat(ev.precioBaseManual) || 0;
   } else {
-    const list = (paquetesFirestore && paquetesFirestore.length > 0)
-      ? paquetesFirestore
-      : ((window.PRODUCTOS_GLOBALES || []).filter(p => p.area === 'Eventos' || p.categoria === 'Paquetes'));
-    let paqueteDb = list.find(p => p.nombre === ev.paquete);
-    if (!paqueteDb && ev.paquete) {
-      paqueteDb = list.find(p => p.nombre?.toLowerCase() === ev.paquete?.toLowerCase());
-    }
-    const basePrice = paqueteDb ? (Number(paqueteDb.precio) || 0) : 0;
-    const saltadoresTotales = parseInt(ev.saltadores) || 0;
-    
-    if (paqueteDb && paqueteDb.tipoCobro === 'por_saltador') {
-      totalBase = saltadoresTotales * basePrice;
-    } else if (paqueteDb) {
-      const extraCount = parseInt(ev.saltadoresExtra) || 0;
-      const precioExtra = parseFloat(ev.precioSaltadorExtra) || 0;
-      totalBase = basePrice + (extraCount * precioExtra);
-    } else {
-      // Fallback para paquetes estándar
-      if (ev.paquete === 'Grupos - Paquete A') {
-        totalBase = saltadoresTotales * 280;
-      } else if (ev.paquete === 'Grupos - Paquete B') {
-        totalBase = saltadoresTotales * 380;
-      } else if (ev.paquete === 'Grupos - Paquete C') {
-        totalBase = saltadoresTotales * 460;
-      } else if (ev.paquete === 'NTP $6299') {
-        totalBase = 6299;
-      } else if (ev.paquete === 'NTP $6100') {
-        totalBase = 6100;
-      } else {
-        const extraCount = parseInt(ev.saltadoresExtra) || 0;
-        const precioExtra = parseFloat(ev.precioSaltadorExtra) || 0;
-        totalBase = basePrice + (extraCount * precioExtra);
-      }
-    }
+    totalBase = calcularCostoBasePaquete(
+      ev.paquete,
+      ev.saltadores,
+      ev.fecha,
+      ev.saltadoresExtra,
+      ev.precioSaltadorExtra,
+      paquetesFirestore
+    );
   }
 
   const totalExtras = ev.extras ? ev.extras.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0) : 0;
   const totalDecoracion = (ev.decoracionTipo === 'Personalizada') ? (parseFloat(ev.decoracionMonto) || 0) : 0;
 
-  // Calcular precio del pastel
-  let totalPastel = 0;
-  if (ev.pastel && ev.pastel !== 'Sin definir') {
-    const list = (paquetesFirestore && paquetesFirestore.length > 0)
-      ? paquetesFirestore
-      : ((window.PRODUCTOS_GLOBALES || []).filter(p => p.area === 'Eventos' || p.categoria === 'Paquetes'));
-    let paqueteDb = list.find(p => p.nombre === ev.paquete);
-    if (!paqueteDb && ev.paquete) {
-      paqueteDb = list.find(p => p.nombre?.toLowerCase() === ev.paquete?.toLowerCase());
-    }
-    const pastelGratis = paqueteDb ? paqueteDb.incluyePastel : (ev.paquete === 'VIP' || ev.paquete === 'Platinum' || ev.paquete === 'Evento Privado');
-    if (!pastelGratis) {
-      if (ev.tamañoPastel === 'Chico') totalPastel = 699;
-      else if (ev.tamañoPastel === 'Grande') totalPastel = 799;
-      else if (ev.tamañoPastel === 'Rectangular') totalPastel = 899;
-    }
-  }
+  // Calcular precio del pastel (VIP y Platinum incluyen pastel sin importar tamaño)
+  const infoP = getInfoPaquete(ev.paquete, ev.fecha, paquetesFirestore);
+  const totalPastel = calcularPrecioPastel(ev.pastel, ev.tamañoPastel, ev.paquete, infoP.paqueteDb);
 
   // PAQUETES DE COMIDA PARA ADULTOS
   const costPaquete1 = (parseInt(ev.adultosPaquete1) || 0) * 180;
@@ -560,32 +623,17 @@ const Eventos = () => {
   };
 
   // Precio dinámico en el formulario de creación (base + extras + decoración + base manual)
-  let precioFormularioBase = 0;
-  const paqueteDbForm = paquetesFirestore.find(p => p.nombre === paquete);
-  const basePriceForm = paqueteDbForm ? (Number(paqueteDbForm.precio) || 0) : 0;
-  const saltadoresTotales = parseInt(saltadores) || 0;
-  const numSaltadoresExtra = parseInt(saltadoresExtra) || 0;
-  const extraJumpersForm = numSaltadoresExtra;
-  if (paqueteDbForm && paqueteDbForm.tipoCobro === 'por_saltador') {
-    precioFormularioBase = saltadoresTotales * basePriceForm;
-  } else {
-    precioFormularioBase = basePriceForm + (extraJumpersForm * (parseFloat(precioSaltadorExtra) || 0));
-  }
+  const infoPaqueteForm = getInfoPaquete(paquete, getFechaCalculo(), paquetesFirestore);
+  const precioFormularioBase = (manualPrecioBase !== '' && manualPrecioBase !== null && manualPrecioBase !== undefined)
+    ? (parseFloat(manualPrecioBase) || 0)
+    : calcularCostoBasePaquete(paquete, saltadores, getFechaCalculo(), saltadoresExtra, precioSaltadorExtra, paquetesFirestore);
+
   const totalExtrasForm = extrasForm.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0);
   const totalDecoracionForm = (decoracionTipo === 'Personalizada') ? (parseFloat(decoracionMonto) || 0) : 0;
-  const finalBaseForm = (manualPrecioBase !== '' && manualPrecioBase !== null && manualPrecioBase !== undefined) ? (parseFloat(manualPrecioBase) || 0) : precioFormularioBase;
+  const finalBaseForm = precioFormularioBase;
 
-  // Calcular precio del pastel en el formulario
-  let totalPastelForm = 0;
-  if (pastel && pastel !== 'Sin definir') {
-    const paqueteDb = paquetesFirestore.find(p => p.nombre === paquete);
-    const pastelGratis = paqueteDb ? paqueteDb.incluyePastel : (paquete === 'VIP' || paquete === 'Platinum' || paquete === 'Evento Privado');
-    if (!pastelGratis) {
-      if (tamañoPastel === 'Chico') totalPastelForm = 699;
-      else if (tamañoPastel === 'Grande') totalPastelForm = 799;
-      else if (tamañoPastel === 'Rectangular') totalPastelForm = 899;
-    }
-  }
+  // Calcular precio del pastel en el formulario (VIP y Platinum siempre incluyen pastel sin costo)
+  const totalPastelForm = calcularPrecioPastel(pastel, tamañoPastel, paquete, infoPaqueteForm.paqueteDb);
 
   const costPaquete1Form = (parseInt(adultosPaquete1) || 0) * 180;
   const costPaquete21Form = (parseInt(adultosPaquete21) || 0) * 220;
@@ -1294,7 +1342,12 @@ const Eventos = () => {
                     </select>
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>🎂 TAMAÑO DEL PASTEL</label>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>
+                      🎂 TAMAÑO DEL PASTEL
+                      {esPastelIncluido(paquete, infoPaqueteForm.paqueteDb) && (
+                        <span style={{ fontSize: '0.72rem', color: 'var(--accent-success)', marginLeft: '6px' }}>(Incluido en el paquete)</span>
+                      )}
+                    </label>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
                       {['Chico', 'Grande', 'Rectangular'].map(size => (
                         <button
@@ -1664,7 +1717,9 @@ const Eventos = () => {
               {paquete !== 'Sin definir' && (
                 <div className="neu-box animate-fade-in" style={{ padding: '12px', borderLeft: '4px solid var(--accent-success)', background: 'rgba(16, 185, 129, 0.05)', fontSize: '0.85rem', marginTop: '10px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '10px' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Costo Base ({paquete}):</span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      Costo Base ({paquete}{infoPaqueteForm.tipoCobro === 'por_saltador' && Number(infoPaqueteForm.precio) > 0 ? ` — ${parseInt(saltadores) || 0} salt. × $${Number(infoPaqueteForm.precio).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : ''}):
+                    </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       {isEditingPrecioBase ? (
                         <>
@@ -1761,10 +1816,14 @@ const Eventos = () => {
                     </div>
                   )}
 
-                  {pastel && pastel !== 'Sin definir' && totalPastelForm > 0 && (
+                  {pastel && pastel !== 'Sin definir' && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', borderTop: '1px dashed var(--bg-color)', paddingTop: '4px' }}>
-                      <span style={{ color: 'var(--text-muted)' }}>Pastel ({tamañoPastel}):</span>
-                      <strong style={{ color: 'var(--text-main)' }}>${totalPastelForm.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
+                      <span style={{ color: 'var(--text-muted)' }}>Pastel ({tamañoPastel || 'Sin tamaño'}):</span>
+                      {totalPastelForm > 0 ? (
+                        <strong style={{ color: 'var(--text-main)' }}>${totalPastelForm.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
+                      ) : (
+                        <strong style={{ color: 'var(--accent-success)', fontSize: '0.85rem' }}>Cortesía (Incluido)</strong>
+                      )}
                     </div>
                   )}
 
@@ -2438,54 +2497,22 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
     return `${parts[2]}-${parts[1]}-${parts[0]}`;
   };
 
-  const listaPaquetesModal = (paquetesFirestore && paquetesFirestore.length > 0)
-    ? paquetesFirestore
-    : ((window.PRODUCTOS_GLOBALES || []).filter(p => p.area === 'Eventos' || p.categoria === 'Paquetes'));
-  let paqueteDbModal = listaPaquetesModal.find(p => p.nombre === paquete);
-  if (!paqueteDbModal && paquete) {
-    paqueteDbModal = listaPaquetesModal.find(p => p.nombre?.toLowerCase() === paquete?.toLowerCase());
-  }
-  let precioCalculadoModal = 0;
-  if (paqueteDbModal) {
-    const baseP = Number(paqueteDbModal.precio) || 0;
-    if (paqueteDbModal.tipoCobro === 'por_saltador') {
-      precioCalculadoModal = (parseInt(saltadores) || 0) * baseP;
-    } else {
-      const extraCount = parseInt(saltadoresExtra) || 0;
-      const precioExtra = parseFloat(precioSaltadorExtra) || 0;
-      precioCalculadoModal = baseP + (extraCount * precioExtra);
-    }
-  } else {
-    if (paquete === 'Grupos - Paquete A') {
-      precioCalculadoModal = (parseInt(saltadores) || 0) * 280;
-    } else if (paquete === 'Grupos - Paquete B') {
-      precioCalculadoModal = (parseInt(saltadores) || 0) * 380;
-    } else if (paquete === 'Grupos - Paquete C') {
-      precioCalculadoModal = (parseInt(saltadores) || 0) * 460;
-    } else if (paquete === 'NTP $6299') {
-      precioCalculadoModal = 6299;
-    } else if (paquete === 'NTP $6100') {
-      precioCalculadoModal = 6100;
-    } else {
-      precioCalculadoModal = (parseInt(saltadores) || 0) * 350;
-    }
-  }
+  const infoPaqueteModal = getInfoPaquete(paquete, getFechaCalculoModal(), paquetesFirestore);
+  const precioCalculadoModal = calcularCostoBasePaquete(
+    paquete,
+    saltadores,
+    getFechaCalculoModal(),
+    saltadoresExtra,
+    precioSaltadorExtra,
+    paquetesFirestore
+  );
 
   const totalExtrasModal = extras.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0);
   const totalDecoracionModal = (decoracionTipo === 'Personalizada') ? (parseFloat(decoracionMonto) || 0) : 0;
   const finalBaseModal = (manualPrecioBase !== '' && manualPrecioBase !== null && manualPrecioBase !== undefined) ? (parseFloat(manualPrecioBase) || 0) : precioCalculadoModal;
 
-  // Calcular precio del pastel en el modal
-  let totalPastelModal = 0;
-  if (pastel && pastel !== 'Sin definir') {
-    const paqueteDb = (window.PRODUCTOS_GLOBALES || []).find(p => p.nombre === paquete);
-    const pastelGratis = paqueteDb ? paqueteDb.incluyePastel : (paquete === 'VIP' || paquete === 'Platinum' || paquete === 'Evento Privado');
-    if (!pastelGratis) {
-      if (tamañoPastel === 'Chico') totalPastelModal = 699;
-      else if (tamañoPastel === 'Grande') totalPastelModal = 799;
-      else if (tamañoPastel === 'Rectangular') totalPastelModal = 899;
-    }
-  }
+  // Calcular precio del pastel en el modal (VIP y Platinum siempre incluyen pastel sin costo)
+  const totalPastelModal = calcularPrecioPastel(pastel, tamañoPastel, paquete, infoPaqueteModal.paqueteDb);
 
   const costPaquete1Modal = (parseInt(adultosPaquete1) || 0) * 180;
   const costPaquete21Modal = (parseInt(adultosPaquete21) || 0) * 220;
@@ -2737,7 +2764,9 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '10px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Costo Base ({paquete}):</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  Costo Base ({paquete}{infoPaqueteModal.tipoCobro === 'por_saltador' && Number(infoPaqueteModal.precio) > 0 ? ` — ${parseInt(saltadores) || 0} salt. × $${Number(infoPaqueteModal.precio).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : ''}):
+                </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {isEditingPrecioBase ? (
                     <>
@@ -2824,10 +2853,14 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
                 </div>
               )}
 
-              {pastel && pastel !== 'Sin definir' && totalPastelModal > 0 && (
+              {pastel && pastel !== 'Sin definir' && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', borderTop: '1px dashed var(--bg-color)', paddingTop: '6px' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Pastel ({tamañoPastel}):</span>
-                  <strong style={{ color: 'var(--text-main)' }}>${totalPastelModal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
+                  <span style={{ color: 'var(--text-muted)' }}>Pastel ({tamañoPastel || 'Sin tamaño'}):</span>
+                  {totalPastelModal > 0 ? (
+                    <strong style={{ color: 'var(--text-main)' }}>${totalPastelModal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
+                  ) : (
+                    <strong style={{ color: 'var(--accent-success)', fontSize: '0.85rem' }}>Cortesía (Incluido)</strong>
+                  )}
                 </div>
               )}
 
@@ -2977,7 +3010,12 @@ const EditReservacionModal = ({ reservacion, eventosReservados, paquetesFirestor
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>Tamaño del Pastel</label>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>
+                  Tamaño del Pastel
+                  {esPastelIncluido(paquete, infoPaqueteModal.paqueteDb) && (
+                    <span style={{ fontSize: '0.72rem', color: 'var(--accent-success)', marginLeft: '6px' }}>(Incluido en el paquete)</span>
+                  )}
+                </label>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
                   {['Chico', 'Grande', 'Rectangular'].map(size => (
                     <button
@@ -3925,6 +3963,7 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
         pagoVisa: (metodoPago === 'Tarjeta' && tipoTarjeta === 'VISA') ? monto : 0,
         pagoMastercard: (metodoPago === 'Tarjeta' && tipoTarjeta === 'MASTERCARD') ? monto : 0,
         pagoTransferencia: metodoPago === 'Transferencia' ? monto : 0,
+        pagoClip: metodoPago === 'Link de pago/CLIP' ? monto : 0,
         fecha: abonoIsoString,
         timestamp: abonoTimestamp,
         productos: `Anticipo/Abono - Folio ${folio}`
@@ -4083,7 +4122,9 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
                                 ? 'rgba(236, 72, 153, 0.1)'
                                 : ab.metodoPago === 'Transferencia'
                                   ? 'rgba(139, 92, 246, 0.1)'
-                                  : 'rgba(59, 130, 246, 0.1)',
+                                  : (ab.metodoPago?.includes('CLIP') || ab.metodoPago?.includes('Link'))
+                                    ? 'rgba(249, 115, 22, 0.15)'
+                                    : 'rgba(59, 130, 246, 0.1)',
                           color: ab.metodoPago === 'Efectivo' 
                             ? 'var(--accent-success)' 
                             : ab.metodoPago === 'Debito' 
@@ -4092,7 +4133,9 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
                                 ? '#ec4899'
                                 : ab.metodoPago === 'Transferencia'
                                   ? '#8b5cf6'
-                                  : 'var(--accent-blue)',
+                                  : (ab.metodoPago?.includes('CLIP') || ab.metodoPago?.includes('Link'))
+                                    ? '#ea580c'
+                                    : 'var(--accent-blue)',
                           fontWeight: 'bold'
                         }}>
                           {ab.tipoTarjeta ? `Tarjeta (${ab.tipoTarjeta})` : ab.metodoPago}
@@ -4162,6 +4205,7 @@ const AbonarLiquidarModal = ({ reservacion, paquetesFirestore = [], onClose, use
                     <option value="Efectivo">Efectivo</option>
                     <option value="Tarjeta">Tarjeta</option>
                     <option value="Transferencia">Transferencia</option>
+                    <option value="Link de pago/CLIP">Link de pago/CLIP</option>
                   </select>
                 </div>
               </div>
@@ -5946,23 +5990,7 @@ const PDFReservacionPrint = ({ event }) => {
 
   const totalBase = (event.precioBaseManual !== undefined && event.precioBaseManual !== null && event.precioBaseManual !== '')
     ? (parseFloat(event.precioBaseManual) || 0)
-    : (() => {
-        const list = (window.PRODUCTOS_GLOBALES || []).filter(p => p.area === 'Eventos' || p.categoria === 'Paquetes');
-        let pDb = list.find(p => p.nombre === event.paquete);
-        if (!pDb && event.paquete) {
-          pDb = list.find(p => p.nombre?.toLowerCase() === event.paquete?.toLowerCase());
-        }
-        if (pDb) {
-          if (pDb.tipoCobro === 'por_saltador') {
-            return (parseInt(event.saltadores) || 0) * (Number(pDb.precio) || 0);
-          } else {
-            const extraCount = parseInt(event.saltadoresExtra) || 0;
-            const precioExtra = parseFloat(event.precioSaltadorExtra) || 0;
-            return (Number(pDb.precio) || 0) + (extraCount * precioExtra);
-          }
-        }
-        return (parseInt(event.saltadores) || 0) * 350;
-      })();
+    : calcularCostoBasePaquete(event.paquete, event.saltadores, event.fecha, event.saltadoresExtra, event.precioSaltadorExtra);
 
   const totalAbonado = event.abonos ? event.abonos.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0) : 0;
   const totalEvento = calcularTotalVenta(event);
@@ -6299,24 +6327,19 @@ const PDFReservacionPrint = ({ event }) => {
                 </tr>
               )}
               {event.pastel && event.pastel !== 'Sin definir' && (() => {
-                let precioPastel = 0;
                 const paqueteDb = (window.PRODUCTOS_GLOBALES || []).find(p => p.nombre === event.paquete);
-                const pastelGratis = paqueteDb ? paqueteDb.incluyePastel : (event.paquete === 'VIP' || event.paquete === 'Platinum' || event.paquete === 'Evento Privado');
-                if (!pastelGratis) {
-                  if (event.tamañoPastel === 'Chico') precioPastel = 699;
-                  else if (event.tamañoPastel === 'Grande') precioPastel = 799;
-                  else if (event.tamañoPastel === 'Rectangular') precioPastel = 899;
-                }
+                const precioPastel = calcularPrecioPastel(event.pastel, event.tamañoPastel, event.paquete, paqueteDb);
+                const esGratis = esPastelIncluido(event.paquete, paqueteDb);
 
-                return precioPastel > 0 ? (
+                return (
                   <tr>
                     <td style={{ padding: '3px 0' }}>1</td>
-                    <td style={{ padding: '3px 0' }}>Pastel: {event.pastel} ({event.tamañoPastel})</td>
+                    <td style={{ padding: '3px 0' }}>Pastel: {event.pastel} ({event.tamañoPastel || 'Sin tamaño'}) {esGratis ? '(Incluido)' : ''}</td>
                     <td style={{ padding: '3px 0', textAlign: 'right' }}>
-                      ${precioPastel.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                      {esGratis ? '$0.00' : `$${precioPastel.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`}
                     </td>
                   </tr>
-                ) : null;
+                );
               })()}
               {event.extras && event.extras.map((ext, idx) => (
                 <tr key={idx}>

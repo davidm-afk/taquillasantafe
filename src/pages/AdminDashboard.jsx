@@ -63,6 +63,7 @@ const AdminDashboard = () => {
   let totalAmex = 0;
   let totalVisa = 0;
   let totalMastercard = 0;
+  let totalClip = 0;
 
   // Global Totals
   let granTotalGanancia = 0;
@@ -72,6 +73,7 @@ const AdminDashboard = () => {
   let granTotalAmex = 0;
   let granTotalVisa = 0;
   let granTotalMastercard = 0;
+  let granTotalClip = 0;
 
   if (allData) {
     allData.forEach(venta => {
@@ -92,10 +94,13 @@ const AdminDashboard = () => {
           granTotalTarjeta += tarjetaLegacy;
         }
         granTotalTransferencia += parseFloat(venta.pagoTransferencia || 0);
+        granTotalClip += parseFloat(venta.pagoClip || 0);
       } else if (metodo.toLowerCase() === 'efectivo') {
         granTotalEfectivo += ventaTotal;
       } else if (metodo.toLowerCase() === 'transferencia') {
         granTotalTransferencia += ventaTotal;
+      } else if (metodo.toLowerCase().includes('clip') || metodo.toLowerCase().includes('link')) {
+        granTotalClip += ventaTotal;
       } else {
         granTotalTarjeta += ventaTotal;
       }
@@ -138,10 +143,13 @@ const AdminDashboard = () => {
           totalTarjeta += tarjetaLegacy;
         }
         totalTransferencia += parseFloat(venta.pagoTransferencia || 0);
+        totalClip += parseFloat(venta.pagoClip || 0);
       } else if (metodo.toLowerCase() === 'efectivo') {
         totalEfectivo += ventaTotal;
       } else if (metodo.toLowerCase() === 'transferencia') {
         totalTransferencia += ventaTotal;
+      } else if (metodo.toLowerCase().includes('clip') || metodo.toLowerCase().includes('link')) {
+        totalClip += ventaTotal;
       } else {
         totalTarjeta += ventaTotal;
       }
@@ -267,7 +275,7 @@ const AdminDashboard = () => {
           const cajaInfo = cajasData[areaName];
           const isCerrada = cajaInfo && cajaInfo.abierta === false;
           const isAbierta = !isCerrada;
-          let ef = 0, tarjeta = 0, trans = 0;
+          let ef = 0, tarjeta = 0, trans = 0, clip = 0;
           let amex = 0, visa = 0, mastercard = 0;
           
           const ventasArea = (allData || []).filter(d => d.area === areaName);
@@ -285,16 +293,18 @@ const AdminDashboard = () => {
                 tarjeta += tarjetaLegacy;
               }
               trans += parseFloat(v.pagoTransferencia || 0);
+              clip += parseFloat(v.pagoClip || 0);
             } else {
               const ventaTotal = parseFloat(v.total || v.Total || 0);
               const metodo = v.metodoPago || v['Método de Pago'] || '';
               if (metodo.toLowerCase() === 'efectivo') ef += ventaTotal;
               else if (metodo.toLowerCase() === 'transferencia') trans += ventaTotal;
+              else if (metodo.toLowerCase().includes('clip') || metodo.toLowerCase().includes('link')) clip += ventaTotal;
               else tarjeta += ventaTotal;
             }
           });
-          const total = ef + amex + visa + mastercard + tarjeta + trans;
-          const totalesObj = { ef, deb: tarjeta + amex + visa + mastercard, cred: 0, trans, totalGeneral: total };
+          const total = ef + amex + visa + mastercard + tarjeta + trans + clip;
+          const totalesObj = { ef, deb: tarjeta + amex + visa + mastercard, cred: 0, trans, clip, totalGeneral: total };
 
           return (
             <div key={areaName} className="neu-box" style={{ padding: '20px', flex: '1', minWidth: '250px', position: 'relative' }}>
@@ -322,6 +332,14 @@ const AdminDashboard = () => {
                   </>
                 )}
                 <div><strong>🏦 Transferencia:</strong></div><div style={{ textAlign: 'right' }}>${trans.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+                {(clip > 0 || areaName === 'Eventos') && (
+                  <>
+                    <div><strong>🔗 Link de pago/CLIP:</strong></div>
+                    <div style={{ textAlign: 'right', color: clip > 0 ? '#ea580c' : 'var(--text-muted)', fontWeight: clip > 0 ? 'bold' : 'normal' }}>
+                      ${clip.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                    </div>
+                  </>
+                )}
                 <div style={{ gridColumn: '1 / -1', borderTop: '1px solid var(--bg-color)', margin: '5px 0' }}></div>
                 <div style={{ fontSize: '1rem', color: isAbierta ? 'var(--accent-blue)' : 'inherit' }}><strong>Total:</strong></div>
                 <div style={{ textAlign: 'right', fontSize: '1rem', fontWeight: 'bold' }}>${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
@@ -406,6 +424,14 @@ const AdminDashboard = () => {
                 ${granTotalTransferencia.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </h2>
             </div>
+            {granTotalClip > 0 && (
+              <div className="neu-box" style={{ padding: '15px', textAlign: 'center', borderBottom: '4px solid #ea580c' }}>
+                <p style={{ margin: '0 0 8px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.8rem' }}>🔗 TOTAL LINK/CLIP</p>
+                <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-main)' }}>
+                  ${granTotalClip.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                </h2>
+              </div>
+            )}
             <div className="neu-box" style={{ padding: '15px', textAlign: 'center', borderBottom: '4px solid var(--accent-blue)', background: 'rgba(59, 130, 246, 0.05)' }}>
               <p style={{ margin: '0 0 8px 0', color: 'var(--text-muted)', fontWeight: 'bold', fontSize: '0.8rem' }}>GRAN TOTAL DEL DÍA</p>
               <h2 className="text-gradient-blue" style={{ margin: 0, fontSize: '2rem' }}>
@@ -641,6 +667,16 @@ const EditVentaModal = ({ venta, onClose }) => {
         updateData.pagoEfectivo = 0;
         updateData.pagoTarjeta = 0;
         updateData.pagoTransferencia = updateData.total;
+        updateData.pagoClip = 0;
+        updateData.tipoTarjeta = null;
+        updateData.pagoAmex = 0;
+        updateData.pagoVisa = 0;
+        updateData.pagoMastercard = 0;
+      } else if (metodoPago === 'Link de pago/CLIP') {
+        updateData.pagoEfectivo = 0;
+        updateData.pagoTarjeta = 0;
+        updateData.pagoTransferencia = 0;
+        updateData.pagoClip = updateData.total;
         updateData.tipoTarjeta = null;
         updateData.pagoAmex = 0;
         updateData.pagoVisa = 0;
@@ -650,6 +686,7 @@ const EditVentaModal = ({ venta, onClose }) => {
         updateData.pagoEfectivo = 0;
         updateData.pagoTarjeta = cardAmount;
         updateData.pagoTransferencia = 0;
+        updateData.pagoClip = 0;
       }
 
       // Guardar tipo de tarjeta y montos por marca si aplica
@@ -745,6 +782,9 @@ const EditVentaModal = ({ venta, onClose }) => {
                 <option value="Tarjeta">Tarjeta</option>
                 <option value="Transferencia">Transferencia</option>
                 <option value="Mixto">Mixto (Efectivo + Tarjeta)</option>
+                {venta.area === 'Eventos' && (
+                  <option value="Link de pago/CLIP">Link de pago/CLIP</option>
+                )}
               </select>
             </div>
           </div>

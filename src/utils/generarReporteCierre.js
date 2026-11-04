@@ -93,9 +93,14 @@ export const generarReporteCierre = (areaName, ventas, totales, resumenCierre) =
     const time = new Date(v.timestamp).toLocaleTimeString('es-MX', {hour: '2-digit', minute:'2-digit'});
     let metodos = [];
     if (v.pagoEfectivo) metodos.push(`Ef($${v.pagoEfectivo})`);
-    const tarjeta = (parseFloat(v.pagoTarjeta || 0) + parseFloat(v.pagoDebito || 0) + parseFloat(v.pagoCredito || 0));
-    if (tarjeta > 0) metodos.push(`Tarjeta($${tarjeta.toFixed(2)})`);
+    if (v.pagoAmex) metodos.push(`AMEX($${v.pagoAmex})`);
+    if (v.pagoVisa) metodos.push(`VISA($${v.pagoVisa})`);
+    if (v.pagoMastercard) metodos.push(`MC($${v.pagoMastercard})`);
+    const tarjetaLegacy = (parseFloat(v.pagoTarjeta || 0) + parseFloat(v.pagoDebito || 0) + parseFloat(v.pagoCredito || 0));
+    const tarjetaDesglosada = parseFloat(v.pagoAmex || 0) + parseFloat(v.pagoVisa || 0) + parseFloat(v.pagoMastercard || 0);
+    if (tarjetaDesglosada === 0 && tarjetaLegacy > 0) metodos.push(`Tarjeta($${tarjetaLegacy.toFixed(2)})`);
     if (v.pagoTransferencia) metodos.push(`Trans($${v.pagoTransferencia})`);
+    if (v.pagoClip) metodos.push(`CLIP($${v.pagoClip})`);
     
     // Fallback if none defined
     if (metodos.length === 0) metodos.push(v.metodoPago || 'No especificado');
